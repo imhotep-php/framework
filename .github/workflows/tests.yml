@@ -1,0 +1,54 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - master
+      - '*.x'
+  pull_request:
+  schedule:
+   - cron: '0 0 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    services:
+      memcached:
+        image: memcached:1.6-alpine
+        ports:
+          - 11211:11211
+    strategy:
+      fail-fast: true
+      matrix:
+        php: [8.1, 8.2]
+        stability: [prefer-lowest, prefer-stable]
+        
+    name: PHP ${{ matrix.php }} - ${{ matrix.stability }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, gd, redis-phpredis/phpredis@5.3.7, igbinary, msgpack, lzf, zstd, lz4, memcached, gmp
+        ini-values: error_reporting=E_ALL
+        tools: composer:v2
+        coverage: none
+        
+    - name: Install dependencies
+      uses: nick-fields/retry@v2
+      with:
+        timeout_minutes: 5
+        max_attempts: 5
+        command: composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
+
+    - name: Execute tests
+      run: vendor/bin/phpunit --display-deprecation
