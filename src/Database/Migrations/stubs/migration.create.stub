@@ -1,0 +1,31 @@
+<?php
+
+use Imhotep\Facades\Scheme;
+use Imhotep\Database\Migrations\Migration;
+use Imhotep\Database\Postgres\Schema\Table;
+
+return new class extends Migration
+{
+     /**
+     * Up the migration.
+     *
+     * @return void
+     */
+    public function up(): void
+    {
+        Scheme::create('{{table}}', function (Table $table) {
+            $table->id();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Down the migration.
+     *
+     * @return void
+     */
+    public function down(): void
+    {
+        Scheme::dropIfExists('{{table}}');
+    }
+};

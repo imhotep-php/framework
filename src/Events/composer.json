@@ -1,0 +1,27 @@
+{
+  "name": "imhotep/events",
+  "type": "library",
+  "description": "Allows application components to communicate with each other by dispatching events and listening to them",
+  "keywords": ["events", "dispatch", "listen"],
+  "license" : "MIT",
+  "homepage": "https://imhotep-php.ru",
+  "authors": [
+    {
+      "name": "Imhotep",
+      "email": "imhotep.php@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Imhotep\\Events\\": ""
+    }
+  },
+  "require": {
+    "php": ">=8.0.2",
+    "imhotep/contracts": "^1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5"
+  },
+  "minimum-stability": "dev"
+}

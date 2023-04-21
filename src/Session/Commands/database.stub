@@ -1,0 +1,29 @@
+<?php
+
+use Imhotep\Database\Facades\Scheme;
+use Imhotep\Database\Migrations\Migration;
+use Imhotep\Database\Postgres\Schema\Table;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Scheme::create('sessions', function (Table $table) {
+            $table->id();
+            $table->bigInteger('user_id');
+            $table->string('tokenable_type', 255);
+            $table->bigInteger('tokenable_id');
+            $table->string('token', 64);
+            $table->string('ip_address', 45);
+            $table->string('user_agent', 255);
+            $table->timestamp('last_used_at');
+            $table->timestamp('expires_at');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Scheme::dropIfExists('sessions');
+    }
+};

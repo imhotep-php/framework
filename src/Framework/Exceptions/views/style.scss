@@ -1,0 +1,145 @@
+body {
+  padding: 30px 0 0 0;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  font-family: 'Roboto', 'sans-serif';
+  font-size: 16px;
+}
+
+.block {
+  margin-bottom: 30px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 3px;
+}
+.block-content {
+  padding: 20px;
+}
+
+.stack {
+  .caption {
+    position: relative;
+    padding-top: 60px;
+
+    .type {
+      position: absolute;
+      left: 20px; top: 20px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .version {
+      position: absolute;
+      top: 20px; right: 20px;
+      color: rgba(255,255,255,0.4);
+
+      span{
+        margin-left: 20px;
+      }
+
+      b{
+        color: rgba(255,255,255,0.6);
+        font-weight: 500;
+      }
+    }
+
+    .message {
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 20px;
+      font-size: 1.4em;
+    }
+
+    .details {
+      padding: 20px;
+      background: rgba(0,0,0,0.4);
+      color: rgba(255,255,255,0.9);
+    }
+  }
+}
+
+.trace-list {
+  border-right: 1px solid rgba(255,255,255,0.2);
+  max-height: 500px;
+  overflow: hidden;
+  overflow-y: auto;
+
+  ul {
+    margin: 0 -15px 0 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      padding: 15px;
+      word-wrap: break-word;
+    }
+
+    li + li {
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+  }
+}
+
+.trace-code {
+  position: relative;
+  background: #2b2b2b;
+
+  &:beforre {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 30px;
+    background: #313335;
+    border-right: 1px solid #555;
+  }
+
+  .line {
+    display: flex;
+    &:hover {
+      background: #323232;
+    }
+    &.active {
+      background: #4c3030;
+    }
+  }
+
+  .num {
+    opacity: 0.2;
+    padding: 0 10px;
+    line-height: 1;
+  }
+
+  pre {
+    margin: 0;
+    line-height: 1;
+  }
+
+  code {
+    display: inline-block;
+    color: #BFC7D5 !important;
+    line-height: 1;
+
+    .hljs {
+      background: #2b2b2b !important;
+      color: #BFC7D5 !important;
+    }
+    .hljs-meta {
+      color: #cb7832 !important;
+    }
+    .hljs-keyword {
+      color: #cb7832 !important;
+      font-weight: 300 !important;
+    }
+    .hljs-title {
+      color: #a9b7c5 !important;
+      font-weight: 300 !important;
+    }
+    .hljs-comment {
+      color: #629755 !important;
+      font-weight: 300 !important;
+    }
+    .hljs-variable {
+      color: #9876aa !important;
+    }
+    .hljs-string {
+      color: #6a8759 !important;
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "imhotep/filesystem",
+  "type": "library",
+  "license" : "MIT",
+  "homepage": "https://imhotep-php.ru",
+  "authors": [
+    {
+      "name": "Imhotep",
+      "email": "imhotep.php@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Imhotep\\Filesystem\\": ""
+    }
+  },
+  "require": {
+    "php": ">=8.0.2",
+    "imhotep/contracts": "^1.0"
+  },
+  "minimum-stability": "dev"
+}

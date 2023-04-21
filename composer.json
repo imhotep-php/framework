@@ -1,0 +1,47 @@
+{
+  "name": "imhotep/components",
+  "type": "library",
+  "description": "All the main components of the Imhotep framework.",
+  "license" : "MIT",
+  "homepage": "https://imhotep-php.ru",
+  "authors": [
+    {
+      "name": "Imhotep",
+      "email": "imhotep.php@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.0.2",
+    "psr/container": "^2.0",
+    "psr/http-message": "^1.0",
+    "psr/log": "^3.0",
+    "psr/simple-cache": "^3.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5"
+  },
+  "replace": {
+    "imhotep/cache": "self.version",
+    "imhotep/container": "self.version",
+    "imhotep/contracts": "self.version",
+    "imhotep/dotenv": "self.version",
+    "imhotep/support": "self.version"
+  },
+  "autoload": {
+    "files": [
+      "src/Support/helpers.php"
+    ],
+    "psr-4": {
+      "Imhotep\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "files": [
+
+    ],
+    "psr-4": {
+      "Imhotep\\Tests\\": "tests/"
+    }
+  },
+  "minimum-stability": "dev"
+}

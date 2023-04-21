@@ -1,0 +1,31 @@
+{
+  "name": "imhotep/encryption",
+  "type": "library",
+  "description": "Registers environment variables from a .env file",
+  "keywords": ["environment", "env", "dotenv"],
+  "license" : "MIT",
+  "homepage": "https://imhotep-php.ru",
+  "authors": [
+    {
+      "name": "Imhotep",
+      "email": "imhotep.php@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Imhotep\\Encryption\\": ""
+    }
+  },
+  "require": {
+    "php": ">=8.0.2",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-openssl": "*",
+    "imhotep/contracts": ">=1.0",
+    "imhotep/support": ">=1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5"
+  },
+  "minimum-stability": "dev"
+}

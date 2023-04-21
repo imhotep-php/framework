@@ -1,0 +1,25 @@
+{
+  "name": "imhotep/debug",
+  "type": "library",
+  "description": "Debug tools",
+  "keywords": ["debug"],
+  "license" : "MIT",
+  "homepage": "https://imhotep-php.ru",
+  "authors": [
+    {
+      "name": "Imhotep",
+      "email": "imhotep.php@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Imhotep\\Debug\\": ""
+    }
+  },
+  "require": {
+    "php": ">=8.0.2",
+    "imhotep/contracts": "^1.0",
+    "imhotep/support": "^1.0"
+  },
+  "minimum-stability": "dev"
+}

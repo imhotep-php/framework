@@ -1,0 +1,21 @@
+{
+  "name": "imhotep/simples3",
+  "type": "library",
+  "license" : "MIT",
+  "homepage": "https://imhotep-php.ru",
+  "authors": [
+    {
+      "name": "Imhotep",
+      "email": "imhotep.php@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Imhotep\\SimpleS3\\": ""
+    }
+  },
+  "require": {
+    "php": ">=8.0.2"
+  },
+  "minimum-stability": "dev"
+}
