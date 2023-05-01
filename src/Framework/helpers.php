@@ -4,6 +4,13 @@ use Imhotep\Contracts\Http\Responsable;
 use Imhotep\Contracts\Http\Response;
 use Imhotep\Http\Exceptions\HttpResponseException;
 
+if (!function_exists('now')) {
+    function now(): int
+    {
+        return microtime(true);
+    }
+}
+
 if (!function_exists('base_path')) {
     function base_path(string $path = null): string
     {
