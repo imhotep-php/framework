@@ -29,7 +29,8 @@
   },
   "autoload": {
     "files": [
-      "src/Support/helpers.php"
+      "src/Support/helpers.php",
+      "src/Framework/helpers.php"
     ],
     "psr-4": {
       "Imhotep\\": "src/"
