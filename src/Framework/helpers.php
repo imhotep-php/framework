@@ -7,7 +7,7 @@ use Imhotep\Http\Exceptions\HttpResponseException;
 if (!function_exists('now')) {
     function now(): int
     {
-        return microtime(true);
+        return (int)microtime(true);
     }
 }
 
