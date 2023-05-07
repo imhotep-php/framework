@@ -740,6 +740,8 @@ class Request implements \ArrayAccess, RequestContract
     // Work with Accept
     protected ?array $acceptsCache = null;
 
+    protected ?array $acceptLanguages = null;
+
     public function getAcceptableTypes(): array
     {
         if (is_null($this->acceptsCache)) {
@@ -858,6 +860,48 @@ class Request implements \ArrayAccess, RequestContract
         return isset($accepts[0]) && (str_contains($accepts[0], '/json') || str_contains($accepts[0], '+json'));
     }
 
+    public function getAcceptedLanguages(string|array $languages = null): array
+    {
+        if (is_null($this->acceptLanguages)) {
+            $this->acceptLanguages = [];
+
+            $pattern = '/([\w\-_]+)\s*(;\s*q\s*=\s*(\d*\.\d*))?/';
+            $accept = $this->headers->get('accept-language');
+
+            if (!is_null($accept) && ($n = preg_match_all($pattern, $accept, $matches)) > 0) {
+                for ($i = 0; $i < $n; ++$i) {
+                    $lang = strtolower(str_replace('-', '_', $matches[1][$i]));
+
+                    $this->acceptLanguages[$lang] = empty($matches[3][$i])
+                        ? 1.0
+                        : floatval($matches[3][$i]);
+                }
+
+                arsort($this->acceptLanguages);
+
+                $this->acceptLanguages = array_keys($this->acceptLanguages);
+            }
+        }
+
+        if (! is_null($languages)) {
+            if (is_string($languages)) $languages = [$languages];
+
+            foreach ($languages as $key => $val) {
+                $languages[$key] = strtolower(str_replace('-', '_', $val));
+            }
+
+            return array_values(array_intersect($this->getAcceptedLanguages(), $languages));
+        }
+
+        return $this->acceptLanguages;
+    }
+
+    public function acceptLanguage(string $language): bool
+    {
+        $language = strtolower(str_replace('-', '_', $language));
+
+        return in_array($language, $this->getAcceptedLanguages());
+    }
 
     // Work with routes
     public function getRoute(): ?Route

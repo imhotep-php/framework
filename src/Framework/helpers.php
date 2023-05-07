@@ -1,5 +1,6 @@
 <?php
 
+use Imhotep\Container\Container;
 use Imhotep\Contracts\Http\Responsable;
 use Imhotep\Contracts\Http\Response;
 use Imhotep\Http\Exceptions\HttpResponseException;
@@ -8,6 +9,178 @@ if (!function_exists('now')) {
     function now(): int
     {
         return (int)microtime(true);
+    }
+}
+
+function dump()
+{
+    $args = func_get_args();
+
+    foreach ($args as $arg) {
+        \Imhotep\Debug\VarDumper::dump($arg);
+    }
+}
+
+function dd()
+{
+    dump(...func_get_args());
+    exit(1);
+}
+
+if (!function_exists('app')) {
+    /**
+     * Get the available container instance.
+     *
+     * @param string|null $abstract
+     * @param array $parameters
+     * @return mixed|\Imhotep\Framework\Application
+     */
+    function app($abstract = null, array $parameters = [])
+    {
+        if (is_null($abstract)) {
+            return Container::getInstance();
+        }
+
+        return Container::getInstance()->make($abstract, $parameters);
+    }
+}
+
+if (!function_exists('config')) {
+    /**
+     * Get the available config instance.
+     *
+     * @return mixed|Imhotep\Config\Repository
+     */
+    function config(string $key = null, mixed $default = null)
+    {
+        if (is_null($key)) {
+            return app('config');
+        }
+
+        return app('config')->get($key, $default);
+    }
+}
+
+if (!function_exists('route')) {
+    /**
+     * Get the available config instance.
+     *
+     * @return Imhotep\Routing\Router
+     */
+    function route()
+    {
+        return app('router');
+    }
+}
+
+if (!function_exists('event')) {
+    /**
+     * Get the available config instance.
+     *
+     * @return mixed|Imhotep\Events\Events
+     */
+    function event(...$args)
+    {
+        return app('events')->dispatch(...$args);
+    }
+}
+
+if (!function_exists('request')) {
+    /**
+     * Get the available config instance.
+     *
+     * @return mixed|Imhotep\Events\Events
+     */
+    function request()
+    {
+        return app('request');
+    }
+}
+
+if (!function_exists('response')) {
+    /**
+     * Get the available config instance.
+     *
+     * @return Imhotep\Http\Response
+     */
+    function response()
+    {
+        return app(\Imhotep\Http\Response::class);
+    }
+}
+
+if (!function_exists('cache')) {
+    /**
+     * Get the available config instance.
+     *
+     * @return mixed|Imhotep\Cache\Repository
+     */
+    function cache(string|null $store = null)
+    {
+        return app('cache')->store($store);
+    }
+}
+
+if (!function_exists('db')) {
+    /**
+     * Get the available config instance.
+     *
+     * @return mixed|Imhotep\Database\Connection
+     */
+    function db(string $connection = null)
+    {
+        return app('db')->connection($connection);
+    }
+}
+
+if (!function_exists('env')) {
+    /**
+     * Get the available dotenv instance.
+     *
+     * @return mixed|Imhotep\Dotenv\Dotenv
+     */
+    function env(string $name, string|int|bool|float|Closure $default = null): mixed
+    {
+        return app('dotenv')->get($name, $default);
+    }
+}
+
+if (!function_exists('files')) {
+    /**
+     * Get local filesystem instance.
+     *
+     * @param string|null $name
+     * @return Imhotep\Filesystem\Drivers\LocalDriver|Imhotep\SimpleS3\S3Client
+     */
+    function files()
+    {
+        return app('filesystem.disk');
+    }
+}
+
+if (!function_exists('disk')) {
+    /**
+     * Get the available filesystem instance. Default local.
+     *
+     * @param string|null $name
+     * @return Imhotep\Filesystem\Drivers\LocalDriver|Imhotep\SimpleS3\S3Client
+     */
+    function disk(string $name = null)
+    {
+        return app('filesystem')->disk($name);
+    }
+}
+
+if (!function_exists('cloud')) {
+    /**
+     * Get the available filesystem instance. Default cloud.
+     *
+     * @param string|null $name
+     * @return Imhotep\Filesystem\Drivers\LocalDriver|Imhotep\SimpleS3\S3Client
+     */
+    function cloud(string $name = null)
+    {
+        return app('filesystem')->cloud($name);
     }
 }
 
@@ -181,24 +354,26 @@ if (!function_exists('url')) {
 }
 
 if (!function_exists('scss')) {
-    function scss(string $from)
+    function scss(string $from): string
     {
-        $pathFrom = app()->basePath("resources/css/{$from}");
-        if (! files()->isFile($pathFrom)) {
+        $pathFrom = resource_path("css/{$from}");
+
+        if (! file_exists($pathFrom)) {
             return '';
         }
 
-        $filename = files()->name($pathFrom).".css";
-
-        $pathTo = app()->basePath("public/css/{$filename}");
-
         $scss = new ScssPhp\ScssPhp\Compiler();
         $scss->addImportPath(dirname($pathFrom));
+        $css = $scss->compileString(file_get_contents($pathFrom))->getCss();
+        $filename = pathinfo($pathFrom, PATHINFO_FILENAME).".css";
+        $path = public_path("css");
 
-        $css = $scss->compileString(files()->get($pathFrom))->getCss();
 
-        files()->ensureDirectoryExists(dirname($pathTo));
-        files()->put($pathTo, $css);
+        if (is_dir($path)) {
+            @mkdir($path, 0755, true);
+        }
+
+        file_put_contents($path.'/'.$filename, $css);
 
         return url("css/{$filename}");
     }

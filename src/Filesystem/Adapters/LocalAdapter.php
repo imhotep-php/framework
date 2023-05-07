@@ -190,7 +190,7 @@ class LocalAdapter implements Filesystem
         return $this->driver->files($this->fixPath($path));
     }
 
-    public function get(string $path, array $options = []): string
+    public function get(string $path, array $options = []): string|false
     {
         return $this->driver->get($this->fixPath($path), $options);
     }

@@ -124,7 +124,7 @@ class Application extends Container
 
     public function resourcePath(string $path = null): string
     {
-        return $this->basePath . '/resource' . (empty($path) ? '' : '/'.ltrim($path, '/'));
+        return $this->basePath . '/resources' . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }
 
     public function storagePath(string $path = null): string

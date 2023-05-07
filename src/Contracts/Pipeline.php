@@ -14,7 +14,7 @@ interface Pipeline
    * @param  mixed  $traveler
    * @return $this
    */
-  public function send($passable);
+  public function send(mixed $passable);
 
   /**
    * Set the stops of the pipeline.
@@ -22,7 +22,7 @@ interface Pipeline
    * @param  dynamic|array  $stops
    * @return $this
    */
-  public function through($stops);
+  public function through(mixed $stops);
 
   /**
    * Set the method to call on the stops.
@@ -30,7 +30,7 @@ interface Pipeline
    * @param  string  $method
    * @return $this
    */
-  public function via($method);
+  public function via(string $method);
 
   /**
    * Run the pipeline with a final destination callback.

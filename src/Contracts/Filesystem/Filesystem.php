@@ -21,7 +21,7 @@ interface Filesystem
 
     public function allFiles(string $path = null): array;
     public function files(string $path = null): array;
-    public function get(string $path, array $options = []): string;
+    public function get(string $path, array $options = []): string|false;
     public function put(string $path, string $contents, array|string $options = []): int|false;
     public function putFile(string $path, string|File|UploadedFile $file, array|string $options = []): string|false;
     public function putFileAs(string $path, string|File|UploadedFile $file, string $name, array|string $options = []): string|false;
