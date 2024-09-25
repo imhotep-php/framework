@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace {{namespace}};
 
-use Imhotep\Routing\Controller;
-use Illuminate\Http\Request;
-
 class {{class}} extends Controller
 {
 

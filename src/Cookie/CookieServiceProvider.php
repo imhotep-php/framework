@@ -9,13 +9,13 @@ use Imhotep\Framework\Providers\ServiceProvider;
 class CookieServiceProvider extends ServiceProvider
 {
     public array $aliases = [
-        CookieJar::class => 'cookie',
+        'cookie' => CookieJar::class,
     ];
 
     public function register()
     {
         $this->app->singleton('cookie', function ($app) {
-            $config = $app['config']->get('session.drivers.cookie');
+            $config = $app['config']->get('session');
             $cookies = new CookieJar();
 
             if (is_array($config)) {

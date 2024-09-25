@@ -17,8 +17,8 @@ class ConsoleServiceProvider extends ServiceProvider
     public array $commands = [
         'make:provider' => ProviderMakeCommand::class,
         'make:controller' => ControllerMakeCommand::class,
-        'make:migration' => MigrationMakeCommand::class,
-        'migrate:status' => StatusCommand::class,
+        //'make:migration' => MigrationMakeCommand::class,
+        //'migrate:status' => StatusCommand::class,
         'route:list' => RouteListCommand::class,
         'route:cache' => RouteCacheCommand::class,
         'route:clear' => RouteClearCommand::class,
@@ -27,13 +27,5 @@ class ConsoleServiceProvider extends ServiceProvider
     public function register()
     {
         $this->commands($this->commands);
-
-        /*
-        $this->commands([
-            ControllerMakeCommand::class,
-            MigrationMakeCommand::class,
-            StatusCommand::class
-        ]);
-        */
     }
 }

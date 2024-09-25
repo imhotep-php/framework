@@ -1,19 +1,18 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Query\Traits;
 
 trait PrepareWhereExpression
 {
-    protected $whereOperators = [
-        '=', '>', '<', '>=', '<=', '<>'
+    protected array $whereOperators = [
+        '=', '>', '<', '>=', '<=', '<>', '!=', 'like', 'not like'
     ];
 
-    protected function prepareWhere($condition){
+    protected function prepareWhere($condition): array
+    {
         $parsed = ['column' => '', 'operator' => '', 'value' => ''];
 
-        $args = func_get_args(); $args = $condition;
+        $args = $condition;
 
         // where('name = name')
         if (count($args) == 1) {

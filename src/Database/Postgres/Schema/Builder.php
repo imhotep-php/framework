@@ -12,7 +12,7 @@ class Builder extends BuilderAbstract
     {
         $results = $this->connection->select(
             $this->grammar->compileColumnListing(), [
-                $this->connection->getDatabase(),
+                $this->connection->getDatabaseName(),
                 $this->connection->getSchema(),
                 $this->connection->getTablePrefix().$table
             ]

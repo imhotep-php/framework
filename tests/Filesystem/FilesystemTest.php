@@ -92,6 +92,7 @@ class FilesystemTest extends TestCase
 
         $results = $this->files->directories($this->root);
 
+
         $this->assertSame($this->fixPath('/bar1'), $results[0]);
         $this->assertSame($this->fixPath('/bar2'), $results[1]);
         $this->assertSame($this->fixPath('/bar11'), $results[2]);

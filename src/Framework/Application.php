@@ -6,6 +6,7 @@ namespace Imhotep\Framework;
 
 use Closure;
 use Imhotep\Container\Container;
+use Imhotep\Filesystem\Filesystem;
 use Imhotep\Framework\Providers\ProviderAdapter;
 use Imhotep\Http\Exceptions\HttpException;
 use Imhotep\Http\Exceptions\NotFoundHttpException;
@@ -25,6 +26,8 @@ class Application extends Container
      */
     const VERSION = '1.0.0';
 
+    public int $id;
+
     protected ProviderAdapter $providers;
 
     /**
@@ -35,6 +38,8 @@ class Application extends Container
      */
     public function __construct(string $basePath = null)
     {
+        $this->id = rand(0, 1000);
+
         if (! is_null($basePath)) {
             $this->setBasePath($basePath);
         }
@@ -51,15 +56,23 @@ class Application extends Container
         static::setInstance($this);
 
         $this->instance('app', $this);
-        //$this->instance(Container::class, $this);
+        $this->instance(Container::class, $this);
+
+
+        $this->singleton(PackageManager::class, function () {
+            $cachePath = env('APP_PACKAGES_CACHE', $this->storagePath('bootstrap/packages.php'));
+
+            return new PackageManager(new Filesystem(), $this->basePath, $cachePath);
+        });
     }
 
     protected function registerBaseAliases()
     {
         $this->alias('app', [self::class, Container::class, \Psr\Container\ContainerInterface::class]);
         $this->alias('cache', [\Imhotep\Cache\CacheManager::class]);
-        $this->alias('router', [\Imhotep\Contracts\Routing\Router::class, \Imhotep\Routing\Router::class]);
+        //$this->alias('router', [\Imhotep\Contracts\Routing\Router::class, \Imhotep\Routing\Router::class]);
         $this->alias('request', [\Imhotep\Contracts\Http\Request::class, \Imhotep\Http\Request::class]);
+        //$this->alias('redirect', [\Imhotep\Routing\Redirector::class]);
         //$this->alias('events', [\Imhotep\Events\Events::class]);
     }
 
@@ -73,6 +86,10 @@ class Application extends Container
         return static::VERSION;
     }
 
+    public function locale(): string
+    {
+        return config('app.locale');
+    }
 
 
     protected ?bool $isRunningInConsole = null;
@@ -80,7 +97,7 @@ class Application extends Container
     public function runningInConsole(): bool
     {
         if ($this->isRunningInConsole === null) {
-            $this->isRunningInConsole = (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg');
+            $this->isRunningInConsole = env('APP_RUNNING_IN_CONSOLE') ?? (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg');
         }
 
         return $this->isRunningInConsole;
@@ -92,7 +109,9 @@ class Application extends Container
     |--------------------------------------------------------------------------
     */
 
-    protected $basePath = '';
+    protected string $basePath = '';
+
+    protected string $publicDir = 'public';
 
     /**
      * Set the base path for the application.
@@ -132,9 +151,14 @@ class Application extends Container
         return $this->basePath .  '/storage' . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }
 
+    public function setPublicDir(string $publicDir = '')
+    {
+        $this->publicDir = $publicDir;
+    }
+
     public function publicPath(string $path = null): string
     {
-        return $this->basePath . '/public' . (empty($path) ? '' : '/'.ltrim($path, '/'));
+        return $this->basePath . '/'. $this->publicDir . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }
 
     public function path(string $path = null): string

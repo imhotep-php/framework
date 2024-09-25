@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Imhotep\Database;
 
+use Imhotep\Contracts\Database\ConnectionResolver;
 use Imhotep\Database\Commands\MigrateCommand;
 use Imhotep\Framework\Providers\ServiceProvider;
 
 class DatabaseServiceProvider extends ServiceProvider
 {
     public array $aliases = [
-        'db' => DatabaseManager::class
+        'db' => [DatabaseManager::class, ConnectionResolver::class],
     ];
 
     public function register()
@@ -20,7 +21,7 @@ class DatabaseServiceProvider extends ServiceProvider
         });
 
         $this->commands([
-            MigrateCommand::class
+            'migrate' => MigrateCommand::class
         ]);
 
         $this->app->bind('scheme', function ($app) {

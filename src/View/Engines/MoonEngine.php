@@ -21,16 +21,17 @@ class MoonEngine extends PhpEngine
         $this->compiler->setFactory($factory);
     }
 
-    public function setCachePath(string $cachePath): void
+    public function setCache(bool $shouldCache, string $cachePath): void
     {
         $this->compiler->setCachePath($cachePath);
+        $this->compiler->setShouldCache($shouldCache);
     }
 
     public function get(string $path, array $data = []): string
     {
-        $this->compiler->compile($path);
-
-        //return "<pre>".htmlspecialchars(file_get_contents($this->compiler->getCompiledPath($path)))."</pre>";
+        if ($this->compiler->isExpired($path)) {
+            $this->compiler->compile($path);
+        }
 
         return $this->evaluatePath(
             $this->compiler->getCompiledPath($path),

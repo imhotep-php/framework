@@ -21,68 +21,35 @@ interface Session
      */
     public function setName(string $name): void;
 
-    /**
-     * Get the current session ID.
-     *
-     * @return string
-     */
     public function getId(): ?string;
 
-    /**
-     * Set the session ID.
-     *
-     * @param  string  $id
-     * @return void
-     */
     public function setId(?string $id): void;
 
-    /**
-     * Start the session, reading the data from a handler.
-     *
-     * @return bool
-     */
     public function start();
 
-    /**
-     * Save the session data to storage.
-     *
-     * @return void
-     */
     public function save();
 
-    /**
-     * Get all of the session data.
-     *
-     * @return array
-     */
     public function all();
 
-    /**
-     * Checks if a key exists.
-     *
-     * @param  string|array  $key
-     * @return bool
-     */
-    public function exists($key);
+    public function exists(string $key);
 
-    /**
-     * Checks if a key is present and not null.
-     *
-     * @param  string|array  $key
-     * @return bool
-     */
-    public function has($key);
+    public function missing(string $key): bool;
 
-    /**
-     * Get an item from the session.
-     *
-     * @param  string  $key
-     * @param  mixed  $default
-     * @return mixed
-     */
-    public function get($key, $default = null): mixed;
+    public function has(string $key): bool;
 
-    public function set(string $key, string|int|float|bool $value);
+    public function get(string $key, mixed $default = null): mixed;
+
+    public function set(string $key, string|int|float|bool|array $value): void;
+
+    public function put(string $key, string|int|float|bool|array $value): void;
+
+    public function push(string $key, string|int|float|bool|array $value): void;
+
+    public function delete(string $key): mixed;
+
+    public function forget(string|array $keys): void;
+
+    public function flush(): void;
 
     /**
      * Get the CSRF token value.
@@ -97,13 +64,6 @@ interface Session
      * @return void
      */
     public function regenerateCsrf(): void;
-
-    /**
-     * Remove all of the items from the session.
-     *
-     * @return void
-     */
-    public function flush();
 
     /**
      * Flush the session data and regenerate the ID.

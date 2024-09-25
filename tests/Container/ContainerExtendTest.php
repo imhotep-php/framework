@@ -1,6 +1,6 @@
 <?php
 
-namespace Imhotep\Tests\Container;
+namespace Imhotep\Tests\ContainerNew;
 
 use Imhotep\Container\Container;
 use PHPUnit\Framework\TestCase;
@@ -8,9 +8,6 @@ use stdClass;
 
 class ContainerExtendTest extends TestCase
 {
-    public function test(){
-        return;
-    }
 
     public function testExtendedBindings()
     {
@@ -25,7 +22,7 @@ class ContainerExtendTest extends TestCase
         $container = new Container;
 
         $container->singleton('foo', function () {
-            return (object) ['name' => 'taylor'];
+            return (object) ['name' => 'imhotep'];
         });
         $container->extend('foo', function ($old, $container) {
             $old->age = 26;
@@ -35,7 +32,7 @@ class ContainerExtendTest extends TestCase
 
         $result = $container->make('foo');
 
-        $this->assertSame('taylor', $result->name);
+        $this->assertSame('imhotep', $result->name);
         $this->assertEquals(26, $result->age);
         $this->assertSame($result, $container->make('foo'));
     }
@@ -71,18 +68,18 @@ class ContainerExtendTest extends TestCase
 
     public function testExtendIsLazyInitialized()
     {
-        ContainerLazyExtendStub::$initialized = false;
+        LazyExtendStub::$initialized = false;
 
         $container = new Container;
-        $container->bind(ContainerLazyExtendStub::class);
-        $container->extend(ContainerLazyExtendStub::class, function ($obj, $container) {
+        $container->bind(LazyExtendStub::class);
+        $container->extend(LazyExtendStub::class, function ($obj, $container) {
             $obj->init();
 
             return $obj;
         });
-        $this->assertFalse(ContainerLazyExtendStub::$initialized);
-        $container->make(ContainerLazyExtendStub::class);
-        $this->assertTrue(ContainerLazyExtendStub::$initialized);
+        $this->assertFalse(LazyExtendStub::$initialized);
+        $container->make(LazyExtendStub::class);
+        $this->assertTrue(LazyExtendStub::$initialized);
     }
 
     public function testExtendCanBeCalledBeforeBind()
@@ -96,18 +93,16 @@ class ContainerExtendTest extends TestCase
         $this->assertSame('foobar', $container->make('foo'));
     }
 
-    /*
     public function testExtendInstanceRebindingCallback()
     {
         $_SERVER['_test_rebind'] = false;
 
-        $container = new Container;
+        $container = new Container();
         $container->rebinding('foo', function () {
             $_SERVER['_test_rebind'] = true;
         });
 
-        $obj = new stdClass;
-        $container->instance('foo', $obj);
+        $container->instance('foo', new stdClass);
 
         $container->extend('foo', function ($obj, $container) {
             return $obj;
@@ -115,9 +110,7 @@ class ContainerExtendTest extends TestCase
 
         $this->assertTrue($_SERVER['_test_rebind']);
     }
-    */
 
-    /*
     public function testExtendBindRebindingCallback()
     {
         $_SERVER['_test_rebind'] = false;
@@ -140,7 +133,6 @@ class ContainerExtendTest extends TestCase
 
         $this->assertTrue($_SERVER['_test_rebind']);
     }
-    */
 
     public function testExtensionWorksOnAliasedBindings()
     {
@@ -187,7 +179,7 @@ class ContainerExtendTest extends TestCase
         });
 
         unset($container['foo']);
-        $container->forgetExtenders('foo');
+        $container->forgetExtends('foo');
 
         $container->bind('foo', function () {
             return 'foo';
@@ -197,7 +189,7 @@ class ContainerExtendTest extends TestCase
     }
 }
 
-class ContainerLazyExtendStub
+class LazyExtendStub
 {
     public static $initialized = false;
 

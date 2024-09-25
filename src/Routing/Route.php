@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Routing;
 
@@ -9,6 +7,7 @@ use Imhotep\Closure\SerializableClosure;
 use Imhotep\Container\Container;
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Routing\Route as RouteContract;
+use Imhotep\Contracts\Routing\RoutingException;
 use Imhotep\Support\Reflector;
 use Imhotep\Support\Traits\Macroable;
 
@@ -410,7 +409,7 @@ class Route implements RouteContract
 
     protected function matchUri(Request $request): bool
     {
-        $uri = urldecode($request->uri());
+        $uri = urldecode($request->path());
 
         if (! str_starts_with($uri, '/')) {
             $uri = '/'.$uri;
@@ -477,6 +476,14 @@ class Route implements RouteContract
             }
             else {
                 $this->action = ['type' => 'controller', 'uses' => $this->action];
+
+                if (! str_contains($this->action['uses'], '@')) {
+                    if (! method_exists($this->action['uses'], '__invoke')) {
+                        throw new RoutingException("Invalid route action: [{$this->action['uses']}].");
+                    }
+
+                    $this->action['uses'] .= '@__invoke';
+                }
             }
 
             return;

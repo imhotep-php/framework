@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Imhotep\Console\Traits;
 
-use Imhotep\Console\Formatter\Components\TwoColumnDetail;
 use Imhotep\Contracts\Console\ConsoleException;
 use Imhotep\Contracts\Console\Input as InputContract;
 use Imhotep\Contracts\Console\Output as OutputContract;
@@ -15,14 +14,14 @@ trait InteractsWithIO
 
     protected OutputContract $output;
 
-    public function setInput($input): static
+    public function setInput(InputContract $input): static
     {
         $this->input = $input;
 
         return $this;
     }
 
-    public function setOutput($output): static
+    public function setOutput(OutputContract $output): static
     {
         $this->output = $output;
 

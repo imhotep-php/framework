@@ -5,22 +5,10 @@ declare(strict_types=1);
 namespace Imhotep\Database\Query;
 
 use Imhotep\Contracts\Database\QueryGrammar as QueryGrammarContract;
+use Imhotep\Database\Grammar as BaseGrammar;
 
-abstract class Grammar implements QueryGrammarContract
+abstract class Grammar extends BaseGrammar implements QueryGrammarContract
 {
-    protected ?string $tablePrefix = null;
-
-    public function getTablePrefix(): ?string
-    {
-        return $this->tablePrefix;
-    }
-
-    public function setTablePrefix($tablePrefix): void
-    {
-        $this->tablePrefix = $tablePrefix;
-    }
-
-
     public function compileInsert(Builder $query, $values, $returning = null): string
     {
         $table = $this->wrapTable($query->from);
@@ -84,62 +72,127 @@ abstract class Grammar implements QueryGrammarContract
 
     public function compileSelect(Builder $query): string
     {
+        if ($query->aggregate) {
+            return $this->compileAggregate($query);
+        }
+
         $sql = [];
         $sql[] = $this->compileColumns($query);
         $sql[] = $this->compileFroms($query);
         $sql[] = $this->compileWheres($query);
+        $sql[] = $this->compileOrders($query);
+        $sql[] = $this->compileLimit($query);
 
-        return "SELECT ".implode(" ", $sql);
+        return "SELECT ".implode("", $sql);
     }
 
-    public function compileColumns(Builder $builder): string
+    public function compileColumns(Builder $query): string
     {
-        $columns = $builder->columns;
+        $columns = $query->columns ?: ['*'];
 
-        if (is_null($columns)) {
-            $columns = ['*'];
-        }
-
-        $sql = "";
+        $sql = [];
 
         foreach ($columns as $column) {
-            if ($column === '*') {
-                $sql.= $column;
-            }
-            else {
-                $sql.= $this->wrap($column);
-            }
+            $sql[] = ($column === '*') ? $column : $this->wrap($column);
         }
 
-        return $sql;
+        return implode(', ', $sql);
     }
 
-    public function compileFroms(Builder $builder): string
+    public function compileFroms(Builder $query): string
     {
-        return "FROM ".$builder->from;
+        return " FROM ".$this->wrapTable($query->from);
     }
 
-    public function compileWheres(Builder $builder): string
+    public function compileWheres(Builder $query): string
     {
-        if (count($builder->conditions) === 0) {
+        if (count($query->conditions) === 0) {
             return '';
         }
 
-        $sql = "WHERE ";
+        $sql = '';
 
-        foreach ($builder->conditions as $where) {
-            $sql.= sprintf('(%s %s %s)',
-                $this->wrap($where['column']),
-                $where['operator'],
-                $this->prepareValue($where['value'])
-            );
+        foreach ($query->conditions as $where) {
+            if (! empty($sql)) {
+                $sql.= ' '.$where['boolean'].' ';
+            }
 
-            $builder->addBinding($where['value'], 'where');
+            $sql.= $this->{"where".$where['type']}($query, $where);
         }
 
-        return $sql;
+        return " WHERE ".$sql;
     }
 
+    protected function compileAggregate(Builder $query): string
+    {
+        if (is_array($query->distinct)) {
+            $columns = 'DISTINCT '.$this->prepareColumns($query->distinct);
+        }
+        else {
+            $columns = $this->prepareColumns($query->aggregate['columns']);
+
+            if ($query->distinct && $columns !== '*') {
+                $columns = 'DISTINCT '.$columns;
+            }
+        }
+
+        $function = $query->aggregate['function'];
+        $query->aggregate = null;
+
+        return sprintf('SELECT %s(%s) as aggregate FROM (%s) as %s',
+            $function, $columns,
+            $this->compileSelect($query), $this->wrapTable('temp')
+        );
+    }
+
+    protected function whereRaw(Builder $query, array $where): string
+    {
+        if (! empty($where['bindings'])) {
+            $query->addBinding($where['bindings'], 'where');
+        }
+
+        return $where['expression'];
+    }
+
+    protected function whereBasic(Builder $query, array $where): string
+    {
+        $query->addBinding($where['value'], 'where');
+
+        return sprintf('%s %s %s',
+            $this->wrap($where['column']),
+            $where['operator'],
+            $this->prepareValue($where['value'])
+        );
+    }
+
+    protected function whereNull(Builder $query, array $where): string
+    {
+        return $this->wrap($where['column']).' IS NULL';
+    }
+
+    protected function whereNotNull(Builder $query, array $where): string
+    {
+        return $this->wrap($where['column']).' IS NOT NULL';
+    }
+
+    protected function compileOrders(Builder $query): string
+    {
+        $sql = [];
+
+        foreach ($query->orders as $order) {
+            $sql[] = $this->wrap($order['column']).' '.strtoupper($order['direction']);
+        }
+
+        return count($sql) > 0 ? ' ORDER BY '.implode(', ', $sql) : '';
+    }
+
+    protected function compileLimit(Builder $query): string
+    {
+        $sql = '';
+        if ($query->limit) $sql.= ' LIMIT '.$query->limit;
+        if ($query->limit && $query->offset) $sql.= ' OFFSET '.$query->offset;
+        return $sql;
+    }
 
 
     public function supportSavepoints(): bool
@@ -176,15 +229,4 @@ abstract class Grammar implements QueryGrammarContract
         return "?";
     }
 
-
-
-    public function wrapTable($table): string
-    {
-        return $this->wrap($this->tablePrefix.$table);
-    }
-
-    public function wrap($value): string
-    {
-        return sprintf('"%s"', $value);
-    }
 }

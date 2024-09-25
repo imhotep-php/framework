@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Support;
 
@@ -172,6 +170,13 @@ class Arr
         }
     }
 
+    public static function except($array, $keys)
+    {
+        static::forget($array, $keys);
+
+        return $array;
+    }
+
     public static function exists(array|object $array, mixed $key): bool
     {
         if ($array instanceof ArrayAccess) {
@@ -330,8 +335,6 @@ class Arr
     {
         $keys = self::shuffle(array_keys($array), $seed);
 
-        var_dump($keys);
-
         $result = [];
 
         foreach ($keys as $key) {
@@ -349,5 +352,12 @@ class Arr
     public static function whereNotNull(array|object $array): array
     {
         return static::where($array, fn($value) => !is_null($value));
+    }
+
+    public static function indexOf(array|object $array, mixed $value): int
+    {
+        foreach((array)$array as $key => $val) if($val === $value) return $key;
+
+        return -1;
     }
 }

@@ -83,6 +83,10 @@ class InputArgv implements InputContract
             }
         }
 
+        if (! $this->definition->hasOption($name) && ! $this->definition->hasShortcut($name)) {
+            return;
+        }
+
         $option = ($isLong) ? $this->definition->getOption($name) : $this->definition->getShortcutOption($name);
 
         if ($option->isValueRequired() && is_null($value)) {
@@ -95,7 +99,7 @@ class InputArgv implements InputContract
 
         $this->setOption($option->getName(), $value);
 
-        $shortcuts = $option->getShortcut();
+        $shortcuts = (array)$option->getShortcut();
         foreach ($shortcuts as $shortcut) {
             $this->setOption($shortcut, $value);
         }

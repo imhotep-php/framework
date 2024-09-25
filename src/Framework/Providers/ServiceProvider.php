@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Imhotep\Framework\Providers;
 
-use Imhotep\Application\Provider\Closure;
+use Closure;
 use Imhotep\Framework\Application;
 
 abstract class ServiceProvider
@@ -82,14 +82,39 @@ abstract class ServiceProvider
         }
     }
 
+    public function loadViewFrom(string|array $path, string $namespace): static
+    {
+        return $this->callAfterResolving('view', function ($view) use ($path, $namespace) {
+            $view->addNamespace($namespace, $path);
+        });
+    }
+    
+    public function loadLangFrom(string|array $path, string $namespace)
+    {
+        return $this->callAfterResolving('localizator', function ($lang) use ($path, $namespace) {
+            $lang->addNamespace($namespace, $path);
+        });
+    }
+
+    protected function callAfterResolving(string $abstract, Closure $callback): static
+    {
+        $this->app->afterResolving($abstract, $callback);
+
+        if ($this->app->resolved($abstract)) {
+            $callback($this->app[$abstract], $this->app);
+        }
+
+        return $this;
+    }
+
     public function commands(array $commands): void
     {
-        if ($this->app->isAlias('console')) {
+        try {
             $console = $this->app['console'];
 
             foreach ($commands as $name => $command) {
                 $console->resolveCommand($name, $command);
             }
-        }
+        }catch(\Throwable){}
     }
 }

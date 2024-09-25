@@ -6,6 +6,8 @@ namespace Imhotep\Support\Traits;
 
 use BadMethodCallException;
 use Closure;
+use ReflectionClass;
+use ReflectionMethod;
 
 trait Macroable
 {

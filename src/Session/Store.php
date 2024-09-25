@@ -75,9 +75,9 @@ class Store implements Session
     public function save(): void
     {
         // Age Flash data
-        $this->forget($this->get('_flash.old', []));
-        $this->put('_flash.old', $this->get('_flash.new', []));
-        $this->put('_flash.new', []);
+        $this->forget($this->get('_flash_old', []));
+        $this->put('_flash_old', $this->get('_flash_new', []));
+        $this->put('_flash_new', []);
 
         // Save data
         $data = json_encode($this->attributes);
@@ -93,22 +93,22 @@ class Store implements Session
         return $this->attributes;
     }
 
-    public function exists($key): bool
+    public function exists(string $key): bool
     {
         return array_key_exists($key, $this->attributes);
     }
 
-    public function missing($key): bool
+    public function missing(string $key): bool
     {
         return ! $this->exists($key);
     }
 
-    public function has($key): bool
+    public function has(string $key): bool
     {
         return isset($this->attributes[$key]);
     }
 
-    public function get($key, $default = null): mixed
+    public function get(string $key, mixed $default = null): mixed
     {
         return Arr::get($this->attributes, $key, $default);
     }
@@ -155,7 +155,7 @@ class Store implements Session
         }
     }
 
-    public function flush()
+    public function flush(): void
     {
         $this->attributes = [];
     }
@@ -165,55 +165,55 @@ class Store implements Session
     {
         $this->put($key, $value);
 
-        $this->push('_flash.old', $key);
+        $this->push('_flash_old', $key);
     }
 
     public function flash(string $key, string|int|float|bool|array $value): void
     {
         $this->put($key, $value);
 
-        $this->push('_flash.new', $key);
+        $this->push('_flash_new', $key);
 
         $this->removeKeysFromOldFlash([$key]);
     }
 
     public function reflash(): void
     {
-        $oldKeys = $this->get('_flash.old', []);
-        $newKeys = $this->get('_flash.new', []);
-        $this->put('_flash.new', array_unique(array_merge($newKeys, $oldKeys)));
-        $this->put('_flash.old', []);
+        $oldKeys = $this->get('_flash_old', []);
+        $newKeys = $this->get('_flash_new', []);
+        $this->put('_flash_new', array_unique(array_merge($newKeys, $oldKeys)));
+        $this->put('_flash_old', []);
     }
 
     public function keep(string|array $keys)
     {
         $keys = is_array($keys) ? $keys : func_get_args();
 
-        $this->put('_flash.new', array_unique(array_merge($this->get('_flash.new', []), $keys)));
+        $this->put('_flash_new', array_unique(array_merge($this->get('_flash_new', []), $keys)));
 
         $this->removeKeysFromOldFlash($keys);
     }
 
     protected function removeKeysFromOldFlash(array $keys)
     {
-        $this->put('_flash.old', array_diff($this->get('_flash.old', []), $keys));
+        $this->put('_flash_old', array_diff($this->get('_flash_old', []), $keys));
     }
 
     public function getOldInput(string $key = null, mixed $default = null): mixed
     {
-        return Arr::get($this->get('_old_input', []), $key, $default);
-    }
-
-    public function setOldInput(array $value): void
-    {
-        $this->put('_old_input', $value);
+        return Arr::get($this->get('_input_old', []), $key, $default);
     }
 
     public function hasOldInput(string $key = null): bool
     {
-        $value = $this->getOldInput($key);
+        $old = $this->getOldInput($key);
 
-        return is_null($value) ? count($value) > 0 : ! is_null($value);
+        return is_null($key) ? count($old) > 0 : ! is_null($old);
+    }
+
+    public function flashInput(array $value): void
+    {
+        $this->flash('_input_old', $value);
     }
 
 
@@ -230,6 +230,8 @@ class Store implements Session
     public function invalidate(): bool
     {
         $this->flush();
+
+        $this->regenerateCsrf();
 
         return $this->migrate(true);
     }

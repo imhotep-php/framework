@@ -2,8 +2,16 @@
 
 namespace Imhotep\Http;
 
+use Imhotep\Contracts\Http\Request as RequestContract;
+use Imhotep\Contracts\Session\Session;
+use Imhotep\Support\MessageBag;
+
 class RedirectResponse extends Response
 {
+    protected Session $session;
+
+    protected ?RequestContract $request = null;
+
     public string $url = '';
 
     public function __construct(string $url = '', int $statusCode = 302, array $headers = [])
@@ -62,4 +70,38 @@ class RedirectResponse extends Response
         return $this;
     }
 
+    public function setSession(Session $session): static
+    {
+        $this->session = $session;
+
+        return $this;
+    }
+
+    public function setRequest(RequestContract $request): static
+    {
+        $this->request = $request;
+
+        return $this;
+    }
+
+    public function with(array|string $key, mixed $value = null): static
+    {
+        $this->session->flash($key, $value);
+
+        return $this;
+    }
+
+    public function withInput(array $input = null): static
+    {
+        $this->session->flashInput($input ?: $this->request?->input() ?: []);
+
+        return $this;
+    }
+
+    public function withErrors(MessageBag $errors): static
+    {
+        $this->session->flash('errors', $errors->messages());
+
+        return $this;
+    }
 }

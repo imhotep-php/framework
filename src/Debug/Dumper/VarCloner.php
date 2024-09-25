@@ -55,10 +55,20 @@ class VarCloner
 
     protected function doCloneObjectProperty(\ReflectionProperty $property, object $object): Data
     {
+        if (! $property->isInitialized($object)) {
+            $value = new Data([
+                'type' => 'empty',
+                'value' => 'not initialized'
+            ]);
+        }
+        else {
+            $value = $this->doClone($property->getValue($object));
+        }
+
         $data = [
             'type' => 'property',
             'name' => $property->getName(),
-            'value' => $this->doClone($property->getValue($object)),
+            'value' => $value,
             'is_public' => $property->isPublic(),
         ];
 

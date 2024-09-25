@@ -17,6 +17,7 @@ class EngineManager
         'html' => 'file',
         'css' => 'file',
         'scss' => 'scss',
+        'js' => 'js'
     ];
 
     protected array $resolvers = [];
@@ -39,6 +40,10 @@ class EngineManager
 
         $this->register('scss', function () {
             return new ScssEngine();
+        });
+
+        $this->register('js', function () {
+            return new JsEngine();
         });
     }
 

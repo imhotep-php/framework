@@ -51,7 +51,8 @@ interface Guard
     /**
      * Set the current user.
      *
-     * @return void
+     * @param mixed $user
+     * @return static
      */
-    public function setUser($user): void;
+    public function setUser(mixed $user): static;
 }

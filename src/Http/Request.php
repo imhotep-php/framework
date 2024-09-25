@@ -1,12 +1,12 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Http;
 
+use Closure;
 use Imhotep\Contracts\Http\Request as RequestContract;
 use Imhotep\Contracts\Routing\Route;
 use Imhotep\Contracts\Session\Session;
+use Imhotep\Contracts\Validation\Validator;
 use Imhotep\Http\Request\HeaderBag;
 use Imhotep\Http\Request\ParameterBug;
 use Imhotep\Support\Arr;
@@ -14,7 +14,7 @@ use Imhotep\Support\Str;
 use Imhotep\Support\Traits\Macroable;
 
 /**
- * @method array validate(array $rules, ...$params)
+ * @method Validator validate(array $rules, array $messages = [])
  */
 class Request implements \ArrayAccess, RequestContract
 {
@@ -26,7 +26,7 @@ class Request implements \ArrayAccess, RequestContract
 
     public ParameterBug $post;
 
-    //protected $input;
+    public ParameterBug $json;
 
     public ParameterBug $cookies;
 
@@ -37,6 +37,10 @@ class Request implements \ArrayAccess, RequestContract
     public HeaderBag $headers;
 
     protected ?Route $route = null;
+
+    protected ?Closure $userResolver = null;
+
+    public mixed $content;
 
     public static function createFromGlobals(): static
     {
@@ -151,6 +155,7 @@ class Request implements \ArrayAccess, RequestContract
 
         $this->makeHeaders();
         $this->makeFiles($files);
+        $this->makeJson();
     }
 
     protected function makeHeaders(): void
@@ -187,9 +192,41 @@ class Request implements \ArrayAccess, RequestContract
         $this->files = new ParameterBug();
 
         foreach ($files as $key => $file) {
-            $file = new UploadedFile($file['tmp_name'], $file['name'], $file['type'], $file['error']);
-            $this->files->set($key, $file);
+            if (! is_array($file['tmp_name'])) {
+                if ($uploadedFile = UploadedFile::createFrom($file)) {
+                    $this->files->set($key, $uploadedFile);
+                }
+                continue;
+            }
+
+            $uploadedFiles = [];
+            for ($i = 0; $i < count($file['tmp_name']); $i++) {
+                $uploadedFile = UploadedFile::createFrom([
+                    'tmp_name' => $file['tmp_name'][$i] ?? '',
+                    'name' => $file['name'][$i] ?? '',
+                    'type' => $file['type'][$i] ?? '',
+                    'size' => $file['size'][$i] ?? 0,
+                    'error' => $file['error'][$i] ?? -1
+                ]);
+
+                if ($uploadedFile) $uploadedFiles[] = $uploadedFile;
+            }
+
+            if (count($uploadedFiles) > 0) {
+                $this->files->set($key, $uploadedFiles);
+            }
         }
+    }
+
+    protected function makeJson(): void
+    {
+        $json = json_decode($this->getContent(), true);
+
+        if (is_null($json) || json_last_error() !== JSON_ERROR_NONE) {
+            $json = [];
+        }
+
+        $this->json = new ParameterBug($json);
     }
 
     public function getMethod(): string
@@ -332,12 +369,16 @@ class Request implements \ArrayAccess, RequestContract
         }
 
         return $qs;
-        /*
-        $qs = explode('&', $qs);
-        ksort($qs);
+    }
 
-        return http_build_query($qs, '', '&', PHP_QUERY_RFC3986);
-        */
+
+    public function getContent(): mixed
+    {
+        if (! isset($this->content)) {
+            $this->content = file_get_contents('php://input');
+        }
+
+        return $this->content;
     }
 
 
@@ -454,6 +495,14 @@ class Request implements \ArrayAccess, RequestContract
         return $this->post->get($key, $default);
     }
 
+    public function json(string $key = null, mixed $default = null): mixed
+    {
+        if (is_null($key)) {
+            return $this->json->all();
+        }
+
+        return $this->json->get($key, $default);
+    }
 
     public function files(string $key = null, mixed $default = null): mixed
     {
@@ -464,7 +513,7 @@ class Request implements \ArrayAccess, RequestContract
         return $this->files->get($key, $default);
     }
 
-    public function file(string $key, mixed $default = null)
+    public function file(string $key, mixed $default = null): mixed
     {
         return $this->files->get($key, $default);
     }
@@ -477,7 +526,7 @@ class Request implements \ArrayAccess, RequestContract
 
     public function all(): array
     {
-        return array_merge($this->query->all(), $this->post->all());
+        return array_merge($this->query(), $this->post(), $this->json(), $this->files());
     }
 
     public function input(string $key = null, mixed $default = null): mixed
@@ -633,7 +682,7 @@ class Request implements \ArrayAccess, RequestContract
     }
 
     // Input types
-    public function string(string $key, string $default = ''): string
+    public function string(string $key, ?string $default = ''): ?string
     {
         $value = $this->input($key, $default);
 
@@ -644,36 +693,36 @@ class Request implements \ArrayAccess, RequestContract
         return trim(strval($value));
     }
 
-    public function str(string $key, string $default = ''): string
+    public function str(string $key, ?string $default = ''): ?string
     {
         return $this->string($key, $default);
     }
 
-    public function integer(string $key, int $default = 0): int
+    public function integer(string $key, ?int $default = 0): ?int
     {
         $value = filter_var($this->input($key, $default), FILTER_VALIDATE_INT);
 
         return is_int($value) ? $value : $default;
     }
 
-    public function int(string $key, int $default = 0): int
+    public function int(string $key, ?int $default = 0): ?int
     {
         return $this->integer($key, $default);
     }
 
-    public function float(string $key, float $default = 0.0): float
+    public function float(string $key, ?float $default = 0.0): ?float
     {
         $value = filter_var($this->input($key, $default), FILTER_VALIDATE_FLOAT);
 
         return is_float($value) ? $value : $default;
     }
 
-    public function boolean(string $key, mixed $default = false): bool
+    public function boolean(string $key, ?bool $default = false): ?bool
     {
         return filter_var($this->input($key, $default), FILTER_VALIDATE_BOOLEAN);
     }
 
-    public function bool(string $key, mixed $default = false): bool
+    public function bool(string $key, ?bool $default = false): ?bool
     {
         return $this->boolean($key, $default);
     }
@@ -716,6 +765,16 @@ class Request implements \ArrayAccess, RequestContract
         }
 
         return null;
+    }
+
+    public function getUser(): ?string
+    {
+        return $this->headers->get('PHP_AUTH_USER');
+    }
+
+    public function getPassword(): ?string
+    {
+        return $this->headers->get('PHP_AUTH_PW');
     }
 
     public function ajax(): bool
@@ -925,11 +984,29 @@ class Request implements \ArrayAccess, RequestContract
         return $this->setRoute($route);
     }
 
+
+    public function setUserResolver(Closure $resolver): static
+    {
+        $this->userResolver = $resolver;
+
+        return $this;
+    }
+
+    public function getUserResolver(): Closure
+    {
+        return $this->userResolver ?: function () { };
+    }
+
+    public function user(string $guard = null): mixed
+    {
+        return call_user_func($this->getUserResolver(), $guard);
+    }
+
     // Session
 
     protected Session $session;
 
-    public function setSession(Session $session)
+    public function setSession(Session $session): void
     {
         $this->session = $session;
     }
@@ -953,7 +1030,7 @@ class Request implements \ArrayAccess, RequestContract
         return $this->getSession();
     }
 
-    public function old(string $key, mixed $default = null): array
+    public function old(string $key, mixed $default = null): mixed
     {
         return $this->hasSession() ? $this->session->getOldInput($key, $default) : value($default);
     }
@@ -977,7 +1054,7 @@ class Request implements \ArrayAccess, RequestContract
         );
     }
 
-    public function flush()
+    public function flush(): void
     {
         $this->session->setOldInput([]);
     }

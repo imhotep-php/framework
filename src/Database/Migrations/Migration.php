@@ -6,9 +6,16 @@ namespace Imhotep\Database\Migrations;
 
 abstract class Migration
 {
-    public string|null $connection = null;
+    public string $name = '';
+
+    public ?string $connection = null;
 
     public bool $useTransaction = true;
+
+    public function __construct()
+    {
+        $this->name = static::class;
+    }
 
     public function up(): void
     {

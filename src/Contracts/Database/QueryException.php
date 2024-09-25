@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Imhotep\Contracts\Database;
 
+use Imhotep\Support\Str;
 use Throwable;
 
 class QueryException extends DatabaseException
@@ -18,7 +19,7 @@ class QueryException extends DatabaseException
 
         $this->sql = $sql;
         $this->bindings = $bindings;
-        $this->code = $previous->getCode();
+        $this->code = 0;
         $this->message = $this->formatMessage($sql, $bindings, $previous);
 
         if ($previous instanceof \PDOException) {
@@ -26,10 +27,9 @@ class QueryException extends DatabaseException
         }
     }
 
-    protected function formatMessage($sql, $bindings, Throwable $previous)
+    protected function formatMessage(string $sql, array $bindings, Throwable $previous)
     {
-        return '';
-        //return $previous->getMessage().' (SQL: '.Str::replaceArray('?', $bindings, $sql).')';
+        return $previous->getMessage().' (SQL: '.Str::replaceArray('?', $bindings, $sql).')';
     }
 
     public function getSql()

@@ -210,6 +210,5 @@ class Pipeline implements PipelineContract
     protected function handleException(mixed $passable, Throwable $e): mixed
     {
         throw $e;
-        //return null;
     }
 }

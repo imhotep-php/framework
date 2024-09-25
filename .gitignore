@@ -9,3 +9,5 @@ Thumbs.db
 /.fleet
 /.vscode
 .phpunit.result.cache
+code.log.php
+test.php

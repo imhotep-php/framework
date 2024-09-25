@@ -32,7 +32,7 @@ class Kernel
         $this->app = $app;
         $this->console = new Console($this->app, $this->app->version());
 
-        $this->app->alias(Console::class, 'console');
+        $this->app->alias('console', Console::class);
         $this->app->instance('console', $this->console);
     }
 
@@ -40,10 +40,12 @@ class Kernel
     {
         $this->app->bootstrapWith($this->bootstrappers);
 
+        /*
         if (! $this->commandsLoaded) {
             $this->commands();
             $this->commandsLoaded = true;
         }
+        */
     }
 
     public function handle($input, $output): int
@@ -143,6 +145,6 @@ class Kernel
 
     protected function renderException($output, \Throwable $e): void
     {
-        $this->app[ExceptionHandler::class]->renderForConsole($output, $e);
+        $this->app[ExceptionHandler::class]->renderForConsole($e, $output);
     }
 }

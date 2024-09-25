@@ -7,10 +7,13 @@ namespace Imhotep\Database\Query;
 use Imhotep\Contracts\Database\QueryBuilder as QueryBuilderContract;
 use Imhotep\Database\Connection;
 use Imhotep\Database\Query\Traits\PrepareWhereExpression;
+use Imhotep\Database\Query\Grammar;use Imhotep\Support\Arr;
 
 abstract class Builder implements QueryBuilderContract
 {
     use PrepareWhereExpression;
+
+    protected bool $useWritePDO = false;
 
     protected $bindings = [
         'columns' => [],
@@ -27,19 +30,21 @@ abstract class Builder implements QueryBuilderContract
 
     public string $command;
 
-    public string $from;
+    public array $from;
 
     public bool|array $distinct = false;
 
-    public array|null $columns = null;
+    public ?array $columns = null;
+
+    public ?array $aggregate = [];
 
     public array $conditions = [];
 
     public array $orders = [];
 
-    public int|null $limit = null;
+    public ?int $limit = null;
 
-    public int|null $offset = null;
+    public ?int $offset = null;
 
     protected bool $withDump = false;
 
@@ -50,6 +55,13 @@ abstract class Builder implements QueryBuilderContract
         protected Grammar $grammar
     )
     {
+    }
+
+    public function useWritePDO(): static
+    {
+        $this->useWritePDO = true;
+
+        return $this;
     }
 
     public function withDump(): static
@@ -66,7 +78,7 @@ abstract class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function select(array $columns = ['*'])
+    public function select(array $columns = ['*']): static
     {
         $this->command = 'select';
 
@@ -178,16 +190,23 @@ abstract class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function from(string $table, string $as = null)
+    public function from(string $table, string $as = null): static
     {
-        $this->from = $as ? sprtinf('%s as %s', $table, $as) : $table;
+        $this->from = [$table, $as]; // $as ? sprintf('%s as %s', $table, $as) : $table;
 
         return $this;
     }
 
-    public function whereRaw(string $expression, array $bindings = null)
+    public function whereRaw(string $expression, array $bindings = null, string $boolean = 'and'): static
     {
+        $this->conditions[] = [
+            'type' => 'raw',
+            'expression' => $expression,
+            'bindings' => $bindings,
+            'boolean' => $boolean
+        ];
 
+        return $this;
     }
 
     /**
@@ -197,8 +216,9 @@ abstract class Builder implements QueryBuilderContract
     public function where(...$condition): static
     {
         $this->conditions[] = [
+            'type' => 'basic',
             ...$this->prepareWhere($condition),
-            'boolean' => 'AND'
+            'boolean' => 'and'
         ];
 
         return $this;
@@ -207,8 +227,47 @@ abstract class Builder implements QueryBuilderContract
     public function orWhere(...$condition): static
     {
         $this->conditions[] = [
-            ...$this->prepareWhere(...func_get_args()),
-            'boolean' => 'AND'
+            'type' => 'basic',
+            ...$this->prepareWhere($condition),
+            'boolean' => 'or'
+        ];
+
+        return $this;
+    }
+
+    public function whereNull(string|array $columns, string $boolean = 'and', bool $not = false): static
+    {
+        $type = $not ? 'NotNull' : 'Null';
+
+        foreach ((array)$columns as $column) {
+            $this->conditions[] = compact('type', 'column', 'boolean');
+        }
+
+        return $this;
+    }
+
+    public function orWhereNull(string|array $columns): static
+    {
+        return $this->whereNull($columns, 'or');
+    }
+
+    public function whereNotNull(string|array $columns, string $boolean = 'and'): static
+    {
+        return $this->whereNull($columns, $boolean, true);
+    }
+
+    public function orWhereNotNull(string|array $columns): static
+    {
+        return $this->whereNull($columns, 'or', true);
+    }
+
+    public function whereIn(string $column, array $values, string $boolean = 'and', bool $not = false): static
+    {
+        $this->conditions[] = [
+            'type' => $not ? 'NotIn' : 'In',
+            'column' => $column,
+            'values' => $values,
+            'boolean' => $boolean
         ];
 
         return $this;
@@ -226,14 +285,14 @@ abstract class Builder implements QueryBuilderContract
         return $this->orderBy($column, 'desc');
     }
 
-    public function offset(int $offset): static
+    public function offset(?int $offset): static
     {
         $this->offset = $offset;
 
         return $this;
     }
 
-    public function limit(int $limit): static
+    public function limit(?int $limit): static
     {
         $this->limit = $limit;
 
@@ -248,6 +307,47 @@ abstract class Builder implements QueryBuilderContract
         return $this;
     }
 
+    public function pluck(string $column, string $key = null): array
+    {
+        $originalColumns = $this->columns;
+
+        $this->columns = $key ? [$column, $key] : [$column];
+
+        $queryResults = $this->runSelect();
+
+        $this->columns = $originalColumns;
+
+        $results = [];
+
+        if (is_null($key)) {
+            foreach ($queryResults as $row) $results[] = $row->$column;
+        }
+        else {
+            foreach ($queryResults as $row) $results[$row->$key] = $row->$column;
+        }
+
+        return $results;
+    }
+
+    public function min(string $column): mixed
+    {
+        return $this->aggregate(__FUNCTION__, [$column]);
+    }
+
+    public function max(string $column): mixed
+    {
+        return $this->aggregate(__FUNCTION__, [$column]);
+    }
+
+    protected function aggregate($function, $columns = ['*']): mixed
+    {
+        $this->aggregate = compact('function', 'columns');
+
+        $results = $this->get();
+
+        return empty($results) ? null : $results[0]->aggregate;
+    }
+
     public function get(): array
     {
         $sql = $this->grammar->compileSelect($this);
@@ -255,9 +355,19 @@ abstract class Builder implements QueryBuilderContract
         return $this->connection->select($sql, $this->bindings['where']);
     }
 
-    public function first(): ?array
+    public function first(): null|array|\stdClass
     {
         return $this->take(1)->get()[0] ?? null;
+    }
+
+    public function count(string $column = 'id'): int
+    {
+        return (int)$this->aggregate(__FUNCTION__, [$column]);
+    }
+
+    protected function runSelect(): array
+    {
+        return $this->connection->select($this->toSql(), $this->getBindings(), $this->useWritePDO);
     }
 
     protected function toSql(): string
@@ -267,7 +377,7 @@ abstract class Builder implements QueryBuilderContract
 
     public function getBindings(): array
     {
-        return [];
+        return Arr::flatten($this->bindings);
     }
 
     public function setBinding(mixed $values, string $type)
@@ -281,6 +391,11 @@ abstract class Builder implements QueryBuilderContract
             $this->bindings[$type],
             is_array($values) ? $values : [$values]
         );
+    }
+
+    public function find($id, $columns = ['*'])
+    {
+        return $this->where('id', '=', $id)->first();
     }
 
     public function dump()

@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Postgres;
 
@@ -16,4 +14,27 @@ class Connector extends ConnectorBase
         PDO::ATTR_STRINGIFY_FETCHES => false,
         //PDO::ATTR_TIMEOUT => 1
     ];
+
+    public function getDsn(): string
+    {
+        $dsn = "{$this->config['driver']}:";
+
+        if (isset($this->config['host'])) {
+            $dsn.= "host={$this->config['host']};";
+        }
+
+        if (isset($this->config['port'])) {
+            $dsn.= "port={$this->config['port']};";
+        }
+
+        if (isset($this->config['database'])) {
+            $dsn.= "dbname={$this->config['database']};";
+        }
+
+        if (! empty($this->config['sslmode'])) {
+            $dsn.= "sslmode={$this->config['sslmode']}";
+        }
+
+        return $dsn;
+    }
 }

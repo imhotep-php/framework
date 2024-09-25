@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 namespace Imhotep\View;
 
+use Imhotep\Support\Str;
+use Imhotep\Support\Traits\Macroable;
 use Imhotep\View\Engines\Engine;
 
 class View
 {
+    use Macroable {
+        __call as macroCall;
+    }
+
     protected Factory $factory;
 
     protected Engine $engine;
@@ -74,5 +80,20 @@ class View
     public function __toString(): string
     {
         return $this->render();
+    }
+
+    public function __call(string $method, array $parameters)
+    {
+        if (static::hasMacro($method)) {
+            return $this->macroCall($method, $parameters);
+        }
+
+        if (str_starts_with($method, 'with')) {
+            return $this->with(Str::camel(substr($method,4)), $parameters[0]);
+        }
+
+        throw new ViewException(sprintf(
+            'Method %s::%s does not exist', static::class, $method
+        ));
     }
 }

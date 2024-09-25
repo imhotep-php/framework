@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Imhotep\Facades;
 
 /**
- * @method static mixed get(mixed $value, mixed $default = null)
+ * @method static mixed get(string $key, mixed $default = null)
  *
  * @see \Imhotep\Contracts\Session\Session
  */

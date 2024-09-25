@@ -1,16 +1,9 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Migrations;
 
 class MigrationCreator
 {
-    public function __construct()
-    {
-
-    }
-
     public function create(string $name, string $path, string $table = '', bool $create = false): string
     {
         $stub = $this->getStub($table, $create);

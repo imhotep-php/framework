@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\SQLite;
 
@@ -13,6 +11,18 @@ use Imhotep\Database\SQLite\Query\Grammar as QueryGrammar;
 
 class Connection extends ConnectionBase
 {
+    public function __construct($pdo, array $config = [])
+    {
+        parent::__construct($pdo, $config);
+
+        if (isset($config['foreign_keys']) && $config['foreign_keys'] === true) {
+            $this->getSchemaBuilder()->enableForeignKeys();
+        }
+        else {
+            $this->getSchemaBuilder()->disableForeignKeys();
+        }
+    }
+
     public function getSchema()
     {
         if (empty($this->config['schema'])) {
@@ -22,12 +32,10 @@ class Connection extends ConnectionBase
         return $this->config['schema'];
     }
 
-    public function useSchemaGrammar(): static
+    public function useSchemaGrammar(): void
     {
         $this->schemaGrammar = new SchemaGrammar();
         $this->schemaGrammar->setTablePrefix($this->tablePrefix);
-
-        return $this;
     }
 
     public function getSchemaBuilder(): SchemaBuilder
@@ -39,12 +47,10 @@ class Connection extends ConnectionBase
         return new SchemaBuilder($this);
     }
 
-    public function useQueryGrammar(): static
+    public function useQueryGrammar(): void
     {
         $this->queryGrammar = new QueryGrammar();
         $this->queryGrammar->setTablePrefix($this->tablePrefix);
-
-        return $this;
     }
 
     public function getQueryBuilder(): QueryBuilder

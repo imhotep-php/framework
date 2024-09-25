@@ -26,8 +26,8 @@ class FilesystemServiceProvider extends ServiceProvider
             return $app['filesystem']->cloud();
         });
 
-        $this->app->singleton('files', function ($app) {
-            return $app['filesystem']->disk();
+        $this->app->singleton('files', function () {
+            return new Filesystem();
         });
     }
 

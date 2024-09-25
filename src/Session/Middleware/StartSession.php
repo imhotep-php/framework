@@ -14,11 +14,13 @@ class StartSession
 {
     public function __construct(protected SessionManager $manager)
     {
+
     }
 
     public function handle(Request $request, \Closure $next): Response
     {
         $session = $this->manager->store();
+
         $session->setId($request->cookie($session->getName()));
 
         return $this->handleStatefulRequest($request, $session, $next);
@@ -27,6 +29,8 @@ class StartSession
     public function handleStatefulRequest(Request $request, Session $session, \Closure $next): Response
     {
         $request->setSession($session);
+
+        $session->start();
 
         $response = $next($request);
 

@@ -35,9 +35,10 @@ abstract class AbstractDumper
         $style = match($type) {
             'integer', 'double' => 'num',
             'boolean', 'NULL' => 'const',
+            'empty' => 'err'
         };
 
-        if (in_array($type, ['integer', 'double'])) {
+        if (in_array($type, ['integer', 'double', 'empty'])) {
             $value = (string)$value;
         }
         elseif ($type === 'boolean') {

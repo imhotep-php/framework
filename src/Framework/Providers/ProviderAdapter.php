@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Imhotep\Framework\Providers;
 
 use Imhotep\Framework\Application;
+use Imhotep\Framework\PackageManager;
 
 class ProviderAdapter
 {
@@ -38,6 +39,8 @@ class ProviderAdapter
     protected function registerFromConfig(): void
     {
         $providers = $this->app['config']->get('app.providers', []);
+
+        $providers = array_merge($providers, ($this->app->make(PackageManager::class))->providers());
 
         foreach($providers as $provider) {
             $this->registerOfOne($provider);

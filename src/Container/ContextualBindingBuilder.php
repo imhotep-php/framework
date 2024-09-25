@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Container;
 
@@ -65,7 +63,7 @@ class ContextualBindingBuilder
      */
     public function giveTagged(string $tag): void
     {
-        $this->give(function ($container) use ($tag) {
+        $this->give(function ($container) use ($tag) {;
             $taggedServices = $container->tagged($tag);
 
             return is_array($taggedServices) ? $taggedServices : iterator_to_array($taggedServices);

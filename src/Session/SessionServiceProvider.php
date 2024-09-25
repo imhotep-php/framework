@@ -23,8 +23,12 @@ class SessionServiceProvider extends ServiceProvider
             return new SessionManager($app);
         });
 
+        $this->app->singleton('session.store', function ($app) {
+            return $app['session']->store();
+        });
+
         $this->commands([
-            SessionTableCommand::class
+            'session:table' => SessionTableCommand::class
         ]);
     }
 }

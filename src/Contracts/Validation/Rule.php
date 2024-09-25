@@ -6,19 +6,7 @@ namespace Imhotep\Contracts\Validation;
 
 interface Rule
 {
-    /**
-     * Determine if the validation rule passes.
-     *
-     * @param string $attribute
-     * @param mixed $value
-     * @return bool
-     */
-    public function passes($attribute, $value);
+    public function check(mixed $value): bool;
 
-    /**
-     * Get the validation error message.
-     *
-     * @return string|array
-     */
-    public function message();
+    public function message(): string;
 }

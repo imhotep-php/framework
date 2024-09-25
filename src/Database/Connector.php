@@ -63,6 +63,10 @@ abstract class Connector
             $dsn.= "dbname={$this->config['database']};";
         }
 
+        if (isset($this->config['charset'])) {
+            $dsn.= "charset={$this->config['charset']};";
+        }
+
         return $dsn;
     }
 

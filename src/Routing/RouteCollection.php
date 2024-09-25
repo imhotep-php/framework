@@ -61,4 +61,15 @@ class RouteCollection implements RouteCollectionContract
     {
         return $this->routes;
     }
+
+    public function has(string $name): bool
+    {
+        foreach ($this->routes as $route) {
+            if ($route->named($name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

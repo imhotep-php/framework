@@ -6,7 +6,7 @@ namespace Imhotep\Console\Formatter\Components;
 
 class TwoColumnDetail extends Component
 {
-    public function render($first, $second)
+    public function render(string $first, string $second)
     {
         $cols = $this->output->getCols();
         if ($cols > 120) $cols = 120;
@@ -18,7 +18,7 @@ class TwoColumnDetail extends Component
         $this->output->write($first);
 
         if ($dotLength > 0) {
-            $this->output->write(sprintf("<fg=gray> %s </>", str_pad("", $dotLength, ".")));
+            $this->output->write(sprintf("<fg=gray> %s </>", str_repeat(".", $dotLength)));
         }
 
         $this->output->write($second);

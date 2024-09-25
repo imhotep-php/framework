@@ -18,6 +18,7 @@ use Imhotep\Database\Schema\Grammar as SchemaGrammar;
 use Imhotep\Database\Traits\ConnectionLogger;
 use Imhotep\Database\Traits\ConnectionTransactions;
 use Imhotep\Database\Traits\DetectsErrors;
+use Imhotep\Support\Arr;
 use PDO;
 use PDOStatement;
 use Throwable;
@@ -62,7 +63,7 @@ abstract class Connection implements ConnectionContract
         return $this->config['name'];
     }
 
-    public function getDatabase(): string
+    public function getDatabaseName(): string
     {
         return $this->database;
     }
@@ -70,6 +71,11 @@ abstract class Connection implements ConnectionContract
     public function getTablePrefix(): string
     {
         return $this->tablePrefix;
+    }
+
+    public function getConfig(string $key = null, mixed $default = null): mixed
+    {
+        return Arr::get($this->config, $key, $default);
     }
 
     /*
@@ -86,6 +92,11 @@ abstract class Connection implements ConnectionContract
     public function table(string $table, string $as = null): QueryBuilder
     {
         return $this->query()->from($table, $as);
+    }
+
+    public function selectFromWriteConnection(string $query, array $bindings = []): array
+    {
+        return $this->select($query, $bindings, false);
     }
 
     public function selectOne(string $query, array $bindings = [], bool $useReadPdo = true)
@@ -114,6 +125,11 @@ abstract class Connection implements ConnectionContract
     public function insert(string $query, array $bindings = []): int
     {
         return $this->affectingStatement($query, $bindings);
+    }
+
+    public function lastInsertId(string $name = null): string|false
+    {
+        return $this->pdo->lastInsertId($name);
     }
 
     public function update(string $query, array $bindings = []): int
@@ -189,7 +205,7 @@ abstract class Connection implements ConnectionContract
         try {
             $result = $this->runQueryCallback($query, $bindings, $callback);
         }
-        catch (Exception $e) {
+        catch (QueryException $e) {
             $result = $this->handleQueryException(
                 $e, $query, $bindings, $callback
             );
@@ -223,7 +239,7 @@ abstract class Connection implements ConnectionContract
             return $this->runQueryCallback($query, $bindings, $callback);
         }
 
-        throw new DatabaseException($e->getMessage(), $e->getCode(), $e);
+        throw $e;
     }
 
     protected function bindValues(PDOStatement $statement, $bindings)
@@ -312,7 +328,7 @@ abstract class Connection implements ConnectionContract
     /**
      * @return PDO
      */
-    public function getPdo()
+    public function getPdo(): ?PDO
     {
         return $this->pdo;
     }
@@ -324,7 +340,7 @@ abstract class Connection implements ConnectionContract
         return $this;
     }
 
-    public function getReadPdo()
+    public function getReadPdo(): ?PDO
     {
         return $this->readPdo;
     }
@@ -339,7 +355,7 @@ abstract class Connection implements ConnectionContract
     /**
      * @return PDO
      */
-    public function getPdoForSelect(bool $useReadPdo)
+    public function getPdoForSelect(bool $useReadPdo): ?PDO
     {
         if ($useReadPdo && ! is_null($this->readPdo)) {
             return $this->readPdo;
@@ -421,7 +437,7 @@ abstract class Connection implements ConnectionContract
 
     protected SchemaGrammar|null $schemaGrammar = null;
 
-    public function useSchemaGrammar()
+    public function useSchemaGrammar(): void
     {
         throw new DatabaseException("Schema grammar is not supported.");
     }
@@ -446,7 +462,7 @@ abstract class Connection implements ConnectionContract
 
     protected QueryGrammar|null $queryGrammar = null;
 
-    public function useQueryGrammar()
+    public function useQueryGrammar(): void
     {
         throw new DatabaseException("Query grammar is not supported.");
     }

@@ -27,9 +27,7 @@ class HandleExceptions
         error_reporting(-1);
 
         ini_set('ignore_repeated_errors', true);
-
         ini_set('display_errors', 'Off');
-
         ini_set('display_startup_errors', false);
 
         set_error_handler([$this, 'handleError']);

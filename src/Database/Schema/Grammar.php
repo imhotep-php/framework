@@ -4,47 +4,26 @@ declare(strict_types=1);
 
 namespace Imhotep\Database\Schema;
 
-use Imhotep\Contracts\Database\DatabaseException;
 use Imhotep\Contracts\Database\SchemaGrammar as SchemaGrammarContract;
+use Imhotep\Database\Grammar as BaseGrammar;
 
-abstract class Grammar implements SchemaGrammarContract
+abstract class Grammar extends BaseGrammar implements SchemaGrammarContract
 {
-    protected ?string $tablePrefix = null;
+    protected bool $transaction = false;
 
-    public function getTablePrefix()
-    {
-        return $this->tablePrefix;
-    }
+    /**
+     * The possible column modifiers.
+     *
+     * @var string[]
+     */
+    protected array $modifiers = ['Collate', 'Primary', 'Nullable', 'Default', 'VirtualAs', 'StoredAs'];
 
-    public function setTablePrefix(string|null $prefix)
-    {
-        $this->tablePrefix = $prefix;
-
-        return $this;
-    }
-
-    public function compileColumnListing(): string
-    {
-        throw new DatabaseException('Grammar not configured.');
-    }
-
-    public function compileCreate($table)
-    {
-        return array_values(array_filter(array_merge([sprintf("CREATE TABLE %s (%s)",
-            $this->wrapTable($table->getName()),
-            implode(", ", $this->getColumns($table))
-        )], $this->compileAutoIncrementStartingValues($table))));
-    }
-
-    public function compileDrop($table): string
-    {
-        return 'DROP TABLE '.$this->wrapTable($table->getName());
-    }
-
-    public function compileDropIfExists($table): string
-    {
-        return 'DROP TABLE IF EXISTS '.$this->wrapTable($table->getName());
-    }
+    /**
+     * The columns available as serials.
+     *
+     * @var string[]
+     */
+    protected array $serials = ['Integer'];
 
     public function getColumns($table): array
     {
@@ -75,37 +54,8 @@ abstract class Grammar implements SchemaGrammarContract
         return $sql;
     }
 
-    public function wrap($value): string
+    public function supportTransactions(): bool
     {
-        return sprintf('"%s"', $value);
-    }
-
-    public function wrapTable($tableName): string
-    {
-        if(!empty($this->tablePrefix)){
-            $tableName = $this->tablePrefix.$tableName;
-        }
-        return '"'.$tableName.'"';
-    }
-
-    public function wrapValue($value): string
-    {
-        if ($value !== '*') {
-            return '"'.str_replace('"', '""', $value).'"';
-        }
-
-        return $value;
-    }
-
-    public function wrapDefaultValue($value): string
-    {
-        return is_bool($value)
-            ? "'".(int) $value."'"
-            : "'".(string) $value."'";
-    }
-
-    public function compileAutoIncrementStartingValues($table): array
-    {
-        return [];
+        return $this->transaction;
     }
 }

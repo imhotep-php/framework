@@ -15,4 +15,6 @@ interface RouteCollection
     public function getByAction(string|array $action): ?Route;
 
     public function getRoutes(): array;
+
+    public function has(string $name): bool;
 }

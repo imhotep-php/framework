@@ -58,15 +58,16 @@ class FacadeLoader
     public function register(): void
     {
         if (! $this->registered) {
-            //spl_autoload_register([$this, 'load'], true, true);
+            spl_autoload_register([$this, 'load'], true, true);
+
             $this->registered = true;
         }
     }
 
     public function load($alias): void
     {
-        //if (isset($this->aliases[$alias])) {
-            //var_dump($alias);
-        //}
+        if (isset($this->aliases[$alias])) {
+            class_alias($this->aliases[$alias], $alias);
+        }
     }
 }

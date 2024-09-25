@@ -6,6 +6,7 @@ use Imhotep\Contracts\Encryption\Encrypter;
 use Imhotep\Contracts\Encryption\EncryptionException;
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Http\Response;
+use Throwable;
 
 class CookieEncryption
 {
@@ -29,9 +30,11 @@ class CookieEncryption
         foreach ($cookies as $cookie) {
             if ($this->isDisabled($cookie->getName())) continue;
 
-            $cookie->setValue( $this->encrypter->encryptString($cookie->getValue()), false );
+            try {
+                $cookie->setValue( $this->encrypter->encryptString($cookie->getValue()), false );
 
-            $response->setCookie($cookie);
+                $response->setCookie($cookie);
+            } catch(Throwable $e) {}
         }
 
         return $response;
@@ -49,7 +52,7 @@ class CookieEncryption
 
                 $request->cookies->set($key, $val);
             }
-            catch (EncryptionException $e) {
+            catch (Throwable $e) {
                 $request->cookies->set($key, null);
             }
         }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Imhotep\Routing;
 
+use Exception;
+
 abstract class Controller
 {
     protected array $middlewares = [];

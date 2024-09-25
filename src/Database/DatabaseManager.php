@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Imhotep\Database;
 
 use Imhotep\Contracts\Database\Connection as ConnectionContract;
+use Imhotep\Contracts\Database\ConnectionResolver;
 use Imhotep\Contracts\Database\DatabaseException;
 use Imhotep\Framework\Application;
 
-class DatabaseManager
+class DatabaseManager implements ConnectionResolver
 {
     protected $app;
 
@@ -19,6 +20,10 @@ class DatabaseManager
     protected \Closure $reconnector;
 
     protected array $drivers = [
+        'mysql' => [
+            'connection' => \Imhotep\Database\MySQL\Connection::class,
+            'connector' => \Imhotep\Database\MySQL\Connector::class,
+        ],
         'pgsql' => [
             'connection' => \Imhotep\Database\Postgres\Connection::class,
             'connector' => \Imhotep\Database\Postgres\Connector::class,
@@ -40,7 +45,7 @@ class DatabaseManager
         };
     }
 
-    public function connection(string $name = null)
+    public function connection(string $name = null): ConnectionContract
     {
         if (is_null($name)) {
             $name = $this->getDefaultConnection();
@@ -112,7 +117,7 @@ class DatabaseManager
         return $connection;
     }
 
-    public function getDefaultConnection(): ?string
+    public function getDefaultConnection(): string
     {
         return config()->get('database.default');
     }

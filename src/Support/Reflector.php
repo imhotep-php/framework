@@ -1,21 +1,12 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Support;
 
 use Closure;
-use Imhotep\Container\Container;
+use Imhotep\Container\BindingResolutionException;
 use ReflectionFunction;
 use ReflectionFunctionAbstract;
 use ReflectionMethod;
-
-/*
- * class [__invoke]
- * class@method
- * [class, Method]
- * closure
- */
 
 class Reflector
 {
@@ -66,7 +57,7 @@ class Reflector
 
         $dependencies = [];
 
-        foreach ($reflector->getParameters() as $key => $parameter) {
+        foreach ($reflector->getParameters() as $parameter) {
             $paramName = $parameter->getName();
 
             if ( array_key_exists($paramName, $parameters) ) {
@@ -78,6 +69,20 @@ class Reflector
                     $dependencies[] = $parameters[$className];
                     unset($parameters[$className]);
                 }
+
+                $variadicDependencies = $container->make($className);
+
+                if ($parameter->isVariadic()) {
+                    $dependencies = array_merge($dependencies, is_array($variadicDependencies)
+                        ? $variadicDependencies
+                        : [$variadicDependencies]);
+                }
+                else {
+                    $dependencies[] = $variadicDependencies;
+                }
+
+
+                /*
                 elseif ($parameter->isVariadic()) {
                     $variadicDependencies = $container->make($className);
 
@@ -88,6 +93,7 @@ class Reflector
                 else {
                     $dependencies[] = $container->make($className);
                 }
+                */
             }
             elseif ( $parameter->isDefaultValueAvailable() ) {
                 $dependencies[] = $parameter->getDefaultValue();
@@ -95,7 +101,7 @@ class Reflector
             elseif (! $parameter->isOptional() && ! array_key_exists($paramName, $parameters)) {
                 $message = "Unable to resolve dependency [{$parameter}] in class {$parameter->getDeclaringClass()->getName()}";
 
-                throw new \Exception($message);
+                throw new BindingResolutionException($message);
             }
         }
 

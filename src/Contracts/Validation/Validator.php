@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Imhotep\Contracts\Validation;
 
+use Imhotep\Contracts\Localization\Localizator;
+
 interface Validator
 {
     /**
@@ -11,7 +13,6 @@ interface Validator
      *
      * @return array
      *
-     * @throws \Imhotep\Validation\ValidationException
      */
     public function validate();
 
@@ -20,7 +21,6 @@ interface Validator
      *
      * @return array
      *
-     * @throws \Imhotep\Validation\ValidationException
      */
     public function validated();
 
@@ -59,7 +59,9 @@ interface Validator
     /**
      * Get all of the validation error messages.
      *
-     * @return \Illuminate\Support\MessageBag
+     * @return \Imhotep\Support\MessageBag
      */
     public function errors();
+
+    public function getLocalizator(): Localizator;
 }

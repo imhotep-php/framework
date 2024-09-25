@@ -18,11 +18,13 @@ class SessionManager
         'file' => FileHandler::class,
     ];
 
-    public function __construct(protected Container $app) {}
+    public function __construct(protected Container $app) {
+
+    }
 
     public function store(): Session
     {
-        if (isset($this->store)) {
+        if ($this->store) {
             return $this->store;
         }
 
@@ -37,7 +39,7 @@ class SessionManager
 
     public function driver(string $name)
     {
-        $config = $this->getDriverConfig($name);
+        //$config = $this->getDriverConfig($name);
 
         $handler = $this->drivers[$name] ?? null;
 
@@ -49,10 +51,10 @@ class SessionManager
             //return $this->app->build($handler);
         }
 
-        return $this->app->make($handler, ['config' => $config]);
+        return $this->app->make($handler, ['config' => $this->getConfig()]);
     }
 
-    public function buildStore($handler, $config): Session
+    protected function buildStore($handler, $config): Session
     {
         return new Store($handler, $config);
     }
@@ -104,6 +106,6 @@ class SessionManager
 
     public function __call($method, $parameters)
     {
-        $this->store()->$method(...$parameters);
+        return $this->store()->$method(...$parameters);
     }
 }

@@ -1,10 +1,7 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\View\Engines;
 
-use ScssPhp\ScssPhp\Compiler;
 use Throwable;
 
 class ScssEngine extends Engine
@@ -32,10 +29,10 @@ class ScssEngine extends Engine
 
     protected function require(string $__path, array $__data): void
     {
-        $scss = new Compiler();
+        $scss = new \ScssPhp\ScssPhp\Compiler();
         $scss->addImportPath(dirname($__path));
 
-        echo "<style>".$scss->compileString(files()->get($__path))->getCss()."</style>";
+        echo "<style> ".$scss->compileString(file_get_contents($__path))->getCss()."</style>";
 
         /*
         (function () use ($__path, $__data) {

@@ -18,6 +18,7 @@
   },
   "require": {
     "php": ">=8.0.2",
+    "ext-mbstring": "*",
     "imhotep/contracts": "^1.0",
     "imhotep/support": "^1.0"
   },

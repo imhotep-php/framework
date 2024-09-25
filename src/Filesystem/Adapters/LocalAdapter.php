@@ -211,7 +211,10 @@ class LocalAdapter implements Filesystem
             $options = ['visibility' => $options];
         }
 
-        $length = $this->driver->put($this->fixPath($path), $contents, $options);
+        if (! isset($options['lock'])) $options['lock'] = false;
+        $lock = is_bool($options['lock']) && $options['lock'];
+
+        $length = $this->driver->put($this->fixPath($path), $contents, $lock);
 
         if (isset($options['visibility']) &&
                 in_array($options['visibility'], [static::VISIBILITY_PUBLIC, static::VISIBILITY_PRIVATE])) {
@@ -356,7 +359,7 @@ class LocalAdapter implements Filesystem
 
     public function url(string $path): string|false
     {
-        return false;
+        return $this->config['url'].'/'.$path;
     }
 
     public function download(): ?StreamedResponse

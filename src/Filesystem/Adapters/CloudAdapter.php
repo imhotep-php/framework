@@ -7,7 +7,7 @@ namespace Imhotep\Filesystem\Adapters;
 use Imhotep\Contracts\Filesystem\Cloud;
 use Imhotep\Contracts\Filesystem\Driver;
 
-class CloudAdapter implements Cloud
+class CloudAdapter
 {
     protected Driver $driver;
 
@@ -17,5 +17,10 @@ class CloudAdapter implements Cloud
     {
         $this->driver = $driver;
         $this->config = $config;
+    }
+
+    public function __call($method, $parameters)
+    {
+        return $this->driver->$method(...$parameters);
     }
 }

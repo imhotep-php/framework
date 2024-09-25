@@ -7,7 +7,7 @@ use Imhotep\Contracts\Http\Kernel as KernelContract;
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Routing\Router;
 use Imhotep\Framework\Application;
-use Imhotep\Support\Pipeline;
+use Imhotep\Routing\Pipeline;
 
 class Kernel implements KernelContract
 {
@@ -81,8 +81,6 @@ class Kernel implements KernelContract
     public function bootstrap()
     {
         $this->app->bootstrapWith($this->bootstrappers);
-
-
     }
 
     public function handle(Request $request)
@@ -110,15 +108,10 @@ class Kernel implements KernelContract
         return $response;
     }
 
-    protected function dispatchToRouter()
+    protected function dispatchToRouter(): \Closure
     {
         return function ($request) {
-            //$this->app->instance('request', $request);
-
             return $this->router->dispatch($request);
-            //
-            //var_dump($request);
-            //return $this->router->dispatch($request);
         };
     }
 

@@ -44,10 +44,15 @@ class Table extends TableBase
         return $this->varchar($name, $length);
     }
 
-    public function timestamps(): void
+    public function timestamps(int $precision = 0): void
     {
-        $this->timestamp('created_at');
-        $this->timestamp('updated_at');
+        $this->timestamp('created_at', $precision);
+        $this->timestamp('updated_at', $precision);
+    }
+
+    public function softDeletes(string $column = 'deleted_at', int $precision = 0): void
+    {
+        $this->timestamp($column, $precision);
     }
 
     /*

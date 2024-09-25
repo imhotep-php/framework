@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Imhotep\View\Compilers;
 
 use Imhotep\View\Compilers\Traits\CompileCommon;
+use Imhotep\View\Compilers\Traits\CompileConditions;
 use Imhotep\View\Compilers\Traits\CompileHtml;
 use Imhotep\View\Compilers\Traits\CompileIncludes;
 use Imhotep\View\Compilers\Traits\CompileLayout;
@@ -13,6 +14,7 @@ use Imhotep\View\Factory;
 class MoonCompiler
 {
     use CompileCommon,
+        CompileConditions,
         CompileIncludes,
         CompileLayout,
         CompileHtml;
@@ -27,11 +29,15 @@ class MoonCompiler
 
     protected array $layouts = [];
 
+    protected bool $shouldCache = true;
+
     //protected Factory $factory;
 
-    public function __construct(string $cachePath = null)
+    public function __construct(bool $shouldCache = true, string $cachePath = null)
     {
         $this->cacheDir = $cachePath;
+
+        $this->shouldCache = $shouldCache;
     }
 
     public function setFactory(Factory $factory): void
@@ -42,6 +48,26 @@ class MoonCompiler
     public function setCachePath(string $path): void
     {
         $this->cacheDir = $path;
+    }
+
+    public function setShouldCache(bool $cache): void
+    {
+        $this->shouldCache = $cache;
+    }
+
+    public function isExpired(string $path): bool
+    {
+        if (! $this->shouldCache) {
+            return true;
+        }
+
+        $compiled = $this->getCompiledPath($path);
+
+        if (file_exists($compiled) && filemtime($compiled) >= filemtime($path)) {
+            return false;
+        }
+
+        return true;
     }
 
     public function compile(string $path = null): void

@@ -54,7 +54,7 @@ class RouteGroup
         return $this;
     }
 
-    public function group(\Closure $routes): void
+    public function group(\Closure|string $routes): void
     {
         $this->router->group($this->attributes, $routes);
     }

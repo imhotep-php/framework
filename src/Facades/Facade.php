@@ -82,4 +82,26 @@ abstract class Facade
 
         return $instance->$method(...$args);
     }
+
+    public static function defaultAliases(array $merge = []): array
+    {
+        return array_merge([
+            'Auth' => Auth::class,
+            'Cache' => Cache::class,
+            'Cookie' => Cookie::class,
+            'Crypt' => Crypt::class,
+            'DB' => DB::class,
+            'Env' => Env::class,
+            'Event' => Event::class,
+            'Lang' => Lang::class,
+            'Log' => Log::class,
+            'Notification' => Notification::class,
+            'Route' => Route::class,
+            'Scheme' => Scheme::class,
+            'Session' => Session::class,
+            'Storage' => Storage::class,
+            'Validator' => Validator::class,
+            'View' => View::class,
+        ], $merge);
+    }
 }

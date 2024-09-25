@@ -31,11 +31,13 @@ trait HasAttributes
         $this->changes[$key] = $this->originalIsEquivalent($key);
     }
 
-    protected function setRawAttribute($attributes)
+    protected function setRawAttribute($attributes, bool $sync = false)
     {
         $this->attributes = $attributes;
 
-        $this->syncOriginals();
+        if ($sync) {
+            $this->syncOriginals();
+        }
     }
 
 
@@ -77,5 +79,18 @@ trait HasAttributes
         }
 
         return $changes;
+    }
+
+    public function only(mixed $keys): array
+    {
+        $result = [];
+
+        $keys = is_array($keys) ? $keys : func_get_args();
+
+        foreach ($keys as $key) {
+            $result[$key] = $this->getAttribute($key);
+        }
+
+        return $result;
     }
 }

@@ -14,9 +14,12 @@ use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Http\Responsable;
 use Imhotep\Contracts\Http\Response as ResponseContract;
 use Imhotep\Http\Exceptions\HttpException;
+use Imhotep\Http\JsonResponse;
 use Imhotep\Http\Response;
 use Imhotep\Routing\Router;
+use Imhotep\Support\Arr;
 use Imhotep\Support\Reflector;
+use Imhotep\Validation\ValidationException;
 use Imhotep\View\View;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
@@ -44,11 +47,11 @@ class Handler implements ExceptionHandler
 
     protected array $renderCallbacks = [];
 
+    protected array $dontFlash = ['password', 'password_confirm', 'password_current'];
+
     public function __construct(Container $container)
     {
         $this->container = $container;
-
-        $this->container['view.finder']->addNamespace(__DIR__.'/views', 'errors');
 
         $this->register();
     }
@@ -138,23 +141,23 @@ class Handler implements ExceptionHandler
 
     public function render(Throwable $e, Request $request): ResponseContract
     {
-        /*if (method_exists($e, 'render')) {
-            if ($response = $e->render($request)) {
-                return Router::toResponse($response, $request);
-            }
+        if (method_exists($e, 'render') && $response = $e->render($request)) {
+            return Router::toResponse($response, $request);
         }
 
         if ($e instanceof Responsable) {
             return $e->toResponse($request);
-        }*/
-
-        if (! $this->isHttpException($e) && config('app.debug') === false) {
-            $e = new HttpException(500, $e->getMessage());
         }
 
-        if ($this->isHttpException($e)) {
-            return $this->renderHttpException($e);
+        if ($e instanceof ValidationException) {
+            return $this->renderValidationExceptionResponse($e, $request);
         }
+
+        return $this->renderExceptionResponse($e, $request);
+
+        /*
+        echo "<pre>";var_dump($e);
+        die();
 
         // Render for debug
         $response = $this->container['view']->make('errors::exception', $this->getExceptionDataForRender($e));
@@ -164,36 +167,132 @@ class Handler implements ExceptionHandler
         }
 
         return $response;
+        */
     }
 
-    public function renderHttpException(HttpExceptionContract $e): ResponseContract
+    protected function renderExceptionResponse(Throwable $e, Request $request): ResponseContract
     {
+        return $request->expectsJson() ? $this->prepareJsonResponse($e) : $this->prepareResponse($e, $request);
+    }
+
+    protected function prepareJsonResponse(Throwable $e): ResponseContract
+    {
+        return new JsonResponse(
+            $this->convertExceptionToArray($e),
+            $this->isHttpException($e) ? $e->getStatusCode() : 500,
+            $this->isHttpException($e) ? $e->getHeaders() : [],
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+        );
+    }
+
+    protected function convertExceptionToArray(Throwable $e): array
+    {
+        if (! config('app.debug')) {
+            return ['message' => $this->isHttpException($e) ? $e->getMessage() : 'Server Error'];
+        }
+
+        $trace = $e->getTrace();
+        array_walk($trace, function(&$value) {
+            unset($value['args']);
+        });
+
+        return [
+            'message' => $e->getMessage(),
+            'exception' => get_class($e),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $trace,
+        ];
+    }
+
+    protected function prepareResponse(Throwable $e, Request $request): Response
+    {
+        if (! $this->isHttpException($e) && config('app.debug') === false) {
+            $e = new HttpException(500, 'Server error');
+        }
+
+        if ($this->isHttpException($e)) {
+            return $this->renderHttpException($e);
+        }
+
+        return $this->renderException($e, $request);
+    }
+
+    protected function renderHttpException(HttpExceptionContract $e): ResponseContract
+    {
+        $this->registerErrorViewPath();
+
         if ($view = $this->getHttpExceptionView($e)) {
             $response = $this->container['view']->make($view, [
                 'exception' => $e
             ]);
 
-            return new Response($response->render(), 200, ['Content-Type' => 'text/html']);
+            return new Response($response->render(), $e->getStatusCode(), $e->getHeaders());
         }
 
-        return $this->renderHttpException(new HttpException(500, $e->getMessage()));
+        return new Response($e->getMessage(), $e->getStatusCode(), $e->getHeaders());
+    }
+
+    protected function renderException(Throwable $e, Request $request): ResponseContract
+    {
+        $whoops = new \Whoops\Run;
+        $whoops->allowQuit(false);
+        $whoops->writeToOutput(false);
+        $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
+        return new Response($whoops->handleException($e), 500, []);
+    }
+
+    protected function renderValidationExceptionResponse(ValidationException $e, Request $request): ResponseContract
+    {
+        if ($e->response) return $e->response;
+
+        if ($request->expectsJson()) {
+            return new JsonResponse(['messages' => $e->getMessage(), 'errors' => $e->errors()->messages()], $e->status);
+        }
+
+        return redirect($e->redirectTo ?? url()->previous())
+            ->withInput(Arr::except($request->input(), $this->dontFlash))
+            ->withErrors($e->errors());
+    }
+
+    protected function registerErrorViewPath(): void
+    {
+        $this->container['view.finder']->addNamespace('errors', [
+            __DIR__.'/views',
+            resource_path('/views/errors')
+        ]);
     }
 
     protected function getExceptionDataForRender(Throwable $e): array
     {
-        $trace = [];
+        /*
+        if ($prev = $e->getPrevious()) {
+            $trace = [[
+                'file' => trim(str_replace($this->container->basePath(), "", $prev->getFile()), '/'),
+                'line' => $prev->getLine(),
+                'function' => '',
+                'class' => '',
+                'code' => $this->getFileContent($prev->getFile(), $prev->getLine()),
+            ]];
+        }
+        */
 
         foreach ($e->getTrace() as $item) {
-            $code = [];
-            $file = file($item['file']);
-            for ($line = $item['line']-30; $line<$item['line']+30; $line++) {
-                if ($line < 0) $line = 0;
-                if ($line >= count($file)) break;
-
-                $code[] = [
-                    'line' => $line,
-                    'code' => $file[$line],
-                ];
+            if (empty($item['file']) && isset($item['args'])) {
+                $item['file'] = $item['args'][2] ?? 'none';
+                $item['line'] = $item['args'][3] ?? '0';
+            }
+            else {
+                foreach ($item['args'] as $key => $val) {
+                    if (is_object($item['args'][$key])) {
+                        if ($val instanceof \ReflectionParameter) {
+                            $item['args'][$key] = $val->getName();
+                        }
+                        else {
+                            $item['args'][$key] = get_class($val);
+                        }
+                    }
+                }
             }
 
             $trace[] = [
@@ -201,7 +300,8 @@ class Handler implements ExceptionHandler
                 'line' => $item['line'],
                 'function' => $item['function'],
                 'class' => $item['class'] ?? '',
-                'code' => $code,
+                'code' => $this->getFileContent($item['file'], $item['line']),
+                'args' => $item['args'],
             ];
         }
 
@@ -213,33 +313,42 @@ class Handler implements ExceptionHandler
             'trace' => json_encode($trace),
             'php' => phpversion(),
             'imhotep' => $this->container->version(),
+            'version' => [
+                'imhotep' => $this->container->version(),
+                'php' => phpversion(),
+            ],
+            'container' => [
+                'aliases' => $this->container->getAliases(),
+                'bindings' => $this->container->getBindings(),
+                'instances' => $this->container->getInstances(),
+                'contextual' => $this->container->getContextual()
+            ]
         ];
     }
 
-    protected function getFileContent($file, $line)
+    protected function getFileContent($fileName, $fileLine)
     {
+        if (! is_file($fileName)) {
+            return [];
+        }
 
+        $code = [];
+
+        $file = file($fileName);
+        for ($line = $fileLine-30; $line<$fileLine+30; $line++) {
+            if ($line < 0) $line = 0;
+            if ($line >= count($file)) break;
+
+            $code[] = [
+                'line' => $line + 1,
+                'code' => $file[$line],
+            ];
+        }
+
+        return $code;
     }
 
-    public function renderForConsole(Throwable $e, Output $output): void
-    {
-        //(new Error($output))->render($e->getMessage());
-
-        $output->newLine();
-
-        $output->writeln("<error> ". $e->getMessage() ." </error>");
-
-        $output->newLine();
-    }
-
-
-    // Methods for HttpException
-    public function isHttpException(Throwable $e): bool
-    {
-        return $e instanceof HttpExceptionContract;
-    }
-
-    public function getHttpExceptionView(HttpExceptionContract $e): ?string
+    protected function getHttpExceptionView(HttpExceptionContract $e): ?string
     {
         $view = 'errors::'.$e->getStatusCode();
 
@@ -254,5 +363,22 @@ class Handler implements ExceptionHandler
         }
 
         return null;
+    }
+
+    protected function isHttpException(Throwable $e): bool
+    {
+        return $e instanceof HttpExceptionContract;
+    }
+
+
+    public function renderForConsole(Throwable $e, Output $output): void
+    {
+        //(new Error($output))->render($e->getMessage());
+
+        $output->newLine();
+
+        $output->writeln("<error> ". $e->getMessage() ." in ".$e->getFile()." on line ". $e->getLine() ." </error>");
+
+        $output->newLine();
     }
 }

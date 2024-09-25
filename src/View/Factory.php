@@ -18,6 +18,8 @@ class Factory
 
     protected array $shared = [];
 
+    protected bool $cache = false;
+
     protected string $cachePath = '';
 
     public function __construct(Container $container, Finder $finder, EngineManager $engine, array $config)
@@ -25,6 +27,8 @@ class Factory
         $this->container = $container;
         $this->finder = $finder;
         $this->engine = $engine;
+
+        $this->cache = is_bool($config['cache']) ? $config['cache'] : false;
 
         if (isset($config['cache_path']) && is_dir($config['cache_path'])) {
             $this->cachePath = $config['cache_path'];
@@ -37,6 +41,11 @@ class Factory
     {
         $file = $this->finder->find($view);
 
+        if (is_null($file)) {
+            dump($view, $file);
+            die();
+        }
+
         $data = array_merge($this->shared, $data);
 
         return new View($this, $this->getEngine($file), $view, $file['path'], $data);
@@ -47,7 +56,7 @@ class Factory
         $engine = $this->engine->resolveByExtension($file['extension']);
 
         $engine->setFactory($this);
-        $engine->setCachePath($this->cachePath);
+        $engine->setCache($this->cache, $this->cachePath);
 
         return $engine;
     }
@@ -60,6 +69,11 @@ class Factory
         else {
             $this->shared[$key] = $value;
         }
+    }
+
+    public function getShare(string $key, mixed $default = null): mixed
+    {
+        return $this->shared[$key] ?? $default;
     }
 
     public function getShared(): array
@@ -143,5 +157,12 @@ class Factory
         //dump($name, static::$sectionContents[$name] );
 
         return static::$sectionContents[$name] ?? '';
+    }
+
+    public function addNamespace(string $namespace, string|array $paths, bool $prepend = false): static
+    {
+        $this->finder->addNamespace($namespace, $paths, $prepend);
+
+        return $this;
     }
 }

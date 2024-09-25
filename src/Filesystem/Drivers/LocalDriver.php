@@ -9,6 +9,7 @@ use FilesystemIterator;
 use Generator;
 use Imhotep\Contracts\Filesystem\Driver;
 use Imhotep\Contracts\Filesystem\FileNotFoundException;
+use Imhotep\Contracts\Filesystem\FilesystemException;
 use SplFileObject;
 use Throwable;
 
@@ -123,12 +124,12 @@ class LocalDriver implements Driver
         return is_file($path);
     }
 
-    public function copy(string $from, string $to, array $options = []): bool
+    public function copy(string $from, string $to): bool
     {
         return copy($from, $to);
     }
 
-    public function move(string $from, string $to, array $options = []): bool
+    public function move(string $from, string $to): bool
     {
         return rename($from, $to);
     }
@@ -188,21 +189,41 @@ class LocalDriver implements Driver
         }
     }
 
-    public function put(string $path, mixed $content, array $options = []): int|bool
+    public function put(string $path, mixed $content, bool $lock = false): int|bool
     {
-        $lock = (isset($options['lock']) && $options['lock'] === true);
-
         return file_put_contents($path, $content, $lock ? LOCK_EX : 0);
     }
 
-    public function putFile(string $path, string $source, array $options = []): int|bool
+    public function putFile(string $path, string $source, bool $lock = false): int|bool
     {
-        return $this->put($path, $this->get($source), $options);
+        return $this->put($path, $this->get($source), $lock);
     }
 
-    public function putFileAs(string $path, string $source, string $name, array $options = []): int|bool
+    public function putFileAs(string $path, string $source, string $name, bool $lock = false): int|bool
     {
-        return $this->putFile(rtrim($path, '/').$name, $source, $options);
+        return $this->putFile(rtrim($path, '/').$name, $source, $lock);
+    }
+
+    public function append(string $path, mixed $content, bool $lock = false): int|bool
+    {
+        return file_put_contents($path, $content, ($lock ? LOCK_EX|FILE_APPEND : FILE_APPEND) );
+    }
+
+    public function replace(string $path, mixed $content)
+    {
+        // If the path already exists and is a symlink, get the real path...
+        clearstatcache(true, $path);
+
+        $path = realpath($path) ?: $path;
+
+        $tempPath = tempnam(dirname($path), basename($path));
+
+        // Fix permissions of tempPath because `tempnam()` creates it with permissions set to 0600...
+        chmod($tempPath, 0777 - umask());
+
+        file_put_contents($tempPath, $content);
+
+        rename($tempPath, $path);
     }
 
     public function size(string $path): int|false
@@ -301,6 +322,21 @@ class LocalDriver implements Driver
         return $success;
     }
 
+    public function getRequire(string $path, array $data = []): mixed
+    {
+        if ($this->isFile($path)) {
+            $__path = $path;
+            $__data = $data;
+
+            return (static function () use ($__path, $__data) {
+               extract($__data, EXTR_SKIP);
+
+               return require $__path;
+            })();
+        }
+
+        return $this->handleException(new FilesystemException("File does not exist at path {$path}"));
+    }
 
 
     public function isDirectory(string $path): bool

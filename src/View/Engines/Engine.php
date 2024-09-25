@@ -8,9 +8,15 @@ use Imhotep\View\Factory;
 
 abstract class Engine
 {
-    public function setCachePath(string $cachePath): void
-    {
+    protected bool $shouldCache = false;
 
+    protected string $cachePath = '';
+
+    public function setCache(bool $shouldCache, string $cachePath): void
+    {
+        $this->cachePath = $cachePath;
+
+        $this->shouldCache = $shouldCache;
     }
 
     public function setFactory(Factory $factory): void

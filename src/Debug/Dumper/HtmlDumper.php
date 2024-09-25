@@ -11,7 +11,8 @@ class HtmlDumper extends AbstractDumper
         'num' => 'color: #00a8f9;',
         'const' => 'color: #ff8400;',
         'type' => 'color: #808080;',
-        'def' => 'color: #808080;'
+        'def' => 'color: #808080;',
+        'err' => 'color: red;'
     ];
 
 
@@ -176,7 +177,7 @@ class HtmlDumper extends AbstractDumper
             return sprintf("<span style='%s'>%s</span>", $this->styles[$style], $value);
         }
 
-        if (in_array($style, ['str', 'num', 'const'])) {
+        if (in_array($style, ['str', 'num', 'const', 'err'])) {
             if ($style === 'str') {
                 $value = sprintf('"%s"', $value);
             }
@@ -195,11 +196,18 @@ class HtmlDumper extends AbstractDumper
 
     }
 
+    public function escape(mixed $value, bool $doubleEncode = true): string
+    {
+        return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8', $doubleEncode);
+    }
+
 
     public function getStyles()
     {
         $style = '
             .imht-dump {
+                position: relative;
+                z-index: 10000000;
                 background: #2b2b2b;
                 color: #fff;
                 font-size: 14px;

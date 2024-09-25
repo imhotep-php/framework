@@ -43,7 +43,7 @@ class Data
             return $dumper->dumpString($this->value, $this->attrs);
         }
 
-        if (in_array($this->type, ['integer', 'double', 'boolean', 'NULL'])) {
+        if (in_array($this->type, ['integer', 'double', 'boolean', 'NULL', 'empty'])) {
             return $dumper->dumpScalar($this->type, $this->value, $this->attrs);
         }
 

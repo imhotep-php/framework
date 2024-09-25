@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Imhotep\Routing;
 
+use Closure;
 use Imhotep\Container\Container;
 use Imhotep\Contracts\Http\Request as RequestContract;
 use Imhotep\Contracts\Http\Responsable;
@@ -14,6 +15,7 @@ use Imhotep\Http\Exceptions\HttpResponseException;
 use Imhotep\Http\JsonResponse;
 use Imhotep\Http\Response;
 use Imhotep\Support\Pipeline;
+use Imhotep\Support\Reflector;
 use Imhotep\Support\Traits\Macroable;
 use Imhotep\View\View;
 
@@ -37,14 +39,19 @@ class Router implements RouterContract
 
 
 
-    public function group(array $attributes, \Closure $routes): void
+    public function group(array $attributes, Closure|string $routes): void
     {
         if (! empty($this->groupStack)) {
             $attributes = RouteGroup::merge($attributes, end($this->groupStack));
         }
         $this->groupStack[] = $attributes;
 
-        $routes();
+        if ($routes instanceof Closure) {
+            $routes();
+        }
+        else {
+            (new RouteFileRegistrar($this))->register($routes);
+        }
 
         array_pop($this->groupStack);
     }
@@ -81,47 +88,47 @@ class Router implements RouterContract
 
 
 
-    public function any(string $uri, string|array|\Closure $action): Route
+    public function any(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute(['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'], $uri, $action);
     }
 
-    public function match(array $methods, string $uri, string|array|\Closure $action): Route
+    public function match(array $methods, string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute($methods, $uri, $action);
     }
 
-    public function get(string $uri, string|array|\Closure $action): Route
+    public function get(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute(['GET','HEAD'], $uri, $action);
     }
 
-    public function head(string $uri, string|array|\Closure $action): Route
+    public function head(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute('HEAD', $uri, $action);
     }
 
-    public function post(string $uri, string|array|\Closure $action): Route
+    public function post(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute('POST', $uri, $action);
     }
 
-    public function put(string $uri, string|array|\Closure $action): Route
+    public function put(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute('PUT', $uri, $action);
     }
 
-    public function patch(string $uri, string|array|\Closure $action): Route
+    public function patch(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute('PATCH', $uri, $action);
     }
 
-    public function delete(string $uri, string|array|\Closure $action): Route
+    public function delete(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute('DELETE', $uri, $action);
     }
 
-    public function options(string $uri, string|array|\Closure $action): Route
+    public function options(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute('OPTIONS', $uri, $action);
     }
@@ -146,7 +153,7 @@ class Router implements RouterContract
     }
     */
 
-    protected function createRoute(string|array $methods, string $uri, string|array|\Closure $action): Route
+    protected function createRoute(string|array $methods, string $uri, string|array|Closure $action): Route
     {
         $groupAttrs = [];
 
@@ -162,16 +169,27 @@ class Router implements RouterContract
             }
         }
 
+        if (str_ends_with($uri, '/') && $uri !== '/') {
+            $uri = substr($uri, 0, -1);
+        }
+
         $route = new Route($methods, $uri, $action, $this->container);
 
         $route->setGroupAttributes($groupAttrs);
 
-        //$this->routes[] = $route;
         $this->routes->add($route);
 
         return $route;
     }
 
+    protected $defaultAction = null;
+
+    public function setDefaultAction(string|array|Closure $action)
+    {
+        if(Reflector::isCallable($action, true)) {
+            $this->defaultAction = $action;
+        }
+    }
 
 
     public function dispatch(RequestContract $request): ResponseContract
@@ -179,6 +197,10 @@ class Router implements RouterContract
         $this->current = $this->routes->match($request);
 
         if (is_null($this->current)) {
+            if (! is_null($this->defaultAction)) {
+                return call_user_func($this->defaultAction);
+            }
+
             return static::toResponse(null, $request);
         }
 
@@ -238,9 +260,22 @@ class Router implements RouterContract
         return $this->current?->getName();
     }
 
-    public function getRoutes(): array
+    public function getRoutes(): RouteCollection
     {
-        return $this->routes->getRoutes();
+        return $this->routes;
+    }
+
+    public function has(string|array $name): bool
+    {
+        $names = (array)$name;
+
+        foreach ($names as $name) {
+            if (! $this->routes->has($name)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function getRouteByName(string $name): ?Route
@@ -273,7 +308,7 @@ class Router implements RouterContract
         $this->middlewareGroups = $middlewaresGroups;
     }
 
-    public function aliasMiddleware(string $alias, string|\Closure $middleware): void
+    public function aliasMiddleware(string $alias, string|Closure $middleware): void
     {
         $this->middlewares[$alias] = $middleware;
     }
@@ -305,7 +340,7 @@ class Router implements RouterContract
             }
 
             $resolved = array_filter($resolved, function ($value) use ($excluded) {
-                if ($value instanceof \Closure) {
+                if ($value instanceof Closure) {
                     return true;
                 }
 
@@ -326,7 +361,7 @@ class Router implements RouterContract
 
     protected function resolveMiddleware(mixed $middleware, $recurseLevel = 0): mixed
     {
-        if ($middleware instanceof \Closure) {
+        if ($middleware instanceof Closure) {
             return $middleware;
         }
 
