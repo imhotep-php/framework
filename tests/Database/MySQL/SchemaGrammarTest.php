@@ -3,10 +3,8 @@
 namespace Imhotep\Tests\Database\MySQL;
 
 use Closure;
-use Imhotep\Database\Connection;
-use Imhotep\Database\Mysql\Schema\Grammar;
+use Imhotep\Database\MySQL\Schema\Grammar;
 use Imhotep\Database\Schema\Table;
-use Mockery;
 use PHPUnit\Framework\TestCase;
 
 class SchemaGrammarTest extends TestCase
