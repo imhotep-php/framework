@@ -19,11 +19,13 @@ class FilesystemTest extends TestCase
         $this->root = __DIR__.'/tmp';
 
         $this->files = new LocalDriver(['throw' => false]);
+
+        $this->files->makeDirectory($this->root);
     }
 
     public function tearDown(): void
     {
-        $this->files->cleanDirectory($this->root);
+        $this->files->deleteDirectory($this->root);
     }
 
     protected function fixPath(string $path = null)
