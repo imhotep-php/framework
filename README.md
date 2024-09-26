@@ -1,3 +1,5 @@
+<p align="center"><a href="https://imhotep.dev" target="_blank"><img src="https://imhotep.dev/img/logo-imhotep.png" width="400" alt="Imhotep Logo" /></a></p>
+
 <p align="center">
 <a href="https://github.com/imhotep-php/components/actions"><img src="https://github.com/imhotep-php/components/workflows/tests/badge.svg" alt="Build Status"></a>
 <a href="https://packagist.org/packages/imhotep/components"><img src="https://img.shields.io/packagist/dt/imhotep/components" alt="Total Downloads"></a>
