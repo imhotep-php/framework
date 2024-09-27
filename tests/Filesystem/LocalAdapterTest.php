@@ -24,12 +24,14 @@ class LocalAdapterTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->disk->ensureDirectoryExists($this->root);
+        if (! file_exists($this->root)) {
+            mkdir($this->root);
+        }
     }
 
     public function tearDown(): void
     {
-        $this->disk->deleteDirectory($this->root);
+        $this->disk->deleteDirectory('/');
     }
 
     protected function fixPath(string $path = null): string
@@ -37,7 +39,7 @@ class LocalAdapterTest extends TestCase
         return is_null($path) ? $this->root : $this->root .'/'. trim($path, '/');
     }
 
-    public function test_common_methods()
+    public function test_disk_common_methods()
     {
         @touch($this->fixPath('file.txt'));
 
@@ -48,7 +50,7 @@ class LocalAdapterTest extends TestCase
         $this->assertTrue($this->disk->missing('file.txt'));
     }
 
-    public function test_file_visibility()
+    public function test_disk_file_visibility()
     {
         @touch($this->fixPath('file.txt'));
 
@@ -66,7 +68,7 @@ class LocalAdapterTest extends TestCase
         $this->assertSame('public', $this->disk->visibility('file.txt'));
     }
 
-    public function test_dir_visibility()
+    public function test_disk_dir_visibility()
     {
         @mkdir($this->fixPath('folder'));
 
@@ -84,7 +86,7 @@ class LocalAdapterTest extends TestCase
         $this->assertSame('public', $this->disk->visibility('folder'));
     }
 
-    public function test_put_method()
+    public function test_disk_put_method()
     {
         $this->assertSame(12, $this->disk->put('file.txt', 'Hello World!', 'private'));
 
@@ -93,7 +95,7 @@ class LocalAdapterTest extends TestCase
         $this->assertSame('private', $this->disk->visibility('file.txt'));
     }
 
-    public function test_putFile_method()
+    public function test_disk_putFile_method()
     {
         @file_put_contents($this->fixPath('source.txt'), "Example content...");
 
