@@ -20,7 +20,7 @@ class FilesystemTest extends TestCase
 
         $this->files = new LocalDriver(['throw' => false]);
 
-        $this->files->makeDirectory($this->root);
+        mkdir($this->root);
     }
 
     public function tearDown(): void
