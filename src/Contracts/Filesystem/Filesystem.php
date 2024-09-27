@@ -37,7 +37,7 @@ interface Filesystem
 
     public function allDirectories(string $path = null): array;
     public function directories(string $path = null, bool $recursive = false): array;
-    public function ensureDirectoryExists(string $path, bool $recursive = true): void;
+    public function ensureDirectoryExists(string $path, bool $recursive = true): bool;
     public function makeDirectory(string $path): bool;
     public function moveDirectory(string $from, string $to): bool;
     public function copyDirectory(string $from, string $to): bool;

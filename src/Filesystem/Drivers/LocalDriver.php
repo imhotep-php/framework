@@ -344,11 +344,13 @@ class LocalDriver implements Driver
         return is_dir($path);
     }
 
-    public function ensureDirectoryExists(string $path, int $mode = 0755, bool $recursive = true)
+    public function ensureDirectoryExists(string $path, int $mode = 0755, bool $recursive = true): bool
     {
         if (! $this->isDirectory($path)) {
-            $this->makeDirectory($path, $mode, $recursive);
+            return $this->makeDirectory($path, $mode, $recursive);
         }
+
+        return false;
     }
 
     public function makeDirectory(string $path, int $mode = 0755, bool $recursive = false, bool $force = false): bool

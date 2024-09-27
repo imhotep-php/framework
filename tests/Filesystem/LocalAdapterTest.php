@@ -22,14 +22,19 @@ class LocalAdapterTest extends TestCase
         $this->disk = new LocalAdapter(new LocalDriver(), ['root' => $this->root]);
     }
 
-    protected function fixPath(string $path = null): string
+    protected function setUp(): void
     {
-        return is_null($path) ? $this->root : $this->root .'/'. trim($path, '/');
+        $this->disk->ensureDirectoryExists($this->root);
     }
 
     public function tearDown(): void
     {
-        $this->disk->cleanDirectory();
+        $this->disk->deleteDirectory($this->root);
+    }
+
+    protected function fixPath(string $path = null): string
+    {
+        return is_null($path) ? $this->root : $this->root .'/'. trim($path, '/');
     }
 
     public function test_common_methods()

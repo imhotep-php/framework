@@ -322,9 +322,9 @@ class LocalAdapter implements Filesystem
         return $this->driver->directories($this->fixPath($path));
     }
 
-    public function ensureDirectoryExists(string $path, bool $recursive = true): void
+    public function ensureDirectoryExists(string $path, bool $recursive = true): bool
     {
-        $this->driver->ensureDirectoryExists($this->fixPath($path), $this->permissions['dir']['public'], $recursive);
+        return $this->driver->ensureDirectoryExists($this->fixPath($path), $this->permissions['dir']['public'], $recursive);
     }
 
     public function makeDirectory(string $path): bool

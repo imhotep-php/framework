@@ -19,8 +19,11 @@ class FilesystemTest extends TestCase
         $this->root = __DIR__.'/tmp';
 
         $this->files = new LocalDriver(['throw' => false]);
+    }
 
-        mkdir($this->root);
+    protected function setUp(): void
+    {
+        $this->files->ensureDirectoryExists($this->root);
     }
 
     public function tearDown(): void
