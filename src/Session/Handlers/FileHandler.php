@@ -28,7 +28,7 @@ class FileHandler implements SessionHandlerInterface
         $this->lifetime = $config['lifetime'] ?? 300;
 
         if (! isset($this->config['files'])) {
-            throw new SessionException("Parameter [path] not configured in [file] session driver.");
+            throw new SessionException("Parameter [files] not configured in [file] session driver.");
         }
 
         $this->path = $this->config['files'];

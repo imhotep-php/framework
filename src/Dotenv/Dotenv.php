@@ -47,7 +47,7 @@ class Dotenv implements \ArrayAccess
 
     public function get(string $name, \Closure|string|int|float|bool $default = null): mixed
     {
-        if (array_key_exists($name, $_ENV)) {
+        if (array_key_exists($name, $_ENV) && ! is_null($_ENV[$name])) {
             return $_ENV[$name];
         }
         elseif($value = getenv($name)) {
