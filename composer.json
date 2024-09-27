@@ -3,7 +3,7 @@
   "type": "library",
   "description": "All the main components of the Imhotep framework.",
   "license" : "MIT",
-  "homepage": "https://imhotep-php.ru",
+  "homepage": "https://imhotep.dev",
   "authors": [
     {
       "name": "Imhotep",
@@ -46,5 +46,6 @@
       "Imhotep\\Tests\\": "tests/"
     }
   },
-  "minimum-stability": "dev"
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }
