@@ -17,8 +17,6 @@ use Imhotep\Routing\RoutingServiceProvider;
  */
 class Application extends Container
 {
-    //use extAppTerminate, extAppBootstrap, extAppServices;
-
     /**
      * The Imhotep framework version
      *
@@ -51,7 +49,7 @@ class Application extends Container
         $this->registerBaseServiceProviders();
     }
 
-    protected function registerBaseBindings()
+    protected function registerBaseBindings(): void
     {
         static::setInstance($this);
 
@@ -66,7 +64,7 @@ class Application extends Container
         });
     }
 
-    protected function registerBaseAliases()
+    protected function registerBaseAliases(): void
     {
         $this->alias('app', [self::class, Container::class, \Psr\Container\ContainerInterface::class]);
         $this->alias('cache', [\Imhotep\Cache\CacheManager::class]);
@@ -76,7 +74,7 @@ class Application extends Container
         //$this->alias('events', [\Imhotep\Events\Events::class]);
     }
 
-    protected function registerBaseServiceProviders()
+    protected function registerBaseServiceProviders(): void
     {
         $this->providers->register(new RoutingServiceProvider($this));
     }
@@ -113,6 +111,10 @@ class Application extends Container
 
     protected string $publicDir = 'public';
 
+    protected ?string $environmentPath = null;
+
+    protected ?string $environmentFile = null;
+
     /**
      * Set the base path for the application.
      *
@@ -134,6 +136,45 @@ class Application extends Container
     public function configPath(string $path = null): string
     {
         return $this->basePath . '/config' . (empty($path) ? '' : '/'.ltrim($path, '/'));
+    }
+
+    public function configCachePath(): string
+    {
+        return $this->storagePath('/bootstrap/config.cache.php');
+    }
+
+    public function configIsCached(): bool
+    {
+        return file_exists($this->configCachePath());
+    }
+
+    public function environmentPath(): string
+    {
+        return $this->environmentPath ?: $this->basePath;
+    }
+
+    public function setEnvironmentPath(string $path): static
+    {
+        $this->environmentPath = $path;
+
+        return $this;
+    }
+
+    public function environmentFile(): string
+    {
+        return $this->environmentFile ?: '.env';
+    }
+
+    public function setEnvironmentFile(string $file): static
+    {
+        $this->environmentFile = $file;
+
+        return $this;
+    }
+
+    public function environmentFilePath(): string
+    {
+        return $this->environmentPath().DIRECTORY_SEPARATOR.$this->environmentFile();
     }
 
     public function databasePath(string $path = null): string

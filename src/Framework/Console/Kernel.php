@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Console;
 
@@ -21,11 +19,12 @@ class Kernel
         \Imhotep\Framework\Bootstrap\LoadEnvironment::class,
         \Imhotep\Framework\Bootstrap\LoadConfiguration::class,
         \Imhotep\Framework\Bootstrap\RegisterFacades::class,
+        \Imhotep\Framework\Bootstrap\SetRequestForConsole::class
     ];
 
     protected bool $commandsLoaded = false;
 
-    private int $commandStartedAt;
+    protected int $commandStartedAt = 0;
 
     public function __construct(Application $app)
     {

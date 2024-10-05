@@ -17,6 +17,8 @@ class RepositoryTest extends TestCase
             'foo' => 'bar',
             'bar' => 'baz',
             'baz' => 'bat',
+            'number' => 123,
+            'position' => 30.12,
             'null' => null,
             'boolean' => true,
             'associate' => [
@@ -76,6 +78,11 @@ class RepositoryTest extends TestCase
     public function testHasIsFalse()
     {
         $this->assertFalse($this->repo->has('not-exist'));
+    }
+
+    public function testAll()
+    {
+        $this->assertSame($this->config, $this->repo->all());
     }
 
     public function testGet()
@@ -138,6 +145,51 @@ class RepositoryTest extends TestCase
         $this->assertSame('default', $this->repo->get('not-exist', 'default'));
     }
 
+    public function testGetString()
+    {
+        $this->assertSame('bar', $this->repo->string('foo'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Configuration value for key [number] must be a string, integer given.');
+        $this->repo->string('number');
+    }
+
+    public function testGetInt()
+    {
+        $this->assertSame(123, $this->repo->int('number'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Configuration value for key [foo] must be an integer, string given.');
+        $this->repo->int('foo');
+    }
+
+    public function testGetFloat()
+    {
+        $this->assertSame(30.12, $this->repo->float('position'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Configuration value for key [foo] must be a float, string given.');
+        $this->repo->float('foo');
+    }
+
+    public function testGetBool()
+    {
+        $this->assertSame(true, $this->repo->bool('boolean'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Configuration value for key [number] must be a bool, integer given.');
+        $this->repo->bool('number');
+    }
+
+    public function testGetArray()
+    {
+        $this->assertSame(['aaa', 'zzz'], $this->repo->array('array'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Configuration value for key [null] must be an array, NULL given.');
+        $this->repo->array('null');
+    }
+
     public function testSet()
     {
         $this->repo->set('key', 'value');
@@ -195,11 +247,6 @@ class RepositoryTest extends TestCase
     {
         $this->repo->push('new_key', 'xxx');
         $this->assertSame(['xxx'], $this->repo->get('new_key'));
-    }
-
-    public function testAll()
-    {
-        $this->assertSame($this->config, $this->repo->all());
     }
 
     public function testOffsetExists()

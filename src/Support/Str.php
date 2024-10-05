@@ -224,4 +224,9 @@ class Str
     {
         return mb_substr($string, 0, $start, 'UTF-8').mb_substr($string, $start + $length, null, 'UTF-8');
     }
+
+    public static function strpos(string $string, string $needle, int $offset = 0): false|int
+    {
+        return mb_strpos($string, $needle, $offset, 'UTF-8');
+    }
 }

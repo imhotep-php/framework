@@ -15,6 +15,13 @@ interface Repository
     public function has(string $key): bool;
 
     /**
+     * Get all the configuration items for the application.
+     *
+     * @return array
+     */
+    public function all(): array;
+
+    /**
      * Get the specified configuration value.
      *
      * @param string|array $key
@@ -31,13 +38,6 @@ interface Repository
      * @return mixed
      */
     public function getMany(array $keys): mixed;
-
-    /**
-     * Get all the configuration items for the application.
-     *
-     * @return array
-     */
-    public function all(): array;
 
     /**
      * Set a given configuration value.

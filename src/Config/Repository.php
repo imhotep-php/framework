@@ -6,6 +6,7 @@ use ArrayAccess;
 use Closure;
 use Imhotep\Contracts\Config\Repository as ConfigContract;
 use Imhotep\Support\Arr;
+use InvalidArgumentException;
 
 class Repository implements ArrayAccess, ConfigContract
 {
@@ -17,6 +18,11 @@ class Repository implements ArrayAccess, ConfigContract
     public function has(string $key): bool
     {
         return Arr::has($this->items, $key);
+    }
+
+    public function all(): array
+    {
+        return $this->items;
     }
 
     public function get(string|array $key, mixed $default = null): mixed
@@ -43,9 +49,69 @@ class Repository implements ArrayAccess, ConfigContract
         return $result;
     }
 
-    public function all(): array
+    public function string(string $key, Closure|string $default = null): string
     {
-        return $this->items;
+        $value = $this->get($key, $default);
+
+        if (is_string($value)) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException(
+            sprintf('Configuration value for key [%s] must be a string, %s given.', $key, gettype($value))
+        );
+    }
+
+    public function int(string $key, Closure|int $default = null): int
+    {
+        $value = $this->get($key, $default);
+
+        if (is_int($value)) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException(
+            sprintf('Configuration value for key [%s] must be an integer, %s given.', $key, gettype($value))
+        );
+    }
+
+    public function float(string $key, Closure|float $default = null): float
+    {
+        $value = $this->get($key, $default);
+
+        if (is_float($value)) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException(
+            sprintf('Configuration value for key [%s] must be a float, %s given.', $key, gettype($value))
+        );
+    }
+
+    public function bool(string $key, Closure|bool $default = null): bool
+    {
+        $value = $this->get($key, $default);
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException(
+            sprintf('Configuration value for key [%s] must be a bool, %s given.', $key, gettype($value))
+        );
+    }
+
+    public function array(string $key, Closure|array $default = null): array
+    {
+        $value = $this->get($key, $default);
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException(
+            sprintf('Configuration value for key [%s] must be an array, %s given.', $key, gettype($value))
+        );
     }
 
     public function set(string|array $key, mixed $value = null): void

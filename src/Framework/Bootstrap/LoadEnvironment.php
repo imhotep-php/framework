@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Imhotep\Framework\Bootstrap;
 
+use Exception;
+use Imhotep\Console\Input\InputArgv;
 use Imhotep\Console\Output\ConsoleOutput;
-use Imhotep\Dotenv\Dotenv;
-use Imhotep\Dotenv\DotenvException;
 use Imhotep\Framework\Application;
+use Imhotep\Support\Env;
 
 class LoadEnvironment
 {
@@ -22,16 +23,43 @@ class LoadEnvironment
 
     public function bootstrap(): void
     {
+        $this->checkSpecificEnvironmentFile();
+
         try {
-            $dotenv = new Dotenv($this->app->basePath());
-            $this->app->instance('dotenv', $dotenv);
-            $this->app->alias('dotenv', Dotenv::class);
-        } catch (DotenvException $e) {
+            Env::initRepository($this->app->environmentFilePath());
+        }
+        catch (Exception $e) {
             $this->writeErrorAndDie($e);
         }
     }
 
-    protected function writeErrorAndDie(DotenvException $e): void
+    protected function checkSpecificEnvironmentFile(): void
+    {
+        if ($this->app->runningInConsole() && ($input = new InputArgv())->hasRawOption('--env')) {
+            if ($this->setEnvironment($input->getRawOption('--env'))) {
+                return;
+            }
+        }
+
+        if ($environment = Env::get('APP_ENV')) {
+            $this->setEnvironment($environment);
+        }
+    }
+
+    protected function setEnvironment(string $environment): bool
+    {
+        $filename = $this->app->environmentFile().'.'.$environment;
+
+        if (is_file($this->app->environmentPath().DIRECTORY_SEPARATOR.$filename)) {
+            $this->app->setEnvironmentFile($filename);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function writeErrorAndDie(Exception $e): void
     {
         $output = (new ConsoleOutput())->getErrorOutput();
 

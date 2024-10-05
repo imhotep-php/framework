@@ -28,11 +28,16 @@ class LoadConfiguration
      */
     public function bootstrap(): void
     {
-        $items = [];
+        $this->app->instance('config', $config = new Repository([]));
 
-        $this->app->instance('config', $config = new Repository($items));
+        if ($this->app->configIsCached()) {
+            $items = require $this->app->configCachePath();
 
-        $this->loadConfigFiles($config);
+            $config->set($items);
+        }
+        else {
+            $this->loadConfigFiles($config);
+        }
 
         date_default_timezone_set($config->get('app.timezone', 'UTC'));
 
@@ -46,7 +51,7 @@ class LoadConfiguration
      * @return void
      * @throws Exception
      */
-    public function loadConfigFiles(RepositoryContract $repository): void
+    protected function loadConfigFiles(RepositoryContract $repository): void
     {
         $files = $this->getConfigFiles();
 
@@ -58,7 +63,7 @@ class LoadConfiguration
             $value = require $file;
             if(is_array($value)){
                 $repository->set($key, $value);
-            }else{
+            } else {
                 throw new Exception('Configuration file "'.$key.'" is not array.');
             }
         }
@@ -69,7 +74,7 @@ class LoadConfiguration
      *
      * @return array
      */
-    public function getConfigFiles(): array
+    protected function getConfigFiles(): array
     {
         $configPath = realpath($this->app->configPath());
         $filenames = array_diff(scandir($configPath), ['..','.']);
@@ -77,7 +82,6 @@ class LoadConfiguration
         $files = [];
         foreach($filenames as $filename){
             if (! str_ends_with($filename, '.php')) {
-            //if(substr($filename, -4) !== '.php'){
                 continue;
             }
 
