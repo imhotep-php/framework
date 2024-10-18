@@ -202,18 +202,6 @@ if (!function_exists('db')) {
     }
 }
 
-if (!function_exists('env')) {
-    /**
-     * Get the available dotenv instance.
-     *
-     * @return mixed|Imhotep\Dotenv\Dotenv
-     */
-    function env(string $name, string|int|bool|float|Closure $default = null): mixed
-    {
-        return app('dotenv')->get($name, $default);
-    }
-}
-
 if (!function_exists('files')) {
     /**
      * Get local filesystem instance.

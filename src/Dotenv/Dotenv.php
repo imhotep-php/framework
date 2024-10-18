@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Dotenv;
 
@@ -8,15 +6,14 @@ class Dotenv implements \ArrayAccess
 {
     protected Parser $parser;
 
-    public function __construct(string $path = null, string $env = null)
+    public function __construct(string $filepath = null)
     {
         $this->parser = new Parser();
 
         $_ENV = array_merge(getenv(), $_ENV);
 
-        if (! empty($path)) {
-            $envFile = $path.'/.env' . (empty($env) ? '' : '.'.$env);
-            $this->loadFrom($envFile);
+        if ($filepath) {
+            $this->loadFrom($filepath);
         }
     }
 
@@ -29,7 +26,9 @@ class Dotenv implements \ArrayAccess
         $env = $this->parser->parse(file_get_contents($file));
 
         array_walk($env, function ($value, $name) {
-            $this->set($name, $value);
+            if (! $this->has($name)) {
+                $this->set($name, $value);
+            }
         });
     }
 
@@ -48,10 +47,10 @@ class Dotenv implements \ArrayAccess
     public function get(string $name, \Closure|string|int|float|bool $default = null): mixed
     {
         if (array_key_exists($name, $_ENV) && ! is_null($_ENV[$name])) {
-            return $_ENV[$name];
+            return $this->fixValueType($_ENV[$name]);
         }
         elseif($value = getenv($name)) {
-            return $value;
+            return $this->fixValueType($value);
         }
 
         if ($default instanceof \Closure) {
@@ -59,6 +58,19 @@ class Dotenv implements \ArrayAccess
         }
 
         return $default;
+    }
+
+    protected function fixValueType(mixed $value): mixed
+    {
+        if (! is_string($value)) return $value;
+
+        return match($value) {
+            'true', '(true)' => true,
+            'false', '(false)' => false,
+            'empty', '(empty)' => '',
+            'null', '(null)' => null,
+            default => $value,
+        };
     }
 
     public function set(string $name, string|int|float|bool|null $value): void

@@ -22,13 +22,6 @@
     "phpunit/phpunit": "^9.5",
     "mockery/mockery": "^1.5.1"
   },
-  "replace": {
-    "imhotep/cache": "self.version",
-    "imhotep/container": "self.version",
-    "imhotep/contracts": "self.version",
-    "imhotep/dotenv": "self.version",
-    "imhotep/support": "self.version"
-  },
   "autoload": {
     "files": [
       "src/Support/helpers.php",

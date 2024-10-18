@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Input;
 
@@ -24,7 +22,8 @@ class InputArgv implements InputContract
         if (is_null($argv)) {
             $argv = $_SERVER['argv'] ?? [];
         }
-        $this->definition = is_null($definition) ? new InputDefinition() : $definition;
+
+        $this->definition = $definition ?? new InputDefinition();
 
         array_shift($argv); // Remove application name
 
@@ -162,5 +161,59 @@ class InputArgv implements InputContract
     public function hasOption(string $name): bool
     {
         return array_key_exists($name, $this->options);
+    }
+
+    public function hasRawOption(string $name, bool $onlyParams = false): bool
+    {
+        if (empty($name)) return false;
+
+        foreach ($this->argv as $argv) {
+            if ($onlyParams && '--' === $argv) {
+                return false;
+            }
+
+            if ($argv === $name) {
+                return true;
+            }
+
+            // Options with values:
+            // For long options, test for '--option=' at beginning
+            // For short options, test for '-o' at beginning
+            $leading = str_starts_with($name, '--') ? $name.'=' : $name;
+            if (str_starts_with($argv, $leading)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function getRawOption(string $name, mixed $default = false, bool $onlyParams = false): mixed
+    {
+        if (empty($name)) return value($default);
+
+        $argv = $this->argv;
+
+        while (! empty($argv)) {
+            $value = array_shift($argv);
+
+            if ($onlyParams && '--' === $value) {
+                return value($default);
+            }
+
+            if ($value === $name) {
+                return array_shift($argv);
+            }
+
+            // Options with values:
+            // For long options, test for '--option=' at beginning
+            // For short options, test for '-o' at beginning
+            $leading = str_starts_with($name, '--') ? $name.'=' : $name;
+            if (str_starts_with($value, $leading)) {
+                return substr($value, strlen($leading));
+            }
+        }
+
+        return value($default);
     }
 }

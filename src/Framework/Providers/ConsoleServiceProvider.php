@@ -6,6 +6,8 @@ namespace Imhotep\Framework\Providers;
 
 use Imhotep\Database\Commands\MigrationMakeCommand;
 use Imhotep\Database\Commands\StatusCommand;
+use Imhotep\Framework\Console\Commands\ConfigCacheCommand;
+use Imhotep\Framework\Console\Commands\ConfigClearCommand;
 use Imhotep\Framework\Console\Commands\ProviderMakeCommand;
 use Imhotep\Framework\Console\Commands\RouteCacheCommand;
 use Imhotep\Framework\Console\Commands\RouteClearCommand;
@@ -22,6 +24,8 @@ class ConsoleServiceProvider extends ServiceProvider
         'route:list' => RouteListCommand::class,
         'route:cache' => RouteCacheCommand::class,
         'route:clear' => RouteClearCommand::class,
+        'config:cache' => ConfigCacheCommand::class,
+        'config:clear' => ConfigClearCommand::class,
     ];
 
     public function register()
