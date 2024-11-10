@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Cache\Stores;
 
@@ -18,7 +16,8 @@ class FileStore implements Store
 
     protected int $filePermission = 0664;
 
-    public function __construct(array $config){
+    public function __construct(array $config)
+    {
         $this->config = $config;
 
         if (! isset($config['path'])) {

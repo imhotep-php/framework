@@ -20,13 +20,15 @@ class Connection extends ConnectionBase
         return $this->config['schema'];
     }
 
-    public function useSchemaGrammar(): void
+    public function useSchemaGrammar(): static
     {
         $this->schemaGrammar = new SchemaGrammar();
         $this->schemaGrammar->setTablePrefix($this->tablePrefix);
         $this->schemaGrammar->setCharset($this->getConfig('charset', 'utf8mb4'));
         $this->schemaGrammar->setCollate($this->getConfig('collate', 'utf8mb4_unicode_ci'));
         $this->schemaGrammar->setEngine($this->getConfig('engine', 'InnoDB'));
+
+        return $this;
     }
 
     public function getSchemaBuilder(): SchemaBuilder
@@ -38,10 +40,12 @@ class Connection extends ConnectionBase
         return new SchemaBuilder($this);
     }
 
-    public function useQueryGrammar(): void
+    public function useQueryGrammar(): static
     {
         $this->queryGrammar = new QueryGrammar();
         $this->queryGrammar->setTablePrefix($this->tablePrefix);
+
+        return $this;
     }
 
     public function getQueryBuilder(): QueryBuilder

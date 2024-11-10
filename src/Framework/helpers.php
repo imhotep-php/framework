@@ -456,7 +456,7 @@ if (!function_exists('scss')) {
 
         file_put_contents($to, $css);
 
-        return url($to);
+        return "/$to";
     }
 }
 

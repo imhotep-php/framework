@@ -76,13 +76,13 @@ interface Connection
 
     public function unsetEventDispatcher(): static;
 
-    public function useSchemaGrammar(): void;
+    public function useSchemaGrammar(): static;
 
     public function getSchemaGrammar(): SchemaGrammar;
 
     public function getSchemaBuilder(): SchemaBuilder;
 
-    public function useQueryGrammar(): void;
+    public function useQueryGrammar(): static;
 
     public function getQueryGrammar(): QueryGrammar;
 
