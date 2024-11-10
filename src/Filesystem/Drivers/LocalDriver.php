@@ -371,7 +371,7 @@ class LocalDriver implements Driver
         return @rename($from, $to) === true;
     }
 
-    public function copyDirectory(string $directory, string $destination, array $options = null): bool
+    public function copyDirectory(string $directory, string $destination, int $options = null): bool
     {
         if (! $this->isDirectory($directory)) {
             return false;
