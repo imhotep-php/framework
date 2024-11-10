@@ -7,8 +7,10 @@ use Imhotep\Contracts\Http\Request as RequestContract;
 use Imhotep\Contracts\Routing\Route;
 use Imhotep\Contracts\Session\Session;
 use Imhotep\Contracts\Validation\Validator;
+use Imhotep\Http\Request\FileBag;
 use Imhotep\Http\Request\HeaderBag;
 use Imhotep\Http\Request\ParameterBug;
+use Imhotep\Http\Request\ServerBag;
 use Imhotep\Support\Arr;
 use Imhotep\Support\Str;
 use Imhotep\Support\Traits\Macroable;
@@ -30,9 +32,9 @@ class Request implements \ArrayAccess, RequestContract
 
     public ParameterBug $cookies;
 
-    public ParameterBug $files;
+    public FileBag $files;
 
-    public ParameterBug $server;
+    public ServerBag $server;
 
     public HeaderBag $headers;
 
@@ -151,13 +153,14 @@ class Request implements \ArrayAccess, RequestContract
         $this->query = new ParameterBug($query);
         $this->post = new ParameterBug($post);
         $this->cookies = new ParameterBug($cookies);
-        $this->server = new ParameterBug($server);
+        $this->server = new ServerBag($server);
+        $this->headers = new HeaderBag($this->server->getHeaders());
+        $this->files = new FileBag($files);
 
-        $this->makeHeaders();
-        $this->makeFiles($files);
         $this->makeJson();
     }
 
+    /*
     protected function makeHeaders(): void
     {
         $this->headers = new HeaderBag();
@@ -186,10 +189,12 @@ class Request implements \ArrayAccess, RequestContract
             $this->headers->set('AUTHORIZATION', $this->headers->get('PHP_AUTH_DIGEST'));
         }
     }
+    */
 
+    /*
     protected function makeFiles(array $files): void
     {
-        $this->files = new ParameterBug();
+        $this->files = new FileBag();
 
         foreach ($files as $key => $file) {
             if (! is_array($file['tmp_name'])) {
@@ -217,6 +222,7 @@ class Request implements \ArrayAccess, RequestContract
             }
         }
     }
+    */
 
     protected function makeJson(): void
     {
@@ -292,8 +298,11 @@ class Request implements \ArrayAccess, RequestContract
 
     public function getHost(bool $withPort = false): string
     {
-        $host = $this->server->get('SERVER_NAME') ?? $this->server->get('SERVER_ADDR');
+        if (! $host = $this->headers->get('HOST')) {
+            $host = $this->server->get('SERVER_NAME') ?? $this->server->get('SERVER_ADDR');
+        }
 
+        // Remove port from host
         $host = strtolower(preg_replace('/:\d+$/', '', trim($host)));
 
         if (! $withPort) {
@@ -318,8 +327,12 @@ class Request implements \ArrayAccess, RequestContract
 
     public function getPort(): int
     {
-        if ($port = $this->server->get('SERVER_PORT')) {
-            return intval($port);
+        if (! $host = $this->headers->get('HOST')) {
+            return intval($this->server->get('SERVER_PORT'));
+        }
+
+        if (preg_match('/:(\d+)/', $host, $match)) {
+            return intval($match[1]);
         }
 
         return $this->getScheme() === 'https' ? 443 : 80;

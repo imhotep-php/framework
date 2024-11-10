@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Cache\Stores;
 
@@ -12,7 +10,8 @@ class ArrayStore implements Store
 
     protected array $config;
 
-    public function __construct(array $config){
+    public function __construct(array $config)
+    {
         $this->config = $config;
     }
 

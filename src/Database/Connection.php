@@ -437,7 +437,7 @@ abstract class Connection implements ConnectionContract
 
     protected SchemaGrammar|null $schemaGrammar = null;
 
-    public function useSchemaGrammar(): void
+    public function useSchemaGrammar(): static
     {
         throw new DatabaseException("Schema grammar is not supported.");
     }
@@ -462,7 +462,7 @@ abstract class Connection implements ConnectionContract
 
     protected QueryGrammar|null $queryGrammar = null;
 
-    public function useQueryGrammar(): void
+    public function useQueryGrammar(): static
     {
         throw new DatabaseException("Query grammar is not supported.");
     }

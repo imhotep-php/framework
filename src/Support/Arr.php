@@ -138,6 +138,25 @@ class Arr
         return $array;
     }
 
+    public static function pull(array|object $array, string|int $key, mixed $default = null): mixed
+    {
+        $value = static::get($array, $key, $default);
+
+        static::forget($array, $key);
+
+        return $value;
+    }
+
+    public static function only(array|object $array, array|string $keys): array
+    {
+        return array_intersect_key($array, array_flip((array) $keys));
+    }
+
+    public static function query(array|object $array): string
+    {
+        return http_build_query($array, '', '&', PHP_QUERY_RFC3986);
+    }
+
     public static function forget(array|object &$array, string|array $keys): void
     {
         $original = &$array;

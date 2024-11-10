@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Http\Request;
 
@@ -13,7 +11,7 @@ class ParameterBug implements \ArrayAccess, \IteratorAggregate, \Countable
         $this->parameters = $parameters;
     }
 
-    public function all()
+    public function all(): array
     {
         return $this->parameters;
     }
@@ -40,22 +38,35 @@ class ParameterBug implements \ArrayAccess, \IteratorAggregate, \Countable
 
     public function has(string $key): bool
     {
+        $key = $this->modifyKey($key);
+
         return array_key_exists($key, $this->parameters);
     }
 
     public function get(string $key, mixed $default = null): mixed
     {
+        $key = $this->modifyKey($key);
+
         return array_key_exists($key, $this->parameters) ? $this->parameters[$key] : value($default);
     }
 
     public function set(string $key, mixed $value): void
     {
+        $key = $this->modifyKey($key);
+
         $this->parameters[$key] = $value;
     }
 
     public function remove(string $key): void
     {
+        $key = $this->modifyKey($key);
+
         unset($this->parameters[$key]);
+    }
+
+    protected function modifyKey(string $key): string
+    {
+        return $key;
     }
 
     public function __get(string $key): mixed

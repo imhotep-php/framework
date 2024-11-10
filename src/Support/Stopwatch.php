@@ -22,9 +22,11 @@ class Stopwatch
         if ($start) static::start();
     }
 
-    public function start(): void
+    public function start(): static
     {
         $this->started = microtime(true);
+
+        return $this;
     }
 
     public function stop(): static
@@ -49,5 +51,16 @@ class Stopwatch
     protected function getFormatted(float $time): string
     {
         return number_format($time, $this->precision);
+    }
+
+    public static function force(\Closure $callback, &$time): mixed
+    {
+        $stopwatch = (new static())->start();
+
+        $result = $callback();
+
+        $time = $stopwatch->stop()->last();
+
+        return $result;
     }
 }

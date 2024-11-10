@@ -8,6 +8,7 @@ use Imhotep\Contracts\Routing\RouteCollection;
 class UrlGenerator
 {
     protected RouteCollection $routes;
+
     protected Request $request;
 
     public function __construct(RouteCollection $routes, Request $request)
@@ -28,15 +29,11 @@ class UrlGenerator
 
     public function to(string $path): string
     {
-        if (str_contains($path, '://')) {
+        if ($this->isValidUrl($path)) {
             return $path;
         }
 
-        $url = $this->request->scheme() . '://' . $this->request->host();
-
-        if ($this->request->port() !== 80) {
-            $url .= ':'.$this->request->port();
-        }
+        $url = $this->request->scheme() . '://' . $this->request->host(true);
 
         return $url . '/' . ltrim($path, '/');
     }
@@ -54,7 +51,7 @@ class UrlGenerator
             $url = $route->uri();
 
             $url = preg_replace_callback('/\{.*?\}/', function ($match) use ($parameters) {
-                $key = preg_replace("/({)|(\??})/", "", $match[0]);
+                $key = preg_replace('/({)|(\??})/', "", $match[0]);
 
                 if (str_ends_with($match[0], '?}') && array_key_exists($key, $parameters) && empty($parameters[$key])) {
                     return '';
@@ -74,5 +71,14 @@ class UrlGenerator
         $this->request = $request;
 
         return $this;
+    }
+
+    protected function isValidUrl(string $url): bool
+    {
+        if (! preg_match('~^(#|//|https?://|(mailto|tel|sms):)~', $url)) {
+            return filter_var($url, FILTER_VALIDATE_URL) !== false;
+        }
+
+        return true;
     }
 }

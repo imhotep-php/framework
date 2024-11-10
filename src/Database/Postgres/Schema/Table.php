@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Postgres\Schema;
 
@@ -9,7 +7,7 @@ use Imhotep\Database\Schema\Table as TableBase;
 
 class Table extends TableBase
 {
-    protected $columnClassDefault = Column::class;
+    protected string $columnClassDefault = Column::class;
 
     /*
     |--------------------------------------------------------------------------
@@ -20,12 +18,12 @@ class Table extends TableBase
     /**
      * Create column as primary auto-incrementing big integer (8-byte, 1 to 9223372036854775807).
      *
-     * @param string $name
+     * @param string $column
      * @return Column
      */
-    public function id(string $name = 'id'): Column
+    public function id(string $column = 'id'): Column
     {
-        return $this->addColumn('bigSerial', $name, ['primary' => true]);
+        return $this->addColumn('bigSerial', $column, ['primary' => true]);
     }
 
     /**
@@ -35,13 +33,13 @@ class Table extends TableBase
      * @param int|null $length
      * @return Column
      */
-    public function string($name, int $length = null): Column
+    public function string(string $column, int $length = null): Column
     {
         if (is_null($length)) {
-            return $this->text($name);
+            return $this->text($column);
         }
 
-        return $this->varchar($name, $length);
+        return $this->varchar($column, $length);
     }
 
     public function timestamps(int $precision = 0): void
@@ -50,9 +48,9 @@ class Table extends TableBase
         $this->timestamp('updated_at', $precision);
     }
 
-    public function softDeletes(string $column = 'deleted_at', int $precision = 0): void
+    public function softDeletes(string $column = 'deleted_at', int $precision = 0): Column
     {
-        $this->timestamp($column, $precision);
+        return $this->timestamp($column, $precision);
     }
 
     /*
@@ -61,7 +59,7 @@ class Table extends TableBase
     |--------------------------------------------------------------------------
     */
 
-    public function boolean(string $column)
+    public function boolean(string $column): Column
     {
         return $this->addColumn('boolean', $column);
     }
@@ -193,7 +191,7 @@ class Table extends TableBase
      * @param int $length
      * @return mixed
      */
-    public function char(string $column, int $length): Column
+    public function char(string $column, int $length = null): Column
     {
         return $this->addColumn('char', $column, compact('length'));
     }
@@ -202,10 +200,10 @@ class Table extends TableBase
      * Create column as text variable-length (with limit).
      *
      * @param string $column
-     * @param int $length
+     * @param int|null $length
      * @return mixed
      */
-    public function varchar(string $column, int $length = 255): Column
+    public function varchar(string $column, int $length = null): Column
     {
         return $this->addColumn('varchar', $column, compact('length'));
     }
@@ -227,7 +225,7 @@ class Table extends TableBase
     |--------------------------------------------------------------------------
     */
 
-    public function timestamp($column, int $precision = 0)
+    public function timestamp(string $column, int $precision = 0): Column
     {
         if($precision < 0) $precision = 0;
         if($precision > 6) $precision = 6;
@@ -235,7 +233,7 @@ class Table extends TableBase
         return $this->addColumn('timestamp', $column, compact('precision'));
     }
 
-    public function timestampTz($column, int $precision = 0)
+    public function timestampTz(string $column, int $precision = 0): Column
     {
         if($precision < 0) $precision = 0;
         if($precision > 6) $precision = 6;
@@ -243,22 +241,22 @@ class Table extends TableBase
         return $this->addColumn('timestampTz', $column, compact('precision'));
     }
 
-    public function date($column)
+    public function date(string $column): Column
     {
         return $this->addColumn('date', $column);
     }
 
-    public function time($column)
+    public function time(string $column): Column
     {
         return $this->addColumn('time', $column);
     }
 
-    public function timeTz($column)
+    public function timeTz(string $column): Column
     {
         return $this->addColumn('timeTz', $column);
     }
 
-    public function interval($column)
+    public function interval(string $column): Column
     {
         throw new DatabaseException("Type 'interval' not supported.");
     }
@@ -270,7 +268,7 @@ class Table extends TableBase
     |--------------------------------------------------------------------------
     */
 
-    public function uuid($column)
+    public function uuid(string $column): Column
     {
         return $this->addColumn('uuid', $column);
     }
