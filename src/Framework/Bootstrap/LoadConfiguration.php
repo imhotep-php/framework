@@ -60,11 +60,16 @@ class LoadConfiguration
         }
 
         foreach($files as $key => $file){
-            $value = require $file;
-            if(is_array($value)){
-                $repository->set($key, $value);
-            } else {
-                throw new Exception('Configuration file "'.$key.'" is not array.');
+            try {
+                $value = require $file;
+                if(is_array($value)){
+                    $repository->set($key, $value);
+                } else {
+                    throw new Exception('Configuration file "'.$key.'" is not array.');
+                }
+            }
+            catch (\Throwable $e) {
+                throw new Exception('Configuration file "'.$key.'" load failed: '.$e->getMessage());
             }
         }
     }

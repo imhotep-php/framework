@@ -48,6 +48,7 @@ namespace Imhotep\Facades;
  * @method static boolean is(...$patterns)
  * @method static boolean has(string $name)
  * @method static mixed input(string $key, string|null $default = null)
+ * @method static void setDefaultAction(string|array|\Closure $action)
  *
  * @see \Imhotep\Routing\Router
  */
