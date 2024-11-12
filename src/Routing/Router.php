@@ -146,12 +146,6 @@ class Router implements RouterContract
     {
         return $this->redirect($uri, $destination, 301);
     }
-    /*
-    public function view(string $uri, string $view, array $data)
-    {
-
-    }
-    */
 
     protected function createRoute(string|array $methods, string $uri, string|array|Closure $action): Route
     {
@@ -182,9 +176,9 @@ class Router implements RouterContract
         return $route;
     }
 
-    protected $defaultAction = null;
+    protected mixed $defaultAction = null;
 
-    public function setDefaultAction(string|array|Closure $action)
+    public function setDefaultAction(string|array|Closure $action): void
     {
         if(Reflector::isCallable($action, true)) {
             $this->defaultAction = $action;
