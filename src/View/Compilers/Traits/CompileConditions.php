@@ -23,6 +23,25 @@ trait CompileConditions
         return '<?php endif; ?>';
     }
 
+    protected function compileAuth($guard = null): string
+    {
+        $guard = is_null($guard) ? '()' : $guard;
+
+        return "<?php if(auth{$guard}->check()): ?>";
+    }
+
+    protected function compileElseAuth($guard = null): string
+    {
+        $guard = is_null($guard) ? '()' : $guard;
+
+        return "<?php elseif(auth{$guard}->check()): ?>";
+    }
+
+    protected function compileEndAuth(): string
+    {
+        return '<?php endif; ?>';
+    }
+
     protected function compileCsrf(): string
     {
         return "<?php echo '<input type=\"hidden\" name=\"_csrf\" value=\"'.csrf().'\">'; ?>";

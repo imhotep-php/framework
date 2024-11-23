@@ -76,7 +76,6 @@ class FileHandler implements SessionHandlerInterface
 
         if ($this->files->isFile($path) && $this->files->lastModified($path) >= (time() - $this->lifetime)) {
             return $this->files->sharedGet($path);
-
         }
 
         return false;

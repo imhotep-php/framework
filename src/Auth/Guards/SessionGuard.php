@@ -185,7 +185,7 @@ class SessionGuard implements StatefulGuard
     // Get a unique key for the auth session value.
     public function getName(): string
     {
-        return '_auth.'.$this->name;
+        return '_auth_'.$this->name;
     }
 
     public function viaRemember(): bool
