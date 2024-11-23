@@ -31,10 +31,11 @@ class Repository
      */
     protected ?string $connection = null;
 
-    public function __construct(ConnectionResolver $resolver, string $table)
+    public function __construct(ConnectionResolver $resolver, array $config)
     {
         $this->resolver = $resolver;
-        $this->table = $table;
+
+        $this->table = $config['table'] ?? 'migrations';
     }
 
     /**

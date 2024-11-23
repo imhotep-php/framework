@@ -34,7 +34,7 @@ class MigrationServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton('migration.repository', function ($app) {
-            return new Repository($app['db'], $app['config']['database.migrations']);
+            return new Repository($app['db'], $app['config']['database.migrations'] ?? []);
         });
 
         $this->app->singleton('migrator', function ($app) {

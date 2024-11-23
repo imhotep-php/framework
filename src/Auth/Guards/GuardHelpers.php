@@ -56,7 +56,7 @@ trait GuardHelpers
     public function id(): int|string|null
     {
         if ($this->user()) {
-            return $this->user()->getAuthIdentifier();
+            return $this->user()->getAuthId();
         }
 
         return null;
@@ -143,6 +143,7 @@ trait GuardHelpers
 
         return $this;
     }
+
     protected function callFailedEvent(?Authenticatable $user, array $credentials): static
     {
         $this->events?->dispatch(new Failed($this->name, $user, $credentials));

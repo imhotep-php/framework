@@ -59,8 +59,8 @@ class UrlGenerator
 
                 return $parameters[$key] ?? $match[0];
             }, $url);
-            
-            return rtrim($url, '/');
+
+            return $url === '/' ? $url : rtrim($url, '/');
         }
 
         throw new \Exception("Route [{$name}] not defined.");

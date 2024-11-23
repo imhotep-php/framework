@@ -241,7 +241,7 @@ class Migrator
                 continue;
             }
 
-            $migration = $this->resolveMigration($files[0]);
+            $migration = $this->resolveMigration(array_shift($files));
 
             $this->components()->task($migration->name, fn() => $this->runMigration($migration, 'down'));
         }

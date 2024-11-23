@@ -8,6 +8,7 @@ use Imhotep\Database\Commands\MigrationMakeCommand;
 use Imhotep\Database\Commands\StatusCommand;
 use Imhotep\Framework\Console\Commands\ConfigCacheCommand;
 use Imhotep\Framework\Console\Commands\ConfigClearCommand;
+use Imhotep\Framework\Console\Commands\KeyGenCommand;
 use Imhotep\Framework\Console\Commands\ProviderMakeCommand;
 use Imhotep\Framework\Console\Commands\RouteCacheCommand;
 use Imhotep\Framework\Console\Commands\RouteClearCommand;
@@ -17,10 +18,9 @@ use Imhotep\Routing\Commands\ControllerMakeCommand;
 class ConsoleServiceProvider extends ServiceProvider
 {
     public array $commands = [
+        'key:gen' => KeyGenCommand::class,
         'make:provider' => ProviderMakeCommand::class,
         'make:controller' => ControllerMakeCommand::class,
-        //'make:migration' => MigrationMakeCommand::class,
-        //'migrate:status' => StatusCommand::class,
         'route:list' => RouteListCommand::class,
         'route:cache' => RouteCacheCommand::class,
         'route:clear' => RouteClearCommand::class,

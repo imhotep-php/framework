@@ -175,6 +175,19 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
         return $this->wrap($where['column']).' IS NOT NULL';
     }
 
+    protected function whereIn(Builder $query, array $where): string
+    {
+        foreach ($where['values'] as $value) {
+            $query->addBinding($value, 'where');
+        }
+
+        return sprintf('%s %s (%s)',
+            $this->wrap($where['column']),
+            $where['type'] === 'In' ? 'IN' : 'NOT IN',
+            $this->prepareValues($where['values'])
+        );
+    }
+
     protected function compileOrders(Builder $query): string
     {
         $sql = [];
