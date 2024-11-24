@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Auth\Guards;
 
@@ -42,7 +40,7 @@ class TokenGuard implements Guard
         return false;
     }
 
-    protected function getTokenFromRequest()
+    protected function getTokenFromRequest(): ?string
     {
         $token = $this->request->query($this->inputKey);
 

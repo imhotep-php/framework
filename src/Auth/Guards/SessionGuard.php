@@ -2,14 +2,10 @@
 
 namespace Imhotep\Auth\Guards;
 
-use Imhotep\Auth\Events\Attempting;
-use Imhotep\Auth\Events\Failed;
-use Imhotep\Auth\Events\Login;
 use Imhotep\Auth\Remember;
 use Imhotep\Contracts\Auth\Authenticatable;
 use Imhotep\Contracts\Auth\StatefulGuard;
 use Imhotep\Contracts\Auth\UnauthorizedHttpException;
-use Imhotep\Contracts\Events\Dispatcher;
 use Imhotep\Contracts\Session\Session;
 use Imhotep\Cookie\CookieJar;
 use Imhotep\Support\Str;
