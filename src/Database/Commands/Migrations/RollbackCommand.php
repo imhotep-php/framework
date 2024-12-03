@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Commands\Migrations;
 
@@ -12,7 +10,7 @@ class RollbackCommand extends BaseCommand
 
     public static string $defaultDescription = 'Create the migration repository';
 
-    public function handle(): void
+    public function handle(): int
     {
         parent::handle();
 
@@ -20,6 +18,8 @@ class RollbackCommand extends BaseCommand
             'pretend' => (bool)$this->input->getOption('pretend'),
             'step' => (int)$this->input->getOption('step'),
         ]);
+
+        return 0;
     }
 
     public function getOptions(): array

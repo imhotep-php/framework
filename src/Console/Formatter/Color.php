@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Formatter;
 
@@ -24,7 +22,7 @@ enum Color
     case gray;
     case white;
 
-    public static function getByName($name): ?Color
+    public static function getByName($name, Color $default = null): ?Color
     {
         return match($name) {
             'black' => self::black,
@@ -43,7 +41,7 @@ enum Color
             'cyan-bright', 'cyanBright' => self::cyanBright,
             'gray-bright', 'grayBright' => self::grayBright,
             'gray' => self::gray,
-            default => null,
+            default => $default,
         };
     }
 

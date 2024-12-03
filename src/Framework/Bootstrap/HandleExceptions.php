@@ -1,10 +1,9 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Bootstrap;
 
-use Exception;
+use ErrorException;
+use Imhotep\Console\Output\ConsoleOutput;
 use Imhotep\Contracts\Debug\ExceptionHandler;
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Framework\Application;
@@ -45,7 +44,7 @@ class HandleExceptions
         }
 
         if (error_reporting() & $level) {
-            throw new \ErrorException($message, 0, $level, $file, $line);
+            throw new ErrorException($message, 0, $level, $file, $line);
         }
     }
 
@@ -57,7 +56,7 @@ class HandleExceptions
 
         try{
             $handler->report($e);
-        } catch (\Exception $e) { }
+        } catch (Throwable $e) { }
 
         if ($this->app->runningInConsole()) {
             $handler->renderForConsole($e);
@@ -80,7 +79,7 @@ class HandleExceptions
     {
         try {
             $logger = $this->app->make(LoggerInterface::class);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             return;
         }
 

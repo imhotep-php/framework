@@ -1,15 +1,16 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Input;
 
+use Imhotep\Console\Utils\SignatureParser;
 use Imhotep\Contracts\Console\ConsoleException;
+use Stringable;
 
-class InputArgument
+class InputArgument implements Stringable
 {
-    public const REQUIRED = 1;
-    public const IS_ARRAY = 2;
+    public const OPTIONAL = 1 << 0;
+    public const REQUIRED = 1 << 1;
+    public const ARRAY = 1 << 2;
 
     public function __construct(
         protected string $name,
@@ -18,8 +19,8 @@ class InputArgument
         protected string|int|bool|float|array|null $default = null
     )
     {
-        if ($mode < 1 | $mode > 3) {
-            throw new ConsoleException(sprintf('Argument mode "%s" is not valid.', $mode));
+        if (is_null($mode)) {
+            $this->mode = static::OPTIONAL;
         }
 
         $this->setDefault($this->default);
@@ -58,18 +59,59 @@ class InputArgument
         return $this->default;
     }
 
+    public function isOptional(): bool
+    {
+        return (bool)($this->mode & static::OPTIONAL);
+    }
+
     public function isRequired(): bool
     {
-        return self::REQUIRED === (self::REQUIRED & $this->mode);
+        return (bool)($this->mode & static::REQUIRED);
     }
 
     public function isArray(): bool
     {
-        return self::IS_ARRAY === (self::IS_ARRAY & $this->mode);
+        return (bool)($this->mode & static::ARRAY);
     }
 
     public static function builder(string $name): InputArgumentBuilder
     {
         return new InputArgumentBuilder($name);
+    }
+
+    public static function fromString(string $expression)
+    {
+        return SignatureParser::argument($expression);
+    }
+
+    public function toString(): string
+    {
+        $result = $this->name;
+
+        if ($this->isOptional()) {
+            $result.= '?';
+        }
+
+        if ($this->isArray()) {
+            $result.= '*';
+        }
+
+        if (is_array($this->default) && ! empty($this->default)) {
+            $result.= '='.$this->default[0];
+        }
+        elseif (! is_array($this->default) && ! is_null($this->default)) {
+            $result.= '='.$this->default;
+        }
+
+        if (! empty($this->description)) {
+            $result.= ' : '.$this->description;
+        }
+
+        return $result;
+    }
+
+    public function __toString(): string
+    {
+        return $this->toString();
     }
 }

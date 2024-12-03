@@ -1,8 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
-declare(strict_types=1);
-
-namespace Imhotep\Routing\Commands;
+namespace Imhotep\Framework\Console\Commands;
 
 use Imhotep\Console\Command\MakeCommand;
 use Imhotep\Console\Input\InputOption;
@@ -17,12 +15,12 @@ class ControllerMakeCommand extends MakeCommand
 
     protected function getStub(): string
     {
-        return $this->resolveStubPath('/stubs/controller.plain.stub');
+        return $this->resolveStubPath('/stubs/controller.stub');
     }
 
     protected function resolveStubPath(string $stub): string
     {
-        $customPath = $this->container->basePath($stub);
+        $customPath = base_path($stub);
         $defaultPath = __DIR__.$stub;
 
         return file_exists($customPath) ? $customPath : $defaultPath;

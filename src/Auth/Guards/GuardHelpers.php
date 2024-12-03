@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Auth\Guards;
 
@@ -10,12 +8,12 @@ use Imhotep\Auth\Events\Failed;
 use Imhotep\Auth\Events\Login;
 use Imhotep\Auth\Events\Logout;
 use Imhotep\Auth\Events\Validated;
+use Imhotep\Auth\GenericUser;
 use Imhotep\Contracts\Auth\Authenticatable;
 use Imhotep\Contracts\Auth\AuthenticationException;
 use Imhotep\Contracts\Auth\UserProvider;
 use Imhotep\Contracts\Events\Dispatcher;
 use Imhotep\Contracts\Http\Request;
-use Imhotep\Cookie\CookieJar;
 
 trait GuardHelpers
 {
@@ -29,7 +27,7 @@ trait GuardHelpers
 
     protected ?Dispatcher $events = null;
 
-    public function authenticate()
+    public function authenticate(): mixed
     {
         if (! is_null($user = $this->user())) {
             return $user;

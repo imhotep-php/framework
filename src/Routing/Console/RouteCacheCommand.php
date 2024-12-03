@@ -1,6 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
-namespace Imhotep\Framework\Console\Commands;
+namespace Imhotep\Routing\Console;
 
 use Imhotep\Console\Command\Command;
 use Imhotep\Facades\Route;
@@ -11,7 +11,7 @@ class RouteCacheCommand extends Command
 
     public static string $defaultDescription = 'Create a route cache file for faster route registration';
 
-    public function handle(): void
+    public function handle(): int
     {
         $routes = Route::getRoutes();
 
@@ -37,5 +37,7 @@ class RouteCacheCommand extends Command
         file_put_contents($this->app->basePath('storage/framework/route.php'), $cacheData);
 
         $this->components()->success('Cached all routes is success');
+
+        return 0;
     }
 }

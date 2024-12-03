@@ -1,12 +1,10 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Formatter\Components;
 
 class Success extends Component
 {
-    public function render($string)
+    public function render($string): void
     {
         $this->output->newLine();
         $this->output->write("<bg=green;fg=white;options=dim> OK </> {$string}");

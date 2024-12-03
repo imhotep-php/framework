@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Commands\Migrations;
 
@@ -21,7 +19,7 @@ class InstallCommand extends Command
         parent::__construct();
     }
 
-    public function handle(): void
+    public function handle(): int
     {
         $this->migrate->setConnection($this->input->getOption('database'));
 
@@ -35,6 +33,8 @@ class InstallCommand extends Command
         $paths = [
             realpath( $this->container->basePath('/database/migrations'))
         ];
+
+        return 0;
     }
 
     public function getOptions(): array

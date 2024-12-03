@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Console\Commands;
 
@@ -22,23 +22,25 @@ class KeyGenCommand extends Command
         $this->files = $files;
     }
 
-    public function handle(): void
+    public function handle(): int
     {
         $key = Encrypter::genKeyBase64();
 
         if ($this->input->hasOption('show')) {
             $this->output->writeln($key);
 
-            return;
+            return 1;
         }
 
         if (! $this->saveToEnvFile($key)) {
-            return;
+            return 1;
         }
 
         config('app.key', $key);
 
         $this->components()->info('New application key set successfully.');
+
+        return 0;
     }
 
     protected function saveToEnvFile(string $key): bool

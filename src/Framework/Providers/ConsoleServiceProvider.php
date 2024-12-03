@@ -1,34 +1,28 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Providers;
 
-use Imhotep\Database\Commands\MigrationMakeCommand;
-use Imhotep\Database\Commands\StatusCommand;
+use Imhotep\Framework\Console\Commands\AboutCommand;
+use Imhotep\Framework\Console\Commands\CommandMakeCommand;
 use Imhotep\Framework\Console\Commands\ConfigCacheCommand;
 use Imhotep\Framework\Console\Commands\ConfigClearCommand;
+use Imhotep\Framework\Console\Commands\ControllerMakeCommand;
 use Imhotep\Framework\Console\Commands\KeyGenCommand;
 use Imhotep\Framework\Console\Commands\ProviderMakeCommand;
-use Imhotep\Framework\Console\Commands\RouteCacheCommand;
-use Imhotep\Framework\Console\Commands\RouteClearCommand;
-use Imhotep\Framework\Console\Commands\RouteListCommand;
-use Imhotep\Routing\Commands\ControllerMakeCommand;
 
 class ConsoleServiceProvider extends ServiceProvider
 {
     public array $commands = [
-        'key:gen' => KeyGenCommand::class,
-        'make:provider' => ProviderMakeCommand::class,
+        'about'           => AboutCommand::class,
+        'key:gen'         => KeyGenCommand::class,
+        'make:provider'   => ProviderMakeCommand::class,
         'make:controller' => ControllerMakeCommand::class,
-        'route:list' => RouteListCommand::class,
-        'route:cache' => RouteCacheCommand::class,
-        'route:clear' => RouteClearCommand::class,
-        'config:cache' => ConfigCacheCommand::class,
-        'config:clear' => ConfigClearCommand::class,
+        'make:command'    => CommandMakeCommand::class,
+        'config:cache'    => ConfigCacheCommand::class,
+        'config:clear'    => ConfigClearCommand::class,
     ];
 
-    public function register()
+    public function register(): void
     {
         $this->commands($this->commands);
     }

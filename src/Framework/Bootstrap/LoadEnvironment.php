@@ -1,14 +1,12 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Bootstrap;
 
-use Exception;
-use Imhotep\Console\Input\InputArgv;
+use Imhotep\Console\Input\ArgvInput;
 use Imhotep\Console\Output\ConsoleOutput;
 use Imhotep\Framework\Application;
 use Imhotep\Support\Env;
+use Throwable;
 
 class LoadEnvironment
 {
@@ -28,14 +26,14 @@ class LoadEnvironment
         try {
             Env::initRepository($this->app->environmentFilePath());
         }
-        catch (Exception $e) {
+        catch (Throwable $e) {
             $this->writeErrorAndDie($e);
         }
     }
 
     protected function checkSpecificEnvironmentFile(): void
     {
-        if ($this->app->runningInConsole() && ($input = new InputArgv())->hasRawOption('--env')) {
+        if ($this->app->runningInConsole() && ($input = new ArgvInput())->hasRawOption('--env')) {
             if ($this->setEnvironment($input->getRawOption('--env'))) {
                 return;
             }
@@ -59,7 +57,7 @@ class LoadEnvironment
         return false;
     }
 
-    protected function writeErrorAndDie(Exception $e): void
+    protected function writeErrorAndDie(Throwable $e): void
     {
         $output = (new ConsoleOutput())->getErrorOutput();
 

@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Input;
 
@@ -32,6 +30,21 @@ class InputDefinition
                 $this->addArgument($definition);
             }
         }
+    }
+
+    public function getOptionsDefault(): array
+    {
+        $result = [];
+
+        foreach ($this->options as $option) {
+            $default = $option->getDefault();
+
+            if (! is_null($default)) {
+                $result[ $option->getName() ] = $default;
+            }
+        }
+
+        return $result;
     }
 
     public function hasShortcut(string $name): bool
@@ -96,6 +109,21 @@ class InputDefinition
     public function getArguments(): array
     {
         return $this->arguments;
+    }
+
+    public function getArgumentsDefault(): array
+    {
+        $result = [];
+
+        foreach ($this->arguments as $argument) {
+            $default = $argument->getDefault();
+
+            if (! is_null($default)) {
+                $result[ $argument->getName() ] = $default;
+            }
+        }
+
+        return $result;
     }
 
     public function getArgument(string|int $key): InputArgument

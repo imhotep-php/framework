@@ -27,16 +27,6 @@ class Remember
         ]);
     }
 
-
-
-
-
-
-
-
-
-
-
     public static function fromValue(string $value): false|static
     {
         if (! static::valid($value)) {

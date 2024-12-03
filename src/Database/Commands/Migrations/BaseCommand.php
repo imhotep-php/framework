@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Commands\Migrations;
 
@@ -17,10 +15,12 @@ class BaseCommand extends Command
         parent::__construct();
     }
 
-    public function handle(): void
+    public function handle(): int
     {
         $this->migrate->setOutput($this->output);
         $this->migrate->setConnection($this->input->getOption('database'));
+
+        return 0;
     }
 
     protected function getPaths(): array
@@ -46,7 +46,7 @@ class BaseCommand extends Command
     {
         return [
             new InputOption('database', null, InputOption::VALUE_OPTIONAL, 'The database connection to use'),
-            new InputOption('path', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'The path(s) to the migrations files to use'),
+            new InputOption('path', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_ARRAY, 'The path(s) to the migrations files to use'),
             new InputOption('realpath', null, InputOption::VALUE_OPTIONAL, 'Indicate any provided migration file paths are pre-resolved absolute paths'),
         ];
     }

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Console\Commands;
 
@@ -22,7 +22,7 @@ class ConfigCacheCommand extends Command
         $this->files = $files;
     }
 
-    public function handle(): void
+    public function handle(): int
     {
         $configPath = $this->app->configCachePath();
 
@@ -37,5 +37,7 @@ class ConfigCacheCommand extends Command
         }
 
         $this->components()->info('Configuration cached successfully.');
+
+        return 0;
     }
 }

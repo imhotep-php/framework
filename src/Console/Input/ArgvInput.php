@@ -3,40 +3,24 @@
 namespace Imhotep\Console\Input;
 
 use Imhotep\Contracts\Console\ConsoleException;
-use Imhotep\Contracts\Console\Input as InputContract;
 
-class InputArgv implements InputContract
+class ArgvInput extends Input
 {
-    protected InputDefinition $definition;
-
     protected array $argv = [];
 
     protected array $parsed = [];
 
-    protected array $options = [];
-
-    protected array $arguments = [];
-
     public function __construct(array $argv = null, ?InputDefinition $definition = null)
     {
+        parent::__construct($definition);
+
         if (is_null($argv)) {
             $argv = $_SERVER['argv'] ?? [];
         }
 
-        $this->definition = $definition ?? new InputDefinition();
-
         array_shift($argv); // Remove application name
 
         $this->argv = $argv;
-    }
-
-    public function bind(InputDefinition $definition): void
-    {
-        $this->definition = $definition;
-        $this->options = [];
-        $this->arguments = [];
-
-        $this->parse();
     }
 
     protected function parse(): void
@@ -117,52 +101,6 @@ class InputArgv implements InputContract
         $this->setArgument($argument->getName(), $val);
     }
 
-
-    public function getFirstArgument()
-    {
-        return array_values($this->arguments)[0] ?? null;
-    }
-
-    public function getArgument(string $name, mixed $default = null): mixed
-    {
-        return $this->arguments[$name] ?? $default;
-    }
-
-    public function setArgument(string $name, mixed $value): void
-    {
-        $this->arguments[$name] = $value;
-    }
-
-    public function hasArgument(string $name): bool
-    {
-        return array_key_exists($name, $this->arguments);
-    }
-
-    public function getOption(string $name, mixed $default = null): mixed
-    {
-        return $this->options[$name] ?? $default;
-    }
-
-    public function setOption(string $name, mixed $value = null): void
-    {
-        if (is_array($value)) {
-            if (!isset($this->options[$name])) {
-                $this->options[$name] = $value;
-            }
-            else {
-                $this->options[$name] = array_merge($this->options[$name], $value);
-            }
-        }
-        else {
-            $this->options[$name] = $value;
-        }
-    }
-
-    public function hasOption(string $name): bool
-    {
-        return array_key_exists($name, $this->options);
-    }
-
     public function hasRawOption(string $name, bool $onlyParams = false): bool
     {
         if (empty($name)) return false;
@@ -215,5 +153,10 @@ class InputArgv implements InputContract
         }
 
         return value($default);
+    }
+
+    public function argv(): array
+    {
+        return $this->argv;
     }
 }
