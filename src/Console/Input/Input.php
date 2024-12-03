@@ -37,12 +37,14 @@ abstract class Input implements InputContract
 
     public function getArguments(): array
     {
-        return $this->arguments;
+        return array_merge($this->definition->getArgumentsDefault(), $this->arguments);
     }
 
     public function getArgument(string $name, mixed $default = null): mixed
     {
-        return $this->arguments[$name] ?? $default;
+        $arguments = $this->getArguments();
+
+        return $arguments[$name] ?? $default;
     }
 
     public function setArgument(string $name, mixed $value): void
@@ -57,12 +59,14 @@ abstract class Input implements InputContract
 
     public function getOptions(): array
     {
-        return $this->options;
+        return array_merge($this->definition->getOptionsDefault(), $this->options);
     }
 
     public function getOption(string $name, mixed $default = null): mixed
     {
-        return $this->options[$name] ?? $default;
+        $options = $this->getOptions();
+
+        return $options[$name] ?? $default;
     }
 
     public function setOption(string $name, mixed $value = null): void
