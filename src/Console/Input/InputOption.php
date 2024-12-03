@@ -1,18 +1,27 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Input;
 
+use Imhotep\Console\Utils\SignatureParser;
 use Imhotep\Contracts\Console\ConsoleException;
+use Stringable;
 
-class InputOption
+class InputOption implements Stringable
 {
-    public const VALUE_REQUIRED = 1;
+    // This is the default option without value (e.g. --flag)
+    public const VALUE_NONE = 1 << 0;
 
-    public const VALUE_OPTIONAL = 2;
+    // The option has optional value (e.g. --flag or --flag=en)
+    public const VALUE_OPTIONAL = 1 << 1;
 
-    public const VALUE_IS_ARRAY = 4;
+    // The option has required value (e.g. --flag=en)
+    public const VALUE_REQUIRED = 1 << 2;
+
+    // The option has array value (e.g. --flag=en --flag=ru)
+    public const VALUE_ARRAY = 1 << 3;
+
+    // The option have positive or negative value (e.g. --flag or --no-flag).
+    public const VALUE_NEGATABLE = 1 << 4;
 
     public function __construct(
         protected string $name,
@@ -64,12 +73,12 @@ class InputOption
 
     protected function setDefault(mixed $default): void
     {
-        if ($this->mode == 0 && ! is_null($default)) {
-            throw new ConsoleException('Cannot set default value for none value option.');
+        if ($this->isValueNone() && ! is_null($default)) {
+            throw new ConsoleException('Cannot set default value for none value option ['.$this->name.'].');
         }
 
         if ($this->isValueRequired() && ! is_null($default)) {
-            throw new ConsoleException('Cannot set default value for required value option.');
+            throw new ConsoleException('Cannot set default value for required value option ['.$this->name.'].');
         }
 
         if ($this->isArray()) {
@@ -104,23 +113,72 @@ class InputOption
         return $this->default;
     }
 
+    public function isValueNone(): bool
+    {
+        return (bool)($this->mode & static::VALUE_NONE);
+    }
+
     public function isValueRequired(): bool
     {
-        return self::VALUE_REQUIRED === (self::VALUE_REQUIRED & $this->mode);
+        return (bool)($this->mode & static::VALUE_REQUIRED);
     }
 
     public function isValueOptional(): bool
     {
-        return self::VALUE_OPTIONAL === (self::VALUE_OPTIONAL & $this->mode);
+        return (bool)($this->mode & static::VALUE_OPTIONAL);
     }
 
     public function isArray(): bool
     {
-        return self::VALUE_IS_ARRAY === (self::VALUE_IS_ARRAY & $this->mode);
+        return (bool)($this->mode & static::VALUE_ARRAY);
+    }
+
+    public function isNegatable(): bool
+    {
+        return (bool)($this->mode & static::VALUE_NEGATABLE);
     }
 
     public static function builder(string $name, string $shortcut = null): InputOptionBuilder
     {
         return new InputOptionBuilder($name, $shortcut);
+    }
+
+    public static function fromString(string $expression)
+    {
+        return SignatureParser::option($expression);
+    }
+
+    public function toString(): string
+    {
+        $name = [];
+        if (is_array($this->shortcut)) $name[] = $this->shortcut[0];
+        elseif (is_string($this->shortcut)) $name[] = $this->shortcut;
+        $name[] = $this->name;
+
+        $result = '--'.implode("|", $name);
+
+        if ($this->isValueOptional()) $result.= '=?';
+
+        if ($this->isValueRequired()) $result.= '=';
+
+        if ($this->isArray()) $result.= '*';
+
+        if (is_array($this->default) && ! empty($this->default)) {
+            $result.= $this->default[0];
+        }
+        elseif (! is_array($this->default) && ! is_null($this->default)) {
+            $result.= $this->default;
+        }
+
+        if (! empty($this->description)) {
+            $result.= ' : '.$this->description;
+        }
+
+        return $result;
+    }
+
+    public function __toString()
+    {
+        return $this->toString();
     }
 }

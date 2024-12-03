@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Http;
 
@@ -148,7 +146,7 @@ class Response implements ResponseContract
         return $this;
     }
 
-    public function send(): void
+    public function send(): static
     {
         $this->sendHeaders()->sendContent();
 
@@ -159,6 +157,8 @@ class Response implements ResponseContract
         } elseif (!in_array(PHP_SAPI, ['cli', 'phpdbg'], true)) {
             static::closeOutputBuffers(0, true);
         }
+
+        return $this;
     }
 
     protected function sendHeaders(): static

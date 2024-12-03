@@ -10,8 +10,8 @@ class SessionTableCommand extends Command
 
     public static string $defaultDescription = 'Create a migration for the session database table';
 
-    public function handle(): void
+    public function handle(): int
     {
-
+        return 0;
     }
 }

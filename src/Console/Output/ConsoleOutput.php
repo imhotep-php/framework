@@ -1,10 +1,6 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Output;
-
-
 
 class ConsoleOutput extends StreamOutput
 {
@@ -127,6 +123,16 @@ class ConsoleOutput extends StreamOutput
     }
 
     public function getLines(): int
+    {
+        return $this->lines;
+    }
+
+    public function width(): int
+    {
+        return $this->cols;
+    }
+
+    public function height(): int
     {
         return $this->lines;
     }

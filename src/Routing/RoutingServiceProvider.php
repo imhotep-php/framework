@@ -5,16 +5,14 @@ namespace Imhotep\Routing;
 use Imhotep\Contracts\Routing\RouteCollection as RouteCollectionContract;
 use Imhotep\Contracts\Routing\Router as RouterContract;
 use Imhotep\Framework\Providers\ServiceProvider;
+use Imhotep\Routing\Console\RouteCacheCommand;
+use Imhotep\Routing\Console\RouteClearCommand;
+use Imhotep\Routing\Console\RouteListCommand;
 
 class RoutingServiceProvider extends ServiceProvider
 {
     public array $aliases = [
-        'router' => [\Imhotep\Contracts\Routing\Router::class, \Imhotep\Routing\Router::class]
-    ];
-
-    public array $bindings = [
-        //RouterContract::class => Router::class,
-        //RouteCollectionContract::class => RouteCollection::class,
+        'router' => [RouterContract::class, \Imhotep\Routing\Router::class]
     ];
 
     public array $singletons = [
@@ -34,5 +32,11 @@ class RoutingServiceProvider extends ServiceProvider
         $this->app->singleton('redirect', function ($app) {
             return new Redirector($this->app['url'], $this->app['session']->store(), $this->app['request']);
         });
+
+        $this->commands([
+            'route:list'  => RouteListCommand::class,
+            'route:cache' => RouteCacheCommand::class,
+            'route:clear' => RouteClearCommand::class,
+        ]);
     }
 }

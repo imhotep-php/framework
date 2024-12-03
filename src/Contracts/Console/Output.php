@@ -8,11 +8,11 @@ use Imhotep\Console\Formatter\Formatter;
 
 interface Output
 {
-    public function newLine(): void;
+    public function newLine(int $count = 1): static;
 
-    public function writeln(string|iterable $messages): void;
+    public function writeln(string|iterable $messages): static;
 
-    public function write(string|iterable $messages, $newline = false): void;
+    public function write(string|iterable $messages, $newline = false): static;
 
     public function getFormatter(): Formatter;
 }

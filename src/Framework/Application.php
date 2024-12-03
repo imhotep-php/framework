@@ -1,20 +1,22 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework;
 
 use Closure;
+use Imhotep\Console\Output\ConsoleOutput;
 use Imhotep\Container\Container;
+use Imhotep\Contracts\Console\Input;
+use Imhotep\Contracts\Console\Kernel as ConsoleKernel;
+use Imhotep\Contracts\Http\Kernel as HttpKernel;
+use Imhotep\Contracts\Http\Request;
+use Imhotep\Events\EventServiceProvider;
 use Imhotep\Filesystem\Filesystem;
 use Imhotep\Framework\Providers\ProviderAdapter;
 use Imhotep\Http\Exceptions\HttpException;
 use Imhotep\Http\Exceptions\NotFoundHttpException;
+use Imhotep\Log\LogServiceProvider;
 use Imhotep\Routing\RoutingServiceProvider;
 
-/**
- *
- */
 class Application extends Container
 {
     /**
@@ -22,9 +24,7 @@ class Application extends Container
      *
      * @var string
      */
-    const VERSION = '1.0.0';
-
-    public int $id;
+    const VERSION = '1.1.0';
 
     protected ProviderAdapter $providers;
 
@@ -34,13 +34,9 @@ class Application extends Container
      * @param string|null $basePath
      * @return void
      */
-    public function __construct(string $basePath = null)
+    public function __construct(string $basePath)
     {
-        $this->id = rand(0, 1000);
-
-        if (! is_null($basePath)) {
-            $this->setBasePath($basePath);
-        }
+        $this->setBasePath($basePath);
 
         $this->providers = new ProviderAdapter($this);
 
@@ -67,15 +63,13 @@ class Application extends Container
     protected function registerBaseAliases(): void
     {
         $this->alias('app', [self::class, Container::class, \Psr\Container\ContainerInterface::class]);
-        $this->alias('cache', [\Imhotep\Cache\CacheManager::class]);
-        //$this->alias('router', [\Imhotep\Contracts\Routing\Router::class, \Imhotep\Routing\Router::class]);
         $this->alias('request', [\Imhotep\Contracts\Http\Request::class, \Imhotep\Http\Request::class]);
-        //$this->alias('redirect', [\Imhotep\Routing\Redirector::class]);
-        //$this->alias('events', [\Imhotep\Events\Events::class]);
     }
 
     protected function registerBaseServiceProviders(): void
     {
+        $this->providers->register(new LogServiceProvider($this));
+        $this->providers->register(new EventServiceProvider($this));
         $this->providers->register(new RoutingServiceProvider($this));
     }
 
@@ -90,22 +84,9 @@ class Application extends Container
     }
 
 
-    protected ?bool $isRunningInConsole = null;
-
-    public function runningInConsole(): bool
-    {
-        if ($this->isRunningInConsole === null) {
-            $this->isRunningInConsole = env('APP_RUNNING_IN_CONSOLE') ?? (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg');
-        }
-
-        return $this->isRunningInConsole;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Path configurations
-    |--------------------------------------------------------------------------
-    */
+    //--------------------------------------------------------------------------
+    // Path configurations
+    //--------------------------------------------------------------------------
 
     protected string $basePath = '';
 
@@ -229,28 +210,24 @@ class Application extends Container
         throw new \RuntimeException('Unable to detect application namespace.');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Bootstrap
-    |--------------------------------------------------------------------------
-    */
 
-    protected bool $isBootstraped = false;
+    //--------------------------------------------------------------------------
+    // Bootstrap
+    //--------------------------------------------------------------------------
 
-    protected bool $isBooted = false;
+    protected bool $bootstraped = false;
+
+    protected bool $booted = false;
 
     protected array $bootingCallbacks = [];
 
     protected array $bootedCallbacks = [];
 
-
     public function bootstrapWith(array $bootstrappers): void
     {
-        if($this->isBootstraped){
-            return;
-        }
+        if($this->bootstraped) return;
 
-        $this->isBootstraped = true;
+        $this->bootstraped = true;
 
         foreach ($bootstrappers as $bootstrapper) {
             $this->make($bootstrapper)->bootstrap();
@@ -263,9 +240,7 @@ class Application extends Container
 
     public function boot(): void
     {
-        if($this->isBooted()){
-            return;
-        }
+        if($this->booted) return;
 
         $this->callAppCallbacks($this->bootingCallbacks);
 
@@ -278,14 +253,49 @@ class Application extends Container
 
     public function isBooted(): bool
     {
-        return $this->isBooted;
+        return $this->booted;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Terminate
-    |--------------------------------------------------------------------------
-    */
+
+    //--------------------------------------------------------------------------
+    // Running
+    //--------------------------------------------------------------------------
+
+    protected ?bool $isRunningInConsole = null;
+
+    public function runningInConsole(): bool
+    {
+        if ($this->isRunningInConsole === null) {
+            $this->isRunningInConsole = env('APP_RUNNING_IN_CONSOLE') ?? (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg');
+        }
+
+        return $this->isRunningInConsole;
+    }
+
+    public function handleRequest(Request $request): void
+    {
+        $kernel = $this->make(HttpKernel::class);
+
+        $response = $kernel->handle($request)->send();
+
+        $kernel->terminate($request, $response);
+    }
+
+    public function handleCommand(Input $input): int
+    {
+        $kernel = $this->make(ConsoleKernel::class);
+
+        $status = $kernel->handle($input, new ConsoleOutput);
+
+        $kernel->terminate($input, $status);
+
+        return $status;
+    }
+
+
+    //--------------------------------------------------------------------------
+    // Terminate
+    //--------------------------------------------------------------------------
 
     protected array $terminateCallbacks = [];
 
@@ -304,11 +314,9 @@ class Application extends Container
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Common methods
-    |--------------------------------------------------------------------------
-    */
+    //--------------------------------------------------------------------------
+    // Callbacks
+    //--------------------------------------------------------------------------
 
     public function booting(Closure $callback): void
     {
@@ -325,6 +333,13 @@ class Application extends Container
         $this->addAppCallback('terminating', $callback);
     }
 
+    /**
+     * Call any callbacks for the application.
+     *
+     * @param string $target
+     * @param Closure $callback
+     * @return void
+     */
     protected function addAppCallback(string $target, Closure $callback): void
     {
         if($target == 'booting'){
@@ -339,7 +354,6 @@ class Application extends Container
             $this->terminateCallbacks[] = $callback;
         }
     }
-
 
     /**
      * Call any callbacks for the application.

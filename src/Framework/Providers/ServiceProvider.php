@@ -1,11 +1,10 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Providers;
 
 use Closure;
 use Imhotep\Framework\Application;
+use Imhotep\Console\Application as Console;
 
 abstract class ServiceProvider
 {
@@ -107,14 +106,12 @@ abstract class ServiceProvider
         return $this;
     }
 
-    public function commands(array $commands): void
+    protected function commands(array $commands): void
     {
-        try {
-            $console = $this->app['console'];
-
+        Console::starting(function ($console) use ($commands) {
             foreach ($commands as $name => $command) {
-                $console->resolveCommand($name, $command);
+                $console->addCommand($command, is_string($name) ? $name : null);
             }
-        }catch(\Throwable){}
+        });
     }
 }

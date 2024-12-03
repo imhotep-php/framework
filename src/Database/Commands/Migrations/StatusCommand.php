@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Commands\Migrations;
 
@@ -10,12 +8,14 @@ class StatusCommand extends BaseCommand
 
     public static string $defaultDescription = 'Show status of each migration';
 
-    public function handle(): void
+    public function handle(): int
     {
         parent::handle();
 
         $this->migrate->dispatch('status', $this->getPaths());
 
         $this->output->newLine();
+
+        return 0;
     }
 }

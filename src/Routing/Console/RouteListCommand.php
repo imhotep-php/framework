@@ -1,6 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
-namespace Imhotep\Framework\Console\Commands;
+namespace Imhotep\Routing\Console;
 
 use Imhotep\Console\Command\Command;
 use Imhotep\Facades\Route;
@@ -11,13 +11,13 @@ class RouteListCommand extends Command
 
     public static string $defaultDescription = 'List all registered routes';
 
-    public function handle(): void
+    public function handle(): int
     {
         $routes = Route::getRoutes();
 
         if (empty($routes)) {
             $this->components()->info('No routes found');
-            return;
+            return 1;
         }
 
         $this->output->newLine();
@@ -86,6 +86,8 @@ class RouteListCommand extends Command
         }
 
         $this->output->newLine();
+
+        return 0;
     }
 
     protected function writeCaption($lengths)

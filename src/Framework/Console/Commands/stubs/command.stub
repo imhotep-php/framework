@@ -1,0 +1,39 @@
+<?php declare(strict_types=1);
+
+namespace {{namespace}};
+
+use Imhotep\Console\Command\Command;
+
+class {{class}} extends Command
+{
+    /**
+     * The console command name.
+     *
+     * @var string
+     */
+    public static string $defaultName = '{{command}}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    public static string $defaultDescription = '';
+
+    /**
+     * The console command signature.
+     *
+     * @var string
+     */
+    protected string $signature = '';
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle(): int
+    {
+        return Command::SUCCESS;
+    }
+}

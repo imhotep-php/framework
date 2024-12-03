@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Formatter\Components;
 
@@ -8,10 +6,9 @@ use Imhotep\Contracts\Console\Output as OutputContract;
 
 abstract class Component
 {
-    public function __construct(protected OutputContract $output)
-    {
-
-    }
+    public function __construct(
+        protected OutputContract $output
+    ) {}
 
     protected function mutate(mixed $data, array $mutators): mixed
     {

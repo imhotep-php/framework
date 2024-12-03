@@ -9,7 +9,7 @@ interface Kernel
    *
    * @return void
    */
-  public function bootstrap();
+  public function bootstrap(): void;
 
   /**
    * Handle an incoming request/command
@@ -17,7 +17,7 @@ interface Kernel
    * @param Request $request
    * @return Response
    */
-  public function handle(Request $request);
+  public function handle(Request $request): Response;
 
   /**
    * Perform any final actions for the request lifecycle.
@@ -26,12 +26,5 @@ interface Kernel
    * @param Response $response
    * @return void
    */
-  public function terminate($request, $response);
-
-  /**
-   * Get application instance.
-   *
-   * @return \Imhotep\Framework\Application
-   */
-  public function getApplication();
+  public function terminate(Request $request, Response $response): void;
 }

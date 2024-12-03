@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Support;
 
@@ -15,6 +13,11 @@ class Str
     public static function length(string $string): int
     {
         return mb_strlen($string, 'UTF-8');
+    }
+
+    public static function width(string $string): int
+    {
+        return mb_strwidth($string, 'UTF-8');
     }
 
     public static function uuid(): string

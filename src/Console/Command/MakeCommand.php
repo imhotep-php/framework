@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Command;
 
@@ -93,7 +91,7 @@ abstract class MakeCommand extends Command
         '__TRAIT__',
     ];
 
-    public function handle(): void
+    public function handle(): int
     {
         try{
             $name = $this->getClassName();
@@ -103,11 +101,14 @@ abstract class MakeCommand extends Command
             $this->makeClassDirectory($path);
 
             file_put_contents($path, $this->buildClass($name, $namespace));
+
+            $this->components()->success($namespace.'\\'.$name);
         }
         catch (\Exception $e) {
             echo $e->getMessage();
         }
 
+        return 0;
     }
 
     public function getArguments(): array
@@ -131,7 +132,11 @@ abstract class MakeCommand extends Command
             throw new ConsoleException("The class name [$name] incorrect");
         }
 
-        return $name;
+        if (! str_contains($name, $this->type)) {
+            $name .= $this->type;
+        }
+
+        return ucfirst($name);
     }
 
     protected function getClassNamespace(): string

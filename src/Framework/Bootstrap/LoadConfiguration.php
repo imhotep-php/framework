@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Bootstrap;
 
@@ -8,6 +6,7 @@ use Exception;
 use Imhotep\Config\Repository;
 use Imhotep\Contracts\Config\Repository as RepositoryContract;
 use Imhotep\Framework\Application;
+use Throwable;
 
 class LoadConfiguration
 {
@@ -62,13 +61,14 @@ class LoadConfiguration
         foreach($files as $key => $file){
             try {
                 $value = require $file;
-                if(is_array($value)){
-                    $repository->set($key, $value);
-                } else {
+
+                if(! is_array($value)){
                     throw new Exception('Configuration file "'.$key.'" is not array.');
                 }
+
+                $repository->set($key, $value);
             }
-            catch (\Throwable $e) {
+            catch (Throwable $e) {
                 throw new Exception('Configuration file "'.$key.'" load failed: '.$e->getMessage());
             }
         }

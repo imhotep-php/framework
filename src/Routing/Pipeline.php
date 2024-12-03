@@ -22,7 +22,7 @@ class Pipeline extends \Imhotep\Support\Pipeline
     /**
      * Handle the given exception.
      *
-     * @param mixed $passable
+     * @param mixed $request
      * @param Throwable $e
      * @return mixed
      *

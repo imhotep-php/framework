@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Commands\Migrations;
 
@@ -10,12 +8,14 @@ class RefreshCommand extends BaseCommand
 
     public static string $defaultDescription = 'Reset and re-run all migrations';
 
-    public function handle(): void
+    public function handle(): int
     {
         parent::handle();
 
         $this->migrate->dispatch('refresh', $this->getPaths());
 
         $this->output->newLine();
+
+        return 0;
     }
 }

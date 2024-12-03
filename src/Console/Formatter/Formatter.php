@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Formatter;
 
@@ -23,9 +21,10 @@ class Formatter
         $this->createStyle('reverse', new Style(options: [Option::reverse]));
         $this->createStyle('hidden', new Style(options: [Option::hidden]));
 
-        $this->createStyle('info', new Style(Color::default, Color::blue));
-        $this->createStyle('warn', new Style(Color::default, Color::yellow));
-        $this->createStyle('error', new Style(Color::default, Color::red));
+        $this->createStyle('success', new Style(Color::green));
+        $this->createStyle('info', new Style(Color::blue));
+        $this->createStyle('warn', new Style(Color::yellow));
+        $this->createStyle('error', new Style(Color::red));
     }
 
     public function setDecorated($decorated): void
@@ -65,7 +64,7 @@ class Formatter
     public function getStringLength($string, $isDecoration = false): int
     {
         if ($isDecoration) {
-            return strlen($string);
+            return mb_strlen($string, 'UTF-8');
         }
 
         $tokens = $this->getTokens($string);
@@ -76,7 +75,7 @@ class Formatter
             if (! $token['tag']) $text .= $token['text'];
         }
 
-        return strlen($text);
+        return mb_strlen($text, 'UTF-8');
     }
 
     public function format($string): string

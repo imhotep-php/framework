@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Commands;
 
@@ -23,7 +21,7 @@ class MigrationMakeCommand extends Command
         parent::__construct();
     }
 
-    public function handle(): void
+    public function handle(): int
     {
         $name = Str::snake($this->input->getArgument('name'));
 
@@ -41,10 +39,18 @@ class MigrationMakeCommand extends Command
         }
 
         if ($this->ensureMigrationExists($table, $create)) {
-            throw new \InvalidArgumentException("A migration with create table [{$table}] already exists.");
+            $this->components()->error("A migration with create table [{$table}] already exists.");
+
+            return 0;
         }
 
-        $this->creator->create($name, $this->getMigrationPath(), $table, $create);
+        $path = $this->creator->create($name, $this->getMigrationPath(), $table, $create);
+
+        $path = str_replace(base_path(), '', $path);
+
+        $this->components()->success('Migration ['.$path.'] created successfully.');
+
+        return 0;
     }
 
     protected function ensureMigrationExists(string $table, bool $create): bool

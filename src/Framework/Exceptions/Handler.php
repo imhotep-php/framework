@@ -6,6 +6,7 @@ namespace Imhotep\Framework\Exceptions;
 
 use Closure;
 use Exception;
+use Imhotep\Console\Output\ConsoleOutput;
 use Imhotep\Container\Container;
 use Imhotep\Contracts\Console\Output;
 use Imhotep\Contracts\Debug\ExceptionHandler;
@@ -371,8 +372,12 @@ class Handler implements ExceptionHandler
     }
 
 
-    public function renderForConsole(Throwable $e, Output $output): void
+    public function renderForConsole(Throwable $e, Output $output = null): void
     {
+        if (is_null($output)) {
+            $output = new ConsoleOutput();
+        }
+
         //(new Error($output))->render($e->getMessage());
 
         $output->newLine();

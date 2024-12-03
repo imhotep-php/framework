@@ -1,12 +1,10 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Console\Input;
 
 class InputOptionBuilder
 {
-    protected int $mode = 0;
+    protected int $mode = InputOption::VALUE_NONE;
     protected string $name;
     protected string $shortcut = '';
     protected string $description = '';
@@ -21,23 +19,34 @@ class InputOptionBuilder
         }
     }
 
-    public function valueRequired(): static
+    public function valueOptional(): static
     {
-        $this->mode = $this->mode ? ($this->mode & 1) : 1;
+        $this->mode &= ~ InputOption::VALUE_NONE;
+
+        $this->mode = $this->mode | InputOption::VALUE_OPTIONAL;
 
         return $this;
     }
 
-    public function valueOptional(): static
+    public function valueRequired(): static
     {
-        $this->mode = $this->mode ? ($this->mode & 2) : 2;
+        $this->mode &= ~ InputOption::VALUE_NONE;
+
+        $this->mode = $this->mode | InputOption::VALUE_REQUIRED;
 
         return $this;
     }
 
     public function array(): static
     {
-        $this->mode = $this->mode ? ($this->mode & 4) : 4;
+        $this->mode = $this->mode | InputOption::VALUE_ARRAY;
+
+        return $this;
+    }
+
+    public function negatable(): static
+    {
+        $this->mode = $this->mode | InputOption::VALUE_NEGATABLE;
 
         return $this;
     }

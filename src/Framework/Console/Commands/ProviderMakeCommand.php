@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Framework\Console\Commands;
 
@@ -17,9 +17,8 @@ class ProviderMakeCommand extends MakeCommand
     {
         $stub = '/stubs/provider.stub';
 
-        return file_exists($customPath = $this->app->basePath($stub))
-            ? $customPath
-            : __DIR__.$stub;
+        return file_exists($customPath = base_path($stub))
+            ? $customPath : __DIR__.$stub;
     }
 
     protected function getDefaultClassNamespace($rootNamespace): string
