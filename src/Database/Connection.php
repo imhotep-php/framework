@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database;
 
@@ -53,7 +51,7 @@ abstract class Connection implements ConnectionContract
 
         $this->database = $config['database'];
 
-        $this->tablePrefix = $config['prefix'];
+        $this->tablePrefix = $config['prefix'] ?? '';
 
         $this->useSchemaGrammar();
     }
@@ -127,6 +125,7 @@ abstract class Connection implements ConnectionContract
         return $this->affectingStatement($query, $bindings);
     }
 
+
     public function lastInsertId(string $name = null): string|false
     {
         return $this->pdo->lastInsertId($name);
@@ -142,7 +141,7 @@ abstract class Connection implements ConnectionContract
         return $this->affectingStatement($query, $bindings);
     }
 
-    public function statement(string $query, array $bindings = [], bool $useReadPdo = false): mixed
+    public function statement(string $query, array $bindings = [], bool $useReadPdo = false): PDOStatement|false
     {
         return $this->run($query, $bindings, function ($query, $bindings) use ($useReadPdo) {
             $statement = $this->getPdoForSelect($useReadPdo)->prepare($query);

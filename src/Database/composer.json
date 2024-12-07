@@ -4,7 +4,7 @@
   "description": "Database tools",
   "keywords": ["database", "mysql", "sqlite", "postgresql"],
   "license" : "MIT",
-  "homepage": "https://imhotep-php.ru",
+  "homepage": "https://imhotep.dev",
   "authors": [
     {
       "name": "Imhotep",
@@ -17,7 +17,7 @@
     }
   },
   "require": {
-    "php": ">=8.0.2",
+    "php": ">=8.2",
     "imhotep/contracts": "^1.0",
     "imhotep/support": "^1.0"
   },

@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Query;
 
@@ -8,6 +6,7 @@ use Imhotep\Contracts\Database\QueryBuilder as QueryBuilderContract;
 use Imhotep\Database\Connection;
 use Imhotep\Database\Query\Traits\PrepareWhereExpression;
 use Imhotep\Database\Query\Grammar;use Imhotep\Support\Arr;
+use InvalidArgumentException;
 
 abstract class Builder implements QueryBuilderContract
 {
@@ -138,6 +137,31 @@ abstract class Builder implements QueryBuilderContract
         $result = $this->connection->selectOne($sql, $bindings, false);
 
         return is_numeric($result[$keyName]) ? (int)$result[$keyName] : $result[$keyName];
+    }
+
+    public function upsert(string $uniqueColumn, array $insertValues, array $updateValues): int
+    {
+        if (! array_key_exists($uniqueColumn, $insertValues)) {
+            throw new InvalidArgumentException("The unique column [$uniqueColumn] must be in the insert values.");
+        }
+
+        if (empty($insertValues) || empty($updateValues)) {
+            throw new InvalidArgumentException('Values must not be empty.');
+        }
+
+        $sql = $this->grammar->compileInsertOrUpdate($this, $uniqueColumn, $insertValues, $updateValues);
+
+        $bindings = $this->getBindings();
+
+        if ($this->withDump) {
+            dump($sql, array_merge($insertValues, $updateValues), $bindings);
+            return 0;
+        }
+        elseif ($this->withSQL) {
+            return compact($sql, $bindings);
+        }
+
+        return $this->connection->statement($sql, $bindings)->rowCount();
     }
 
     public function update(array $values): int|array

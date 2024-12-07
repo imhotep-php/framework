@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Query;
 
@@ -44,6 +42,26 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
         }
 
         return $sql;
+    }
+
+    public function compileUpsert(Builder $query, string $uniqueColumn, array $insertValues, array $updateValues): string
+    {
+        $table = $this->wrapTable($query->from);
+        $sqlInsertColumns = $this->prepareColumns(array_keys($insertValues));
+        $sqlInsertValues = $this->prepareValues($insertValues);
+
+        $sqlUpdateSet = [];
+        foreach ($updateValues as $key => $val) {
+            $sqlUpdateSet[] = sprintf('%s = %s', $this->wrap($key), $this->prepareValue($val));
+        }
+        $sqlUpdateSet = implode(", ", $sqlUpdateSet);
+
+        $query->addBinding(array_values($insertValues), 'columns');
+        $query->addBinding(array_values($updateValues), 'columns');
+
+        return sprintf('INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET %s',
+            $table, $sqlInsertColumns, $sqlInsertValues, $this->wrap($uniqueColumn), $sqlUpdateSet
+        );
     }
 
     public function compileUpdate(Builder $query, $values): string
