@@ -12,7 +12,7 @@ class RedisServiceProvider extends ServiceProvider
             $config = config('database.redis');
             $driver = config('database.redis.client', 'phpredis');
 
-            return new \Imhotep\Redis\RedisManager($app, $driver, $config);
+            return new RedisManager($app, $driver, $config);
         });
     }
 }

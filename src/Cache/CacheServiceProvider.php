@@ -1,9 +1,8 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Cache;
 
+use Imhotep\Cache\Commands\CacheTableCommand;
 use Imhotep\Framework\Providers\ServiceProvider;
 
 class CacheServiceProvider extends ServiceProvider
@@ -12,10 +11,14 @@ class CacheServiceProvider extends ServiceProvider
         'cache' => CacheManager::class
     ];
 
-    public function register()
+    public function register(): void
     {
         $this->app->singleton('cache', function ($app) {
             return new CacheManager($app);
         });
+
+        $this->commands([
+            'cache:table' => CacheTableCommand::class,
+        ]);
     }
 }

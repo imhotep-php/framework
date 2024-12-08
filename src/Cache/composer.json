@@ -4,7 +4,7 @@
   "description": "Application data caching system",
   "keywords": ["cache", "caching"],
   "license" : "MIT",
-  "homepage": "https://imhotep-php.ru",
+  "homepage": "https://imhotep.dev",
   "authors": [
     {
       "name": "Imhotep",

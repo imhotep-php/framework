@@ -2,8 +2,12 @@
 
 namespace Imhotep\Cache;
 
+use Closure;
 use Imhotep\Cache\Stores\ArrayStore;
+use Imhotep\Cache\Stores\DatabaseStore;
 use Imhotep\Cache\Stores\FileStore;
+use Imhotep\Cache\Stores\MemcacheStore;
+use Imhotep\Cache\Stores\MemcachedStore;
 use Imhotep\Cache\Stores\RedisStore;
 use Imhotep\Container\Container;
 use Imhotep\Contracts\Cache\CacheException;
@@ -13,14 +17,13 @@ class CacheManager
 {
     protected array $stores = [];
 
-    protected array $drivers = [
-        //'array' => ArrayStore::class,
-        //'file' => FileStore::class
-    ];
+    protected array $drivers = [];
 
-    public function __construct(protected Container $app) {}
+    public function __construct(
+        protected Container $app
+    ) {}
 
-    public function store(string $name = null): Repository
+    public function store(?string $name = null): Repository
     {
         if (is_null($name)) {
             $name = $this->app['config']['cache.default'];
@@ -56,7 +59,7 @@ class CacheManager
         throw new CacheException("Cache driver [{$name}] is not supported.");
     }
 
-    protected function repository(Store $store, array $config): Repository
+    public function repository(Store $store, array $config = []): Repository
     {
         return new Repository($store, (int)($config['ttl'] ?? 3600));
     }
@@ -78,6 +81,34 @@ class CacheManager
         return new RedisStore($this->app['redis'], $connection, $this->getPrefix($config));
     }
 
+    protected function createMemcacheDriver(array $config): Store
+    {
+        $memcache = MemcacheStore::memcache($config['servers'] ?? []);
+
+        return new MemcacheStore($memcache, $this->getPrefix($config));
+    }
+
+    protected function createMemcachedDriver(array $config): Store
+    {
+        $memcached = MemcachedStore::memcached(
+            $config['servers'] ?? [],
+            $config['persistent_id'] ?? null,
+            $config['options'] ?? [],
+            array_filter($config['sasl'] ?? [])
+        );
+
+        return new MemcachedStore($memcached, $this->getPrefix($config));
+    }
+
+    protected function createDatabaseDriver(array $config): Store
+    {
+        return new DatabaseStore(
+            $this->app['db']->connection($config['connection'] ?? null),
+            $config['table'],
+            $this->getPrefix($config)
+        );
+    }
+
     protected function callCustomDriver(array $config): Store
     {
         return $this->drivers[$config['driver']]($this->app, $config);
@@ -88,7 +119,7 @@ class CacheManager
         return $config['prefix'] ?? ($this->app['config']['cache.prefix'] ?: '');
     }
 
-    public function extend(string $driver, \Closure $callback): static
+    public function extend(string $driver, Closure $callback): static
     {
         $this->drivers[$driver] = $callback;
 
@@ -103,6 +134,6 @@ class CacheManager
             return $store->$method(...$parameters);
         }
 
-        throw new CacheException("Method [$method] not found.");
+        throw new CacheException("Cache method [$method] not found.");
     }
 }

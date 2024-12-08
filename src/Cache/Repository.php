@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Cache;
 
@@ -10,15 +8,10 @@ use Imhotep\Contracts\Cache\Store;
 
 class Repository implements ArrayAccess
 {
-    protected Store $store;
-
-    protected int $ttl = 3600;
-
-    public function __construct(Store $store, int $ttl)
-    {
-        $this->store = $store;
-        $this->ttl = $ttl;
-    }
+    public function __construct(
+        protected Store $store,
+        protected int $ttl
+    ) {}
 
     public function has(string $key): bool
     {
@@ -40,27 +33,51 @@ class Repository implements ArrayAccess
         return $this->store->many($keys);
     }
 
-    public function set(string $key, array|string|int|float|bool $value, int $ttl = null): bool
+    public function add(string $key, array|string|int|float|bool $value, ?int $ttl = null): bool
+    {
+        if ($this->has($key)) {
+            return false;
+        }
+
+        return $this->put($key, $value, $ttl);
+    }
+
+    public function set(string $key, array|string|int|float|bool $value, ?int $ttl = null): bool
+    {
+        return $this->put($key, $value, $ttl);
+    }
+
+    public function put(string $key, array|string|int|float|bool $value, ?int $ttl = null): bool
     {
         return $this->store->set($key, $value, $ttl ?? $this->ttl);
     }
 
-    public function setMany(array $values, int $ttl = null): bool
+    public function setMany(array $values, ?int $ttl = null): bool
+    {
+        return $this->putMany($values, $ttl);
+    }
+
+    public function putMany(array $values, ?int $ttl = null): bool
     {
         return $this->store->setMany($values, $ttl ?? $this->ttl);
     }
 
-    public function increment(string $key, int $value = 1, int $ttl = null): int|bool
+    public function increment(string $key, int $value = 1, ?int $ttl = null): int|bool
     {
         return $this->store->increment($key, $value, $ttl ?? $this->ttl);
     }
 
-    public function decrement(string $key, int $value = 1, int $ttl = null): int|bool
+    public function decrement(string $key, int $value = 1, ?int $ttl = null): int|bool
     {
         return $this->store->decrement($key, $value, $ttl ?? $this->ttl);
     }
 
     public function delete(string $key): bool
+    {
+        return $this->forget($key);
+    }
+
+    public function forget(string $key): bool
     {
         return $this->store->delete($key);
     }
@@ -75,7 +92,7 @@ class Repository implements ArrayAccess
         return $this->set($key, $value, 0);
     }
 
-    public function remember(string $key, Closure $callback, int $ttl = null): mixed
+    public function remember(string $key, Closure $callback, ?int $ttl = null): mixed
     {
         if ($value = $this->get($key)) {
             return $value;

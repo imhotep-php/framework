@@ -2,7 +2,6 @@
 
 namespace Imhotep\Tests\Cache;
 
-use Imhotep\Cache\Repository;
 use Imhotep\Cache\Stores\ArrayStore;
 use PHPUnit\Framework\TestCase;
 

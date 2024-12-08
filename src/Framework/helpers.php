@@ -182,9 +182,10 @@ if (!function_exists('cache')) {
     /**
      * Get the available config instance.
      *
-     * @return mixed|Imhotep\Cache\Repository
+     * @param string|null $store
+     * @return Imhotep\Cache\Repository
      */
-    function cache(string|null $store = null)
+    function cache(string|null $store = null): Imhotep\Cache\Repository
     {
         return app('cache')->store($store);
     }
