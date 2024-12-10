@@ -2,15 +2,18 @@
 
 namespace Imhotep\Cache;
 
-use ArrayAccess;
 use Closure;
-use Imhotep\Contracts\Cache\Store;
+use Imhotep\Contracts\Cache\CacheInterface;
+use Imhotep\Contracts\Cache\CacheStoreInterface;
+use Imhotep\Support\Traits\Macroable;
 
-class Repository implements ArrayAccess
+class Repository implements CacheInterface
 {
+    use Macroable;
+
     public function __construct(
-        protected Store $store,
-        protected int $ttl
+        protected CacheStoreInterface $store,
+        protected int                 $ttl,
     ) {}
 
     public function has(string $key): bool
@@ -126,6 +129,16 @@ class Repository implements ArrayAccess
     public function setTtl(int $ttl): void
     {
         $this->ttl = $ttl;
+    }
+
+    public function getStore(): CacheStoreInterface
+    {
+        return $this->store;
+    }
+
+    public function setStore(CacheStoreInterface $store): void
+    {
+        $this->store = $store;
     }
 
     public function offsetExists(mixed $offset): bool

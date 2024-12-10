@@ -183,9 +183,9 @@ if (!function_exists('cache')) {
      * Get the available config instance.
      *
      * @param string|null $store
-     * @return Imhotep\Cache\Repository
+     * @return Imhotep\Cache\CacheInterface
      */
-    function cache(string|null $store = null): Imhotep\Cache\Repository
+    function cache(string|null $store = null): Imhotep\Cache\CacheInterface
     {
         return app('cache')->store($store);
     }
@@ -353,7 +353,7 @@ if (!function_exists('decryptString')) {
 
 if (!function_exists('session')) {
     /**
-     * @return void|mixed|\Imhotep\Contracts\Session\Session
+     * @return void|mixed|\Imhotep\Contracts\Session\SessionInterface
      */
     function session(string|array $key = null, mixed $default = null): mixed
     {

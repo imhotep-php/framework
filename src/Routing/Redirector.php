@@ -4,15 +4,15 @@ namespace Imhotep\Routing;
 
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Http\Response;
-use Imhotep\Contracts\Session\Session;
+use Imhotep\Contracts\Session\SessionInterface;
 use Imhotep\Http\RedirectResponse;
 
 class Redirector
 {
     public function __construct(
-        protected UrlGenerator $generator,
-        protected Session $session,
-        protected Request $request
+        protected UrlGenerator     $generator,
+        protected SessionInterface $session,
+        protected Request          $request
     ) { }
 
     public function home()

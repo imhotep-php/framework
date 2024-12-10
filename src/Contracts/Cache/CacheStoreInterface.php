@@ -2,7 +2,7 @@
 
 namespace Imhotep\Contracts\Cache;
 
-interface Store
+interface CacheStoreInterface
 {
     /**
      * Retrieve an item from the cache by key.

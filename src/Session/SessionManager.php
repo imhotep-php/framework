@@ -1,111 +1,115 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Session;
 
-use Imhotep\Container\Container;
-use Imhotep\Contracts\Session\Session;
+use Imhotep\Contracts\DriverManager;
+use Imhotep\Contracts\Session\SessionException;
+use Imhotep\Contracts\Session\SessionInterface;
+use Imhotep\Filesystem\Filesystem;
 use Imhotep\Session\Handlers\ArrayHandler;
+use Imhotep\Session\Handlers\CacheHandler;
+use Imhotep\Session\Handlers\CookieHandler;
+use Imhotep\Session\Handlers\DatabaseHandler;
 use Imhotep\Session\Handlers\FileHandler;
+use InvalidArgumentException;
+use SessionHandlerInterface;
 
-class SessionManager
+class SessionManager extends DriverManager
 {
-    protected ?Session $store = null;
+    protected ?SessionInterface $store = null;
 
-    protected array $drivers = [
-        'array' => ArrayHandler::class,
-        'file' => FileHandler::class,
-    ];
-
-    public function __construct(protected Container $app) {
-
-    }
-
-    public function store(): Session
+    public function store(): SessionInterface
     {
         if ($this->store) {
             return $this->store;
         }
 
-        $config = $this->getConfig();
-
-        $driver = $this->driver($config['driver']);
-
-        $this->store = $this->buildStore($driver, $config);
-
-        return $this->store;
-    }
-
-    public function driver(string $name)
-    {
-        //$config = $this->getDriverConfig($name);
-
-        $handler = $this->drivers[$name] ?? null;
-
-        if (is_null($handler)) {
-            throw new \Exception(sprintf('Session driver [%s] is not supported', $name));
+        if ($this->config['session.encrypt']) {
+            return $this->store = new EncryptedStore(
+                $this->container->make('encrypter'),
+                $this->driver($this->getDefaultDriver()),
+                $this->config->get('session', [])
+            );
         }
 
-        if ($handler instanceof \Closure) {
-            //return $this->app->build($handler);
-        }
-
-        return $this->app->make($handler, ['config' => $this->getConfig()]);
+        return $this->store = new Store(
+            $this->driver($this->getDefaultDriver()),
+            $this->config->get('session', [])
+        );
     }
 
-    protected function buildStore($handler, $config): Session
+    protected function createArrayDriver(): SessionHandlerInterface
     {
-        return new Store($handler, $config);
+        return new ArrayHandler($this->config->get('session', []));
     }
 
-    public function extend(string $driver, \Closure $callback): static
+    protected function createFileDriver(): SessionHandlerInterface
     {
-        if (isset($this->drivers[$driver])) {
-            unset($this->drivers[$driver]);
+        $path = $this->config->get('session.files');
+
+        if (! is_dir($path)) {
+            $path = (string)$path;
+
+            throw new SessionException("Parameter [files] not configured in session driver. The path [$path] is not a directory.");
         }
 
-        $this->drivers[$driver] = $callback;
-
-        return $this;
+        return new FileHandler(new Filesystem(), $path, $this->getLifetime());
     }
 
-    public function getConfig(): array
+    protected function createCacheDriver(): SessionHandlerInterface
     {
-        $config = $this->app['config']['session'];
+        $cache = $this->container->make('cache')->store(
+            $this->config->get('session.store')
+        );
 
-        if (is_null($config)) {
-            throw new \Exception("Default session is not configured.");
-        }
-
-        return $config;
+        return new CacheHandler($cache, $this->getLifetime());
     }
 
-    public function getDriverConfig(string $name): array
+    protected function createCookieDriver(): SessionHandlerInterface
     {
-        $config = $this->app['config']['session'];
+        return new CookieHandler($this->container->make('cookie'), $this->getLifetime());
+    }
 
-        if (! isset($config['drivers'][$name])) {
-            throw new \Exception("Session driver [$name] is not configured.");
-        }
+    protected function createDatabaseDriver(): SessionHandlerInterface
+    {
+        $connection = $this->container->make('db')->connection(
+            $this->config->get('session.connection')
+        );
 
-        return $config['drivers'][$name];
+        return new DatabaseHandler(
+            $connection,
+            $this->config->get('session.table', ''),
+            $this->getLifetime()
+        );
+    }
+
+    public function getLifetime(): int
+    {
+        $lifetime = $this->config->get('session.lifetime', 300);
+
+        return is_integer($lifetime) ? $lifetime : 300;
     }
 
     public function getDefaultDriver(): string
     {
-        $config = $this->getConfig();
-
-        return $config['driver'];
+        return $this->config['session.driver'];
     }
 
-    public function setDefaultDriver(string $name): void
+    public function setDefaultDriver(string $driver): static
     {
-        $this->app['config']['session.driver'] = $name;
+        $this->config['session.driver'] = $driver;
+
+        return $this;
     }
 
     public function __call($method, $parameters)
     {
-        return $this->store()->$method(...$parameters);
+        $store = $this->store();
+
+        if (method_exists($store, $method)) {
+            return $store->$method(...$parameters);
+        }
+
+        throw new InvalidArgumentException("Method [$method] not supported in [".static::class."].");
     }
 }

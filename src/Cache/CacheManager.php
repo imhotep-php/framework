@@ -2,93 +2,71 @@
 
 namespace Imhotep\Cache;
 
-use Closure;
 use Imhotep\Cache\Stores\ArrayStore;
 use Imhotep\Cache\Stores\DatabaseStore;
 use Imhotep\Cache\Stores\FileStore;
-use Imhotep\Cache\Stores\MemcacheStore;
 use Imhotep\Cache\Stores\MemcachedStore;
+use Imhotep\Cache\Stores\MemcacheStore;
 use Imhotep\Cache\Stores\RedisStore;
-use Imhotep\Container\Container;
 use Imhotep\Contracts\Cache\CacheException;
-use Imhotep\Contracts\Cache\Store;
+use Imhotep\Contracts\Cache\CacheFactoryInterface;
+use Imhotep\Contracts\Cache\CacheInterface;
+use Imhotep\Contracts\Cache\CacheStoreInterface;
+use Imhotep\Contracts\DriverManager;
+use InvalidArgumentException;
 
-class CacheManager
+class CacheManager extends DriverManager implements CacheFactoryInterface
 {
     protected array $stores = [];
 
-    protected array $drivers = [];
-
-    public function __construct(
-        protected Container $app
-    ) {}
-
-    public function store(?string $name = null): Repository
+    public function store(?string $name = null): CacheInterface
     {
-        if (is_null($name)) {
-            $name = $this->app['config']['cache.default'];
+        if (empty($name)) {
+            $name = $this->getDefaultDriver();
         }
 
-        if (isset($this->stores[$name])) {
-            return $this->stores[$name];
-        }
-
-        return $this->stores[$name] = $this->resolve($name);
+        return $this->stores[$name] ?? $this->stores[$name] = $this->resolve($name);
     }
 
-    protected function resolve(string $name): Repository
+    protected function resolve(string $name): CacheInterface
     {
-        $config = config()->get("cache.stores.{$name}");
+        $config = $this->config->get("cache.stores.{$name}");
 
         if (is_null($config)) {
             throw new CacheException("Cache store [{$name}] not configured.");
         }
 
-        $driver = empty($config['driver']) ? '' : $config['driver'];
-
-        if (isset($this->drivers[$driver])) {
-            return $this->repository($this->callCustomDriver($config), $config);
-        }
-
-        $driverMethod = 'create'.ucfirst($driver).'Driver';
-
-        if (method_exists($this, $driverMethod)) {
-            return $this->repository($this->{$driverMethod}($config), $config);
-        }
-
-        throw new CacheException("Cache driver [{$name}] is not supported.");
+        return new Repository($this->driver($name, [$config]), $config['ttl'] ?? 3600);
     }
 
-    public function repository(Store $store, array $config = []): Repository
+    protected function createArrayDriver(): CacheStoreInterface
     {
-        return new Repository($store, (int)($config['ttl'] ?? 3600));
+        return new ArrayStore();
     }
 
-    protected function createArrayDriver(array $config): Store
+    protected function createFileDriver(array $config): CacheStoreInterface
     {
-        return new ArrayStore($config);
+        return new FileStore($config['path'],
+            is_int($config['permission']) ? $config['permission'] : null,
+            is_int($config['dirPermission']) ? $config['dirPermission'] : null
+        );
     }
 
-    protected function createFileDriver(array $config): Store
+    protected function createRedisDriver(array $config): CacheStoreInterface
     {
-        return new FileStore($config);
+        $connection = is_string($config['connection']) ? $config['connection'] : 'default';
+
+        return new RedisStore($this->container['redis'], $connection, $this->getPrefix($config));
     }
 
-    protected function createRedisDriver(array $config): Store
-    {
-        $connection = $config['connection'] ?? 'default';
-
-        return new RedisStore($this->app['redis'], $connection, $this->getPrefix($config));
-    }
-
-    protected function createMemcacheDriver(array $config): Store
+    protected function createMemcacheDriver(array $config): CacheStoreInterface
     {
         $memcache = MemcacheStore::memcache($config['servers'] ?? []);
 
         return new MemcacheStore($memcache, $this->getPrefix($config));
     }
 
-    protected function createMemcachedDriver(array $config): Store
+    protected function createMemcachedDriver(array $config): CacheStoreInterface
     {
         $memcached = MemcachedStore::memcached(
             $config['servers'] ?? [],
@@ -100,33 +78,38 @@ class CacheManager
         return new MemcachedStore($memcached, $this->getPrefix($config));
     }
 
-    protected function createDatabaseDriver(array $config): Store
+    protected function createDatabaseDriver(array $config): CacheStoreInterface
     {
         return new DatabaseStore(
-            $this->app['db']->connection($config['connection'] ?? null),
+            $this->container['db']->connection($config['connection'] ?? null),
             $config['table'],
             $this->getPrefix($config)
         );
     }
 
-    protected function callCustomDriver(array $config): Store
-    {
-        return $this->drivers[$config['driver']]($this->app, $config);
-    }
-
     protected function getPrefix(array $config): string
     {
-        return $config['prefix'] ?? ($this->app['config']['cache.prefix'] ?: '');
+        return $config['prefix'] ?? $this->config->get('cache.prefix', '');
     }
 
-    public function extend(string $driver, Closure $callback): static
+    public function getStores(): array
     {
-        $this->drivers[$driver] = $callback;
+        return $this->stores;
+    }
+
+    public function getDefaultDriver(): string
+    {
+        return $this->config['cache.default'];
+    }
+
+    public function setDefaultDriver(string $driver): static
+    {
+        $this->config['cache.default'] = $driver;
 
         return $this;
     }
 
-    public function __call(string $method, array $parameters)
+    public function __call($method, $parameters)
     {
         $store = $this->store();
 
@@ -134,6 +117,6 @@ class CacheManager
             return $store->$method(...$parameters);
         }
 
-        throw new CacheException("Cache method [$method] not found.");
+        throw new InvalidArgumentException("Method [$method] not supported in [".static::class."].");
     }
 }

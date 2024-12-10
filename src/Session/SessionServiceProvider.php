@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Session;
 
@@ -13,11 +11,7 @@ class SessionServiceProvider extends ServiceProvider
         'session' => SessionManager::class
     ];
 
-    public array $singletons = [
-        SessionManager::class
-    ];
-
-    public function register()
+    public function register(): void
     {
         $this->app->singleton('session', function ($app) {
             return new SessionManager($app);

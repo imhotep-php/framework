@@ -2,18 +2,11 @@
 
 namespace Imhotep\Cache\Stores;
 
-use Imhotep\Contracts\Cache\Store;
+use Imhotep\Contracts\Cache\CacheStoreInterface;
 
-class ArrayStore implements Store
+class ArrayStore implements CacheStoreInterface
 {
     protected array $storage = [];
-
-    protected array $config;
-
-    public function __construct(array $config)
-    {
-        $this->config = $config;
-    }
 
     public function get(string $key): mixed
     {

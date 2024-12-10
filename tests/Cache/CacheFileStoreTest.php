@@ -15,9 +15,7 @@ class CacheFileStoreTest extends TestCase
     {
         parent::__construct($name, $data, $dataName);
 
-        $this->store = new FileStore([
-            'path' => __DIR__.'/data'
-        ]);
+        $this->store = new FileStore(__DIR__.'/data');
     }
 
     public function __destruct()

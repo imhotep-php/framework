@@ -52,7 +52,6 @@ class Application extends Container
         $this->instance('app', $this);
         $this->instance(Container::class, $this);
 
-
         $this->singleton(PackageManager::class, function () {
             $cachePath = env('APP_PACKAGES_CACHE', $this->storagePath('bootstrap/packages.php'));
 

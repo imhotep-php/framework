@@ -231,14 +231,14 @@ class Router implements RouterContract
         if ($response instanceof View) {
             $response = new Response($response->render(), 200, ['Content-Type' => 'text/html']);
         }
-        elseif (is_string($response)) {
-            $response = new Response($response, 200, ['Content-Type' => 'text/html']);
+        elseif (is_string($response) || is_numeric($response) || is_bool($response)) {
+            $response = new Response((string)$response, 200, ['Content-Type' => 'text/html']);
         }
         elseif (is_array($response)) {
             $response = new JsonResponse($response, 200);
         }
         elseif (is_null($response)) {
-            $response = new Response();
+            $response = new Response('', 200, ['Content-Type' => 'text/html']);
         }
 
         return $response->prepare($request);

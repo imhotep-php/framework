@@ -3,8 +3,8 @@
 namespace Imhotep\Framework\Bootstrap;
 
 use Exception;
-use Imhotep\Config\Repository;
-use Imhotep\Contracts\Config\Repository as RepositoryContract;
+use Imhotep\Config\Repository as ConfigRepository;
+use Imhotep\Contracts\Config\ConfigRepositoryInterface;
 use Imhotep\Framework\Application;
 use Throwable;
 
@@ -27,7 +27,8 @@ class LoadConfiguration
      */
     public function bootstrap(): void
     {
-        $this->app->instance('config', $config = new Repository([]));
+        $this->app->alias('config', [ConfigRepository::class, ConfigRepositoryInterface::class]);
+        $this->app->instance('config', $config = new ConfigRepository([]));
 
         if ($this->app->configIsCached()) {
             $items = require $this->app->configCachePath();
@@ -46,11 +47,11 @@ class LoadConfiguration
     /**
      * Load configurations items from all files
      *
-     * @param RepositoryContract $repository
+     * @param ConfigRepositoryInterface $repository
      * @return void
      * @throws Exception
      */
-    protected function loadConfigFiles(RepositoryContract $repository): void
+    protected function loadConfigFiles(ConfigRepositoryInterface $repository): void
     {
         $files = $this->getConfigFiles();
 

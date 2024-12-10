@@ -1,23 +1,21 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Session\Middleware;
 
+use Closure;
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Http\Response;
-use Imhotep\Contracts\Session\Session;
+use Imhotep\Contracts\Session\SessionInterface;
 use Imhotep\Cookie\Cookie;
 use Imhotep\Session\SessionManager;
 
 class StartSession
 {
-    public function __construct(protected SessionManager $manager)
-    {
+    public function __construct(
+        protected SessionManager $manager
+    ) { }
 
-    }
-
-    public function handle(Request $request, \Closure $next): Response
+    public function handle(Request $request, Closure $next): Response
     {
         $session = $this->manager->store();
 
@@ -26,11 +24,13 @@ class StartSession
         return $this->handleStatefulRequest($request, $session, $next);
     }
 
-    public function handleStatefulRequest(Request $request, Session $session, \Closure $next): Response
+    public function handleStatefulRequest(Request $request, SessionInterface $session, Closure $next): Response
     {
         $request->setSession($session);
 
-        $session->start();
+        $session->garbageCollect()
+                ->setRequestOnHandler($request)
+                ->start();
 
         $response = $next($request);
 
@@ -41,7 +41,7 @@ class StartSession
         return $response;
     }
 
-    public function addCookieToResponse(Response $response, Session $session): void
+    public function addCookieToResponse(Response $response, SessionInterface $session): void
     {
         if (is_null($session->getId())) {
             return;

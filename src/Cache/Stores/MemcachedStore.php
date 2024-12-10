@@ -2,10 +2,10 @@
 
 namespace Imhotep\Cache\Stores;
 
-use Imhotep\Contracts\Cache\Store;
+use Imhotep\Contracts\Cache\CacheStoreInterface;
 use Memcached;
 
-class MemcachedStore implements Store
+class MemcachedStore implements CacheStoreInterface
 {
     public function __construct(
         protected Memcached $memcached,

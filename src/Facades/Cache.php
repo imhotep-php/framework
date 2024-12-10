@@ -3,10 +3,10 @@
 namespace Imhotep\Facades;
 
 use Closure;
-use Imhotep\Cache\Repository;
+use Imhotep\Cache\CacheInterface;
 
 /**
- * @method static Repository store(string|null $name = null)
+ * @method static CacheInterface store(string|null $name = null)
  * @method static bool has(string $key)
  * @method static bool missing(string $key)
  * @method static mixed get(string $key)
@@ -28,7 +28,7 @@ use Imhotep\Cache\Repository;
  * @method static void setTtl(int $ttl)
  *
  * @see \Imhotep\Cache\CacheManager
- * @see \Imhotep\Cache\Repository
+ * @see \Imhotep\Cache\CacheInterface
  */
 class Cache extends Facade
 {

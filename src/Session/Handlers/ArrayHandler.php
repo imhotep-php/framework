@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Session\Handlers;
 
@@ -8,18 +6,11 @@ use SessionHandlerInterface;
 
 class ArrayHandler implements SessionHandlerInterface
 {
-    protected array $config = [];
-
     protected array $storage = [];
 
-    protected int $lifetime = 0;
-
-    public function __construct(array $config = [])
-    {
-        $this->config = $config;
-
-        $this->lifetime = $this->config['lifetime'] ?? 300;
-    }
+    public function __construct(
+        protected int $lifetime = 0
+    ) { }
 
     public function close(): bool
     {
@@ -40,7 +31,7 @@ class ArrayHandler implements SessionHandlerInterface
         $countDeleted = 0;
 
         foreach ($this->storage as $key => $item) {
-            if ($item['time'] < time()-$max_lifetime) {
+            if ($item['time'] < time() - $this->lifetime) {
                 unset($this->storage[$key]);
                 $countDeleted++;
             }

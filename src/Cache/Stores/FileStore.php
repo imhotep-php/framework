@@ -3,10 +3,9 @@
 namespace Imhotep\Cache\Stores;
 
 use FilesystemIterator;
-use Imhotep\Contracts\Cache\CacheException;
-use Imhotep\Contracts\Cache\Store;
+use Imhotep\Contracts\Cache\CacheStoreInterface;
 
-class FileStore implements Store
+class FileStore implements CacheStoreInterface
 {
     protected array $config;
 
@@ -16,21 +15,16 @@ class FileStore implements Store
 
     protected int $filePermission = 0664;
 
-    public function __construct(array $config)
+    public function __construct(string $path, ?int $filePermission = null, ?int $dirPermission = null)
     {
-        $this->config = $config;
+        $this->directory = rtrim($path, '/');
 
-        if (! isset($config['path'])) {
-            throw new CacheException('Cache store [file] not configured. Specify value [path].');
+        if (! is_null($filePermission)) {
+            $this->filePermission = $filePermission;
         }
 
-        $this->directory = rtrim($config['path'], '/');
-
-        if (isset($config['permission'])) {
-            $this->filePermission = (int)$config['permission'];
-        }
-        if (isset($config['dirPermission'])) {
-            $this->dirPermission = (int)$config['dirPermission'];
+        if (! is_null($dirPermission)) {
+            $this->dirPermission = $dirPermission;
         }
     }
 

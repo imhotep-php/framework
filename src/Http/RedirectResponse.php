@@ -3,12 +3,12 @@
 namespace Imhotep\Http;
 
 use Imhotep\Contracts\Http\Request as RequestContract;
-use Imhotep\Contracts\Session\Session;
+use Imhotep\Contracts\Session\SessionInterface;
 use Imhotep\Support\MessageBag;
 
 class RedirectResponse extends Response
 {
-    protected Session $session;
+    protected SessionInterface $session;
 
     protected ?RequestContract $request = null;
 
@@ -70,7 +70,7 @@ class RedirectResponse extends Response
         return $this;
     }
 
-    public function setSession(Session $session): static
+    public function setSession(SessionInterface $session): static
     {
         $this->session = $session;
 

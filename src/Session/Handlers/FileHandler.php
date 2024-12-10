@@ -1,38 +1,19 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Session\Handlers;
 
 use FilesystemIterator;
-use Imhotep\Contracts\Session\SessionException;
 use Imhotep\Filesystem\Filesystem;
 use SessionHandlerInterface;
+use SplFileInfo;
 
 class FileHandler implements SessionHandlerInterface
 {
-    protected Filesystem $files;
-
-    protected array $config = [];
-
-    protected int $lifetime = 0;
-
-    protected string $path = '';
-
-    public function __construct(Filesystem $files, array $config = [])
-    {
-        $this->files = $files;
-
-        $this->config = $config;
-
-        $this->lifetime = $config['lifetime'] ?? 300;
-
-        if (! isset($this->config['files'])) {
-            throw new SessionException("Parameter [files] not configured in [file] session driver.");
-        }
-
-        $this->path = $this->config['files'];
-    }
+    public function __construct(
+        protected Filesystem $files,
+        protected string $path,
+        protected int $lifetime
+    ){ }
 
     public function close(): bool
     {
@@ -52,11 +33,11 @@ class FileHandler implements SessionHandlerInterface
 
         $files = new FilesystemIterator($this->path, FilesystemIterator::SKIP_DOTS);
 
-        /** @var \SplFileInfo $file */
+        /** @var SplFileInfo $file */
         foreach ($files as $file) {
             if (! $file->isFile()) continue;
 
-            if ($file->getMTime() < time() - $max_lifetime) {
+            if ($file->getMTime() < time() - $this->lifetime) {
                 $this->files->delete($file->getRealPath());
                 $countDeleted++;
             }

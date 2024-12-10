@@ -15,7 +15,7 @@ class CacheArrayStoreTest extends TestCase
     {
         parent::__construct($name, $data, $dataName);
 
-        $this->store = new ArrayStore([]);
+        $this->store = new ArrayStore();
     }
 
     public function testItemCanBeSetAndGet()

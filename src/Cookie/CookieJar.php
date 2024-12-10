@@ -2,7 +2,9 @@
 
 namespace Imhotep\Cookie;
 
-class CookieJar
+use Imhotep\Contracts\Cookie\QueueingFactory;
+
+class CookieJar implements QueueingFactory
 {
     protected string $path = '/';
 

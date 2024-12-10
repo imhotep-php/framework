@@ -5,7 +5,7 @@ namespace Imhotep\Http;
 use Closure;
 use Imhotep\Contracts\Http\Request as RequestContract;
 use Imhotep\Contracts\Routing\Route;
-use Imhotep\Contracts\Session\Session;
+use Imhotep\Contracts\Session\SessionInterface;
 use Imhotep\Contracts\Validation\Validator;
 use Imhotep\Http\Request\FileBag;
 use Imhotep\Http\Request\HeaderBag;
@@ -1017,9 +1017,9 @@ class Request implements \ArrayAccess, RequestContract
 
     // Session
 
-    protected Session $session;
+    protected SessionInterface $session;
 
-    public function setSession(Session $session): void
+    public function setSession(SessionInterface $session): void
     {
         $this->session = $session;
     }
@@ -1029,7 +1029,7 @@ class Request implements \ArrayAccess, RequestContract
         return ! is_null($this->session);
     }
 
-    public function getSession(): Session
+    public function getSession(): SessionInterface
     {
         if (! $this->hasSession()) {
             throw new \RuntimeException('Session store not set on request.');
@@ -1038,7 +1038,7 @@ class Request implements \ArrayAccess, RequestContract
         return $this->session;
     }
 
-    public function session(): Session
+    public function session(): SessionInterface
     {
         return $this->getSession();
     }

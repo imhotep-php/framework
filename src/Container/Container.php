@@ -2,19 +2,18 @@
 
 namespace Imhotep\Container;
 
-use ArrayAccess;
 use Closure;
+use Imhotep\Contracts\ContainerInterface;
 use Imhotep\Support\Reflector;
 use Imhotep\Support\RewindableGenerator;
 use LogicException;
-use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionFunction;
 use ReflectionNamedType;
 use ReflectionParameter;
 use Throwable;
 
-class Container implements ArrayAccess, ContainerInterface
+class Container implements ContainerInterface
 {
     use Traits\HasMethodBindings, Traits\HasCallbacks, Traits\HasContextual;
 

@@ -149,7 +149,13 @@ class Arr
 
     public static function only(array|object $array, array|string $keys): array
     {
-        return array_intersect_key($array, array_flip((array) $keys));
+        $result = [];
+
+        foreach ($keys as $key) {
+            $result[$key] = static::get($array, $key);
+        }
+
+        return $result;
     }
 
     public static function query(array|object $array): string
@@ -189,7 +195,7 @@ class Arr
         }
     }
 
-    public static function except($array, $keys)
+    public static function except(array|object $array, string|array $keys)
     {
         static::forget($array, $keys);
 
@@ -213,7 +219,7 @@ class Arr
 
         $keys = (array)$keys;
 
-        if (count($keys) === 0) {
+        if (empty($keys)) {
             return false;
         }
 

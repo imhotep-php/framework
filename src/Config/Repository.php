@@ -2,18 +2,16 @@
 
 namespace Imhotep\Config;
 
-use ArrayAccess;
 use Closure;
-use Imhotep\Contracts\Config\Repository as ConfigContract;
+use Imhotep\Contracts\Config\ConfigRepositoryInterface;
 use Imhotep\Support\Arr;
 use InvalidArgumentException;
 
-class Repository implements ArrayAccess, ConfigContract
+class Repository implements ConfigRepositoryInterface
 {
     public function __construct(
         protected array $items = []
-    )
-    {}
+    ) {}
 
     public function has(string $key): bool
     {

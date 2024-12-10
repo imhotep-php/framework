@@ -2,7 +2,7 @@
   "name": "imhotep/session",
   "type": "library",
   "license" : "MIT",
-  "homepage": "https://imhotep-php.ru",
+  "homepage": "https://imhotep.dev",
   "authors": [
     {
       "name": "Imhotep",
@@ -15,7 +15,7 @@
     }
   },
   "require": {
-    "php": ">=8.0.2"
+    "php": ">=8.2"
   },
   "minimum-stability": "dev"
 }

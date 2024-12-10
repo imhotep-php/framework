@@ -1,10 +1,10 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Contracts\Config;
 
-interface Repository
+use ArrayAccess;
+
+interface ConfigRepositoryInterface extends ArrayAccess
 {
     /**
      * Determine if the given configuration value exists.
