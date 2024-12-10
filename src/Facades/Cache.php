@@ -3,7 +3,7 @@
 namespace Imhotep\Facades;
 
 use Closure;
-use Imhotep\Cache\CacheInterface;
+use Imhotep\Contracts\Cache\CacheInterface;
 
 /**
  * @method static CacheInterface store(string|null $name = null)
@@ -28,7 +28,7 @@ use Imhotep\Cache\CacheInterface;
  * @method static void setTtl(int $ttl)
  *
  * @see \Imhotep\Cache\CacheManager
- * @see \Imhotep\Cache\CacheInterface
+ * @see \Imhotep\Cache\Repository
  */
 class Cache extends Facade
 {
