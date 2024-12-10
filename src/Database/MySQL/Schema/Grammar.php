@@ -162,6 +162,11 @@ class Grammar extends GrammarBase
         return sprintf('ALTER TABLE %s %s', $this->wrapTable($table), implode(', ', $columns));
     }
 
+    public function compilePrimary(TableContract $table, Fluent $command): string
+    {
+        return $this->compileIndexBase($table, $command, 'PRIMARY KEY');
+    }
+
     public function compileIndex(TableContract $table, Fluent $command): string
     {
         return $this->compileIndexBase($table, $command, 'INDEX');

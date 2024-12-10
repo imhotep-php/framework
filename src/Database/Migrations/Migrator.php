@@ -57,7 +57,7 @@ class Migrator
      * @return array
      * @throws Exception
      */
-    public function dispatch($command, array $paths = [], array $options = [])
+    public function dispatch($command, array $paths = [], array $options = []): int
     {
         $this->loadMigrationFiles($paths);
 
@@ -67,20 +67,21 @@ class Migrator
             'refresh' => $this->commandRefresh($options),
             'rollback' => $this->commandRollback($options),
             'status' => $this->commandStatus($options),
+            default => 1,
         };
     }
 
     /**
      * @throws Exception
      */
-    protected function commandMigrate($options)
+    protected function commandMigrate($options): int
     {
         $migrations = $this->getPendingMigrations();
 
         if (empty($migrations)) {
             $this->components()->info('Nothing to migrate');
 
-            return;
+            return 0;
         }
 
         $this->components()->info('Running migrations');
@@ -100,17 +101,19 @@ class Migrator
         }
 
         $this->output->newLine();
+
+        return 0;
     }
 
     /**
      * @throws Exception
      */
-    protected function commandReset($options)
+    protected function commandReset($options): int
     {
         if (! $this->repository->repositoryExists()) {
             $this->components()->error('Migration table not found.');
 
-            return;
+            return 0;
         }
 
         $pretend = $options['pretend'] ?? false;
@@ -120,21 +123,25 @@ class Migrator
         }, $this->repository->getRan());
 
         $this->rollbackMigrations($migrations);
+
+        return 0;
     }
 
     /**
      * @throws Exception
      */
-    protected function commandRefresh($options)
+    protected function commandRefresh($options): int
     {
         $this->commandReset($options);
         $this->commandMigrate($options);
+
+        return 0;
     }
 
     /**
      * @throws Exception
      */
-    protected function commandRollback($options)
+    protected function commandRollback($options): int
     {
         $pretend = $options['pretend'] ?? false;
 
@@ -143,23 +150,25 @@ class Migrator
         $migrations = ($step > 0) ? $this->repository->getMigrations($step) : $this->repository->getLast();
 
         $this->rollbackMigrations($migrations);
+
+        return 0;
     }
 
     /**
      * @param $options
      */
-    protected function commandStatus($options)
+    protected function commandStatus($options): int
     {
         if (! $this->repository->repositoryExists()) {
             $this->components()->error('Migration table not found');
 
-            return;
+            return 0;
         }
 
         if (empty($this->files)) {
             $this->components()->info('Migrations not found');
 
-            return;
+            return 0;
         }
 
         $this->output->newLine();
@@ -180,16 +189,7 @@ class Migrator
             $this->components()->twoColumnDetail($migrationName, $status);
         }
 
-        /*
-        $migrations = $this->getPendingMigrations();
-        foreach ($migrations as $migration) {
-            $result[] = [
-                'migration' => $migration->getFilename(),
-                'batch' => 0,
-                'status' => 'Pending'
-            ];
-        }
-        */
+        return 0;
     }
 
     protected function runMigration(Migration $migration, string $method, int $batch = null): void

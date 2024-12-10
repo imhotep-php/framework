@@ -149,7 +149,7 @@ abstract class Builder implements QueryBuilderContract
             throw new InvalidArgumentException('Values must not be empty.');
         }
 
-        $sql = $this->grammar->compileInsertOrUpdate($this, $uniqueColumn, $insertValues, $updateValues);
+        $sql = $this->grammar->compileUpsert($this, $uniqueColumn, $insertValues, $updateValues);
 
         $bindings = $this->getBindings();
 

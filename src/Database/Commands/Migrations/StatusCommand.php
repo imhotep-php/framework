@@ -12,10 +12,10 @@ class StatusCommand extends BaseCommand
     {
         parent::handle();
 
-        $this->migrate->dispatch('status', $this->getPaths());
+        $exitCode = $this->migrate->dispatch('status', $this->getPaths());
 
         $this->output->newLine();
 
-        return 0;
+        return $exitCode;
     }
 }
