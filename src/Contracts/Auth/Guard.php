@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Contracts\Auth;
 
@@ -54,5 +52,5 @@ interface Guard
      * @param mixed $user
      * @return static
      */
-    public function setUser(mixed $user): static;
+    public function setUser(Authenticatable $user): static;
 }

@@ -14,7 +14,8 @@ class DatabaseUserProvider implements UserProvider
 {
     public function __construct(
         protected Connection $connection,
-        protected string $table
+        protected string $table,
+        protected ?string $userClass = null
     ) { }
 
     public function getById(mixed $id): ?Authenticatable
@@ -80,6 +81,14 @@ class DatabaseUserProvider implements UserProvider
 
     protected function makeGenericUser(object|array $user = null): ?Authenticatable
     {
-        return is_null($user) ? null : new GenericUser((array)$user);
+        if (is_null($user)) {
+            return null;
+        }
+
+        if ($this->userClass) {
+            return new $this->userClass((array)$user);
+        }
+
+        return new GenericUser((array)$user);
     }
 }

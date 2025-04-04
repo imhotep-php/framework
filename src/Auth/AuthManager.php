@@ -3,10 +3,12 @@
 namespace Imhotep\Auth;
 
 use Closure;
+use Imhotep\Auth\Guards\RequestGuard;
 use Imhotep\Auth\Guards\SessionGuard;
 use Imhotep\Auth\Guards\TokenGuard;
 use Imhotep\Auth\UserProviders\DatabaseUserProvider;
 use Imhotep\Container\Container;
+use Imhotep\Contracts\Auth\Authenticatable;
 use Imhotep\Contracts\Auth\AuthenticationException;
 use Imhotep\Contracts\Auth\Factory;
 use Imhotep\Contracts\Auth\Guard;
@@ -199,18 +201,25 @@ class AuthManager implements Factory
 
     public function createRequestDriver(): Guard
     {
+        return new RequestGuard(function () {
 
+        });
     }
 
     public function createDatabaseUserProvider(array $config): UserProvider
     {
         if (empty($config['table'])) {
-            throw new AuthenticationException('Parameter [table] for auth provider [database] is not configured.');
+            throw new \InvalidArgumentException('Parameter [table] for auth provider [database] is not configured.');
+        }
+
+        if (isset($config['user']) && $config['user'] instanceof Authenticatable) {
+            throw new \InvalidArgumentException('Parameter [table] for auth provider [database] is not configured.');
         }
 
         return new DatabaseUserProvider(
             $this->app['db']->connection($config['connection'] ?? null),
-            $config['table']
+            $config['table'],
+            $config['user'] ?? null
         );
     }
 

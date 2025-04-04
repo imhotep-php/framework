@@ -8,7 +8,6 @@ use Imhotep\Auth\Events\Failed;
 use Imhotep\Auth\Events\Login;
 use Imhotep\Auth\Events\Logout;
 use Imhotep\Auth\Events\Validated;
-use Imhotep\Auth\GenericUser;
 use Imhotep\Contracts\Auth\Authenticatable;
 use Imhotep\Contracts\Auth\AuthenticationException;
 use Imhotep\Contracts\Auth\UserProvider;
@@ -19,13 +18,13 @@ trait GuardHelpers
 {
     protected ?Authenticatable $user = null;
 
-    protected bool $loggedOut = false;
-
     protected ?UserProvider $provider = null;
 
     protected ?Request $request = null;
 
     protected ?Dispatcher $events = null;
+
+    protected bool $loggedOut = false;
 
     public function authenticate(): mixed
     {
@@ -60,7 +59,7 @@ trait GuardHelpers
         return null;
     }
 
-    public function setUser(mixed $user): static
+    public function setUser(Authenticatable $user): static
     {
         $this->user = $user;
 

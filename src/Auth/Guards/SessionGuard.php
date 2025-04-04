@@ -53,27 +53,42 @@ class SessionGuard implements StatefulGuard
         return $this->user;
     }
 
-    public function validate(array $credentials = []): bool
-    {
-        $this->lastAttemptedUser = $user = $this->provider->getByCredentials($credentials);
 
-        return ! is_null($user) && $this->hasValidCredentials($user, $credentials);
+    public function basic(string $field = 'email', array $extraConditions = []): void
+    {
+        if ($this->check()) {
+            return;
+        }
+
+        $credentials = array_merge($this->basicCredentials($field), $extraConditions);
+
+        if (! $this->attempt($credentials)) {
+            $this->failedBasicResponse();
+        }
     }
 
-    protected function hasValidCredentials(?Authenticatable $user, array $credentials): bool
+    public function onceBasic(string $field = 'email', array $extraConditions = []): void
     {
-        return $this->timebox->call(function ($timebox) use ($user, $credentials) {
-            $valid = ! is_null($user) && $this->provider->validateCredentials($user, $credentials);
+        $credentials = $this->basicCredentials($field);
 
-            if ($valid) {
-                $timebox->returnEarly();
-
-                $this->callValidatedEvent($user, $credentials);
-            }
-
-            return $valid;
-        }, 1000 * 1000); // 1 sec.
+        if (! $this->once(array_merge($credentials, $extraConditions))) {
+            $this->failedBasicResponse();
+        }
     }
+
+    protected function basicCredentials(string $field): array
+    {
+        return [
+            $field => $this->request->getUser(),
+            'password' => $this->request->getPassword(),
+        ];
+    }
+
+    protected function failedBasicResponse(): void
+    {
+        throw new UnauthorizedHttpException('Basic', 'Invalid credentials.');
+    }
+
 
     public function attempt(array $credentials = [], bool $remember = false): bool
     {
@@ -105,33 +120,35 @@ class SessionGuard implements StatefulGuard
         return false;
     }
 
-    public function onceBasic($field = 'email', $extraConditions = []): void
-    {
-        $credentials = $this->basicCredentials($field);
 
-        if (! $this->once(array_merge($credentials, $extraConditions))) {
-            $this->failedBasicResponse();
-        }
+    public function validate(array $credentials = []): bool
+    {
+        $this->lastAttemptedUser = $user = $this->provider->getByCredentials($credentials);
+
+        return ! is_null($user) && $this->hasValidCredentials($user, $credentials);
     }
 
-    protected function basicCredentials($field): array
+    protected function hasValidCredentials(?Authenticatable $user, array $credentials): bool
     {
-        return [
-            $field => $this->request->getUser(),
-            'password' => $this->request->getPassword(),
-        ];
-    }
+        return $this->timebox->call(function ($timebox) use ($user, $credentials) {
+            $valid = ! is_null($user) && $this->provider->validateCredentials($user, $credentials);
 
-    protected function failedBasicResponse(): void
-    {
-        throw new UnauthorizedHttpException('Basic', 'Invalid credentials.');
+            if ($valid) {
+                $timebox->returnEarly();
+
+                $this->callValidatedEvent($user, $credentials);
+            }
+
+            return $valid;
+        }, 1000 * 1000); // 1 sec.
     }
 
 
     public function login(Authenticatable $user, bool $remember = false): void
     {
-        $this->session->put($this->getName(), $user->getAuthId());
-        $this->session->regenerate(true);
+        $this->session->put(
+            $this->getName(), $user->getAuthId()
+        )->regenerate(true);
 
         if ($remember) {
             $this->cookie->make($this->getRememberName(), $this->getRememberValue($user), $this->rememberDuration);
@@ -157,7 +174,13 @@ class SessionGuard implements StatefulGuard
 
     public function onceUsingId(mixed $id): Authenticatable|false
     {
-        // TODO: Implement onceUsingId() method.
+        if ($user = $this->provider->getById($id)) {
+            $this->setUser($user);
+
+            return $this->user;
+        }
+
+        return false;
     }
 
     public function logout(): void
@@ -168,7 +191,6 @@ class SessionGuard implements StatefulGuard
             return;
         }
 
-        $this->session->delete($this->getName());
         $this->session->invalidate();
 
         $this->callLogoutEvent($this->user);
@@ -178,10 +200,11 @@ class SessionGuard implements StatefulGuard
         $this->loggedOut = true;
     }
 
+
     // Get a unique key for the auth session value.
     public function getName(): string
     {
-        return '_auth_'.$this->name;
+        return 'auth_'.$this->name;
     }
 
     public function viaRemember(): bool

@@ -3,8 +3,6 @@
 namespace Imhotep\Auth\Guards;
 
 use Imhotep\Contracts\Auth\Guard;
-use Imhotep\Contracts\Auth\UserProvider;
-use Imhotep\Http\Request;
 
 class RequestGuard implements Guard
 {
@@ -12,11 +10,12 @@ class RequestGuard implements Guard
 
     protected mixed $callback;
 
-    protected function __construct(callable $callback, Request $request, UserProvider $provider = null)
+    // Request $request, UserProvider $provider = null
+    public function __construct(callable $callback)
     {
         $this->callback = $callback;
-        $this->setRequest($request);
-        $this->setProvider($provider);
+        //$this->setRequest($request);
+        //$this->setProvider($provider);
     }
 
     public function user(): mixed
