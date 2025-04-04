@@ -56,7 +56,13 @@ abstract class AbstractDumper
 
     public function dumpArray(array $values, array $attrs = []): string
     {
-        return '';
+        $result = '';
+
+        foreach ($values as $key => $value) {
+            $result .= sprintf("%s %s\n", $key, $value->dump($this));
+        }
+
+        return $result;
     }
 
 
