@@ -3,6 +3,7 @@
 namespace Imhotep\Localization;
 
 use Imhotep\Contracts\Localization\Localizator as LocalizatorContract;
+use Imhotep\Support\Arr;
 use Imhotep\Support\Str;
 
 // Реализовать:
@@ -67,6 +68,25 @@ class Localizator implements LocalizatorContract
         return $this->makeExpressions($value, $locale);
     }
 
+    public function has(string $key, ?string $locale = null, bool $fallback = true): bool
+    {
+        [$ns, $group, $item] = $this->parseKey($key);
+
+        $locale = $locale ?: $this->locale;
+
+        $this->load($locale, $group, $ns);
+
+        $value = $this->getValue($locale, $group, $ns, $item);
+
+        if (is_null($value) && $fallback) {
+            $this->load($this->fallback, $group, $ns);
+
+            $value = $this->getValue($this->fallback, $group, $ns, $item);
+        }
+
+        return ! is_null($value);
+    }
+
     protected function parseKey(string $key): array
     {
         if (isset($this->parsedKeys[$key])) {
@@ -97,6 +117,10 @@ class Localizator implements LocalizatorContract
     {
         if ($item === '*') {
             return $this->loaded[$namespace][$group][$locale];
+        }
+
+        if (str_contains($item, '.')) {
+            return Arr::get($this->loaded[$namespace][$group][$locale], $item);
         }
 
         if (array_key_exists($item, $this->loaded[$namespace][$group][$locale])) {
@@ -149,7 +173,7 @@ class Localizator implements LocalizatorContract
                 $plural = $this->plural($number, $locale);
 
                 if (isset($values[$plural])) {
-                    return $values[$plural];
+                    return trim($values[$plural]);
                 }
 
                 return $original;
