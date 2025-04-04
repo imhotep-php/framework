@@ -199,9 +199,20 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
             $query->addBinding($value, 'where');
         }
 
-        return sprintf('%s %s (%s)',
+        return sprintf('%s IN (%s)',
             $this->wrap($where['column']),
-            $where['type'] === 'In' ? 'IN' : 'NOT IN',
+            $this->prepareValues($where['values'])
+        );
+    }
+
+    protected function whereNotIn(Builder $query, array $where): string
+    {
+        foreach ($where['values'] as $value) {
+            $query->addBinding($value, 'where');
+        }
+
+        return sprintf('%s NOT IN (%s)',
+            $this->wrap($where['column']),
             $this->prepareValues($where['values'])
         );
     }

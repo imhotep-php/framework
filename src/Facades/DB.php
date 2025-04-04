@@ -1,12 +1,11 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Facades;
 
 use Imhotep\Contracts\Database\Connection as ConnectionContract;
 use Imhotep\Database\Query\Builder as QueryBuilder;
 use Iterator;
+use Closure;
 
 /**
  * @method static string getName()
@@ -31,6 +30,8 @@ use Iterator;
  * @method static void purge(string $name = null)
  * @method static string getDefaultConnection()
  * @method static void setDefaultConnection(string $name)
+ *
+ * @method static mixed transaction(Closure $callback, int $attempts = 1)
  *
  * @see \Imhotep\Database\Connection
  */

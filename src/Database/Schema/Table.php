@@ -21,6 +21,8 @@ class Table
 
     protected bool $isTemporary = false;
 
+    protected string $columnClassDefault = Column::class;
+
     public function __construct(string $name, Closure $callback = null, $prefix = '')
     {
         $this->name = $name;
@@ -212,7 +214,9 @@ class Table
 
     public function addColumn(string $type, string $name, array $parameters = []): Column
     {
-        $column = new Column(
+        $columnClass = $this->columnClassDefault;
+
+        $column = new $columnClass(
             array_merge(compact('type', 'name'), $parameters)
         );
         $this->columns[] = $column;
@@ -233,11 +237,11 @@ class Table
         return $this;
     }
 
-    public function dropColumn(string|array $columns): static
+    public function dropColumn(string|array $columns, bool $cascade = false): static
     {
-        $columns = is_array($columns) ? $columns : func_get_args();
+        $columns = (array)$columns;
 
-        $this->addCommand('dropColumn', compact('columns'));
+        $this->addCommand('dropColumn', compact('columns', 'cascade'));
 
         return $this;
     }

@@ -297,6 +297,11 @@ abstract class Builder implements QueryBuilderContract
         return $this;
     }
 
+    public function whereNotIn(string $column, array $values, string $boolean = 'and', bool $not = false): static
+    {
+        return $this->whereIn($column, $values, $boolean, true);
+    }
+
     public function orderBy($column, $direction = 'asc'): static
     {
         $this->orders[] = compact('column', 'direction');

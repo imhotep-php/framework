@@ -23,6 +23,17 @@ class Builder extends BuilderAbstract
         return $results;
     }
 
+    public function hasTable(string $table): bool
+    {
+        $database = $this->connection->getDatabaseName();
+        $schema = 'public';
+        $table = $this->connection->getTablePrefix().$table;
+
+        return count($this->connection->selectFromWriteConnection(
+                $this->grammar->compileTableExists(), [$database, $schema, $table]
+            )) > 0;
+    }
+
     public function createTable(string $table, \Closure $callback = null): Table
     {
         return new Table($table, $callback);

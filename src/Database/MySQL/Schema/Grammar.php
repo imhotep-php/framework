@@ -239,6 +239,18 @@ class Grammar extends GrammarBase
         return 'decimal';
     }
 
+    protected function typeNumeric(Column $column): string
+    {
+        if (! is_null($column->precision) && ! is_null($column->scale)) {
+            return sprintf("numeric(%s,%s)", $column->precision, $column->scale);
+        }
+        else if (! is_null($column->precision)) {
+            return sprintf("numeric(%s)", $column->precision);
+        }
+
+        return 'numeric';
+    }
+
     protected function typeFloat(Column $column): string
     {
         return 'float';
@@ -362,14 +374,16 @@ class Grammar extends GrammarBase
         }
     }
 
-    protected function modifyCollate(Column $column)
+    protected function modifyCollate(Column $column): string
     {
-        if (! is_null($column->collation)) {
-            return ' COLLATE '.$this->wrapValue($column->collation);
+        if (! is_null($column->collate)) {
+            return ' COLLATE '.$this->wrapValue($column->collate);
         }
+
+        return '';
     }
 
-    protected function modifyNullable(Column $column)
+    protected function modifyNullable(Column $column): string
     {
         if (! empty($column->virtualAs) || ! empty($column->virtualAsJson)) {
             return '';
@@ -386,7 +400,7 @@ class Grammar extends GrammarBase
         return ' NOT NULL';
     }
 
-    protected function modifyDefault(Column $column)
+    protected function modifyDefault(Column $column): string
     {
         if (! is_null($column->useCurrent)) {
             if ($column->type === 'date'){
@@ -405,20 +419,26 @@ class Grammar extends GrammarBase
         if (! is_null($column->default)) {
             return ' DEFAULT '.$this->getDefaultValue($column->default);
         }
+
+        return '';
     }
 
-    protected function modifyVirtualAs(Column $column)
+    protected function modifyVirtualAs(Column $column): string
     {
         if ($column->virtualAs !== null) {
             return " GENERATED ALWAYS AS ({$column->virtualAs})";
         }
+
+        return '';
     }
 
-    protected function modifyStoredAs(Column $column)
+    protected function modifyStoredAs(Column $column): string
     {
         if ($column->storedAs !== null) {
             return " GENERATED ALWAYS AS ({$column->storedAs}) STORED";
         }
+
+        return '';
     }
 
     protected function modifyIncrement(Column $column): string

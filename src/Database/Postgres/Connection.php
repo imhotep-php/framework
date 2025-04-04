@@ -24,6 +24,7 @@ class Connection extends ConnectionBase
     {
         $this->schemaGrammar = new SchemaGrammar();
         $this->schemaGrammar->setTablePrefix($this->tablePrefix);
+        $this->schemaGrammar->setCharset($this->getConfig('charset', 'utf8mb4'));
 
         return $this;
     }
