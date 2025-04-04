@@ -30,6 +30,11 @@ class Str
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 
+    public static function isUuid(string $uuid): bool
+    {
+        return (bool)preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[089ab][a-f0-9]{3}-[a-f0-9]{12}$/i', $uuid);
+    }
+
     public static function genToken(): string
     {
         if(function_exists('random_bytes')){
@@ -231,5 +236,27 @@ class Str
     public static function strpos(string $string, string $needle, int $offset = 0): false|int
     {
         return mb_strpos($string, $needle, $offset, 'UTF-8');
+    }
+
+    public static function is(string|array $pattern, string $value): bool
+    {
+        foreach ((array)$pattern as $pattern) {
+            if (! is_string($pattern)) {
+                continue;
+            }
+
+            if ($pattern === $value) {
+                return true;
+            }
+
+            $pattern = preg_quote($pattern, '#');
+            $pattern = str_replace('\*', '.*', $pattern);
+
+            if (preg_match('#^'.$pattern.'\z#u', $value) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
