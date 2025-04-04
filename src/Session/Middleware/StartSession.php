@@ -49,8 +49,7 @@ class StartSession
 
         $config = $session->getConfig();
 
-        $expires = $config['expire_on_close'] ? 0 :
-            strtotime(sprintf("+%s days", $config['lifetime']));
+        $expires = $config['expire_on_close'] ? 0 : time() + $config['lifetime'];
 
         $response->setCookie(new Cookie(
             $session->getName(), $session->getId(), $expires,

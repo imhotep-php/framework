@@ -47,7 +47,7 @@ class Cookie
         $str .= '=';
 
         if (empty($this->value)) {
-            $str .= 'deleted; expires='.gmdate('D, d M Y H:i:s T', time() - 31536001).'; Max-Age=0';
+            $str .= 'deleted; expires='.gmdate('D, d M Y H:i:s T', time() - 3600).'; Max-Age=0';
         } else {
             $str .= rawurlencode($this->value);
 

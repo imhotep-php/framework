@@ -18,7 +18,7 @@ class CookieJar implements QueueingFactory
 
     protected array $queued = [];
 
-    public function make(string $name, string $value, int $minutes = 0, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = null, string $sameSite = null): Cookie
+    public function make(string $name, string $value, int $seconds = 0, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = null, string $sameSite = null): Cookie
     {
         $path = is_null($path) ? $this->path : $path;
         $domain = is_null($domain) ? $this->domain : $domain;
@@ -26,19 +26,19 @@ class CookieJar implements QueueingFactory
         $httpOnly = is_null($httpOnly) ? $this->httpOnly : $httpOnly;
         $sameSite = is_null($sameSite) ? $this->sameSite : $sameSite;
 
-        $expires = ($minutes === 0) ? 0 : time() + ($minutes * 60);
+        $expires = $seconds === 0 ? 0 : time() + $seconds;
 
         return new Cookie($name, $value, $expires, $path, $domain, $secure, $httpOnly, $sameSite);
     }
 
     public function forever(string $name, string $value, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = true, string $sameSite = null): Cookie
     {
-        return $this->make($name, $value, 576000, $path, $domain, $secure, $httpOnly, $sameSite);
+        return $this->make($name, $value, 31536000, $path, $domain, $secure, $httpOnly, $sameSite); // expires in a year
     }
 
     public function forget($name, $path = null, $domain = null): Cookie
     {
-        return $this->make($name, '', -2628000, $path, $domain);
+        return $this->make($name, '', -3600, $path, $domain);
     }
 
     public function hasQueued(string $name, string $path = null): bool
@@ -46,10 +46,10 @@ class CookieJar implements QueueingFactory
         return ! is_null($this->queued($name, null, $path));
     }
 
-    public function queue(Cookie|string $cookie, string $value = '', int $minutes = 0, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = true, string $sameSite = null): void
+    public function queue(Cookie|string $cookie, string $value = '', int $seconds = 0, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = true, string $sameSite = null): void
     {
         if (is_string($cookie)) {
-            $cookie = $this->make($cookie, $value, $minutes, $path, $domain, $secure, $httpOnly, $sameSite);
+            $cookie = $this->make($cookie, $value, $seconds, $path, $domain, $secure, $httpOnly, $sameSite);
         }
 
         if (! isset($this->queued[$cookie->getName()])) {
