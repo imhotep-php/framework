@@ -72,6 +72,10 @@ class Finder
     {
         $path = $this->resolvePath($path);
 
+        if (! is_dir($path)) {
+            return null;
+        }
+
         $files = $this->files->allFiles($path);
 
         $substrLength = strlen($path) + 1;
