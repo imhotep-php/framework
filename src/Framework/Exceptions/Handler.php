@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Framework\Exceptions;
 
@@ -8,12 +6,15 @@ use Closure;
 use Exception;
 use Imhotep\Console\Output\ConsoleOutput;
 use Imhotep\Container\Container;
+use Imhotep\Contracts\Auth\AuthenticationException;
+use Imhotep\Contracts\Auth\AuthorizationException;
 use Imhotep\Contracts\Console\Output;
 use Imhotep\Contracts\Debug\ExceptionHandler;
 use Imhotep\Contracts\Http\HttpException as HttpExceptionContract;
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Http\Responsable;
 use Imhotep\Contracts\Http\Response as ResponseContract;
+use Imhotep\Framework\Exceptions\Decorators\AuthorizationExceptionDecorator;
 use Imhotep\Http\Exceptions\HttpException;
 use Imhotep\Http\JsonResponse;
 use Imhotep\Http\Response;
@@ -36,7 +37,10 @@ class Handler implements ExceptionHandler
     protected array $dontReport = [];
 
     protected array $internalDontReport = [
-        HttpException::class
+        HttpException::class,
+        ValidationException::class,
+        AuthenticationException::class,
+        AuthorizationException::class,
     ];
 
     /**
@@ -140,8 +144,27 @@ class Handler implements ExceptionHandler
         $this->renderCallbacks[$class] = $callback;
     }
 
+
+    protected array $decorators = [
+        AuthorizationException::class => AuthorizationExceptionDecorator::class,
+    ];
+
+    public function applyDecorator(Throwable $e, Request $request): Throwable
+    {
+        $name = get_class($e);
+
+        if (isset($this->decorators[$name])) {
+            return ($this->decorators[$name])::decorate($e, $request);
+        }
+
+        return $e;
+    }
+
+
     public function render(Throwable $e, Request $request): ResponseContract
     {
+        $e = $this->applyDecorator($e, $request);
+
         if (method_exists($e, 'render') && $response = $e->render($request)) {
             return Router::toResponse($response, $request);
         }
@@ -152,6 +175,10 @@ class Handler implements ExceptionHandler
 
         if ($e instanceof ValidationException) {
             return $this->renderValidationExceptionResponse($e, $request);
+        }
+
+        if ($e instanceof AuthenticationException) {
+            return $this->renderUnauthenticationResponse($e, $request);
         }
 
         return $this->renderExceptionResponse($e, $request);
@@ -173,16 +200,28 @@ class Handler implements ExceptionHandler
 
     protected function renderExceptionResponse(Throwable $e, Request $request): ResponseContract
     {
+        if (! $this->isHttpException($e) && config('app.debug') === false) {
+            $e = new HttpException(500, 'Server error');
+        }
+
         return $request->expectsJson() ? $this->prepareJsonResponse($e) : $this->prepareResponse($e, $request);
     }
 
     protected function prepareJsonResponse(Throwable $e): ResponseContract
     {
+        $jsonOptions = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE;
+
+        if ($this->isHttpException($e)) {
+            return new JsonResponse([
+                'message' => $e->getMessage()
+            ], $e->getStatusCode(), $e->getHeaders(), $jsonOptions);
+        }
+
         return new JsonResponse(
             $this->convertExceptionToArray($e),
             $this->isHttpException($e) ? $e->getStatusCode() : 500,
             $this->isHttpException($e) ? $e->getHeaders() : [],
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+            $jsonOptions
         );
     }
 
@@ -208,10 +247,6 @@ class Handler implements ExceptionHandler
 
     protected function prepareResponse(Throwable $e, Request $request): ResponseContract
     {
-        if (! $this->isHttpException($e) && config('app.debug') === false) {
-            $e = new HttpException(500, 'Server error');
-        }
-
         if ($this->isHttpException($e)) {
             return $this->renderHttpException($e);
         }
@@ -254,6 +289,15 @@ class Handler implements ExceptionHandler
         return redirect($e->redirectTo ?? url()->previous())
             ->withInput(Arr::except($request->input(), $this->dontFlash))
             ->withErrors($e->errors());
+    }
+
+    protected function renderUnauthenticationResponse(AuthenticationException $e, Request $request): ResponseContract
+    {
+        if ($request->expectsJson()) {
+            return new JsonResponse($e->getMessage(), 401);
+        }
+
+        return redirect()->guest($e->redirectTo() ?? route('login'));
     }
 
     protected function registerErrorViewPath(): void
