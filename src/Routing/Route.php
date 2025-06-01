@@ -326,8 +326,9 @@ class Route implements RouteContract
             $matches = array_reverse($matches);
 
             foreach ($matches as $match) {
+                $name = $match[0][0];
                 $position = $match[0][1];
-                $length = strlen($match[0][0]);
+                $length = strlen($name);
 
                 if (preg_match("/^([A-z]+)(:(.*?))?(\?)?$/", $match[1][0], $match)) {
                     $name = $match[1];
@@ -362,7 +363,7 @@ class Route implements RouteContract
                     $regex = $reBefore.$re.$reAfter;
                 }
                 else {
-                    throw new \Exception("Parameter syntax invalid [".$match[0][0]."] in route [".$this->uri."]");
+                    throw new \Exception("Parameter syntax invalid [".$name."] in route [".$this->uri."]");
                 }
             }
         }

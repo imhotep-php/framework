@@ -153,7 +153,7 @@ class Router implements RouterContract
 
         if (! empty($this->groupStack)) {
             $groupAttrs = end($this->groupStack);
-            
+
             if (isset($groupAttrs['controller'])) {
                 $action = (is_string($action)) ? [ $groupAttrs['controller'], $action ] : $groupAttrs['controller'];
             }
