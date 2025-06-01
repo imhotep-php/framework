@@ -6,7 +6,7 @@ use Closure;
 use Imhotep\Contracts\Http\Request as RequestContract;
 use Imhotep\Contracts\Routing\Route;
 use Imhotep\Contracts\Session\SessionInterface;
-use Imhotep\Contracts\Validation\Validator;
+use Imhotep\Contracts\Validation\IValidator;
 use Imhotep\Http\Request\FileBag;
 use Imhotep\Http\Request\HeaderBag;
 use Imhotep\Http\Request\ParameterBug;
@@ -16,7 +16,7 @@ use Imhotep\Support\Str;
 use Imhotep\Support\Traits\Macroable;
 
 /**
- * @method Validator validate(array $rules, array $messages = [])
+ * @method IValidator validate(array $rules, array $messages = [])
  */
 class Request implements \ArrayAccess, RequestContract
 {
@@ -159,70 +159,6 @@ class Request implements \ArrayAccess, RequestContract
 
         $this->makeJson();
     }
-
-    /*
-    protected function makeHeaders(): void
-    {
-        $this->headers = new HeaderBag();
-
-        foreach ($this->server->all() as $key => $val) {
-            if (str_starts_with($key, 'HTTP_')) {
-                $this->headers->set(substr($key, 5), $val);
-            }
-            elseif (in_array($key, ['CONTENT_TYPE', 'CONTENT_LENGTH', 'CONTENT_MD5'], true)) {
-                $this->headers->set($key, $val);
-            }
-        }
-
-        if ($this->server->has('PHP_AUTH_USER')) {
-            $this->headers->set('PHP_AUTH_USER', $this->server->get('PHP_AUTH_USER'));
-            $this->headers->set('PHP_AUTH_PW', $this->server->get('PHP_AUTH_PW', ''));
-        }
-
-        if ($this->headers->has('PHP_AUTH_USER')) {
-            $this->headers->set(
-                'AUTHORIZATION',
-                'Basic '.base64_encode($this->headers->get('PHP_AUTH_USER').':'.$this->headers->get('PHP_AUTH_PW', ''))
-            );
-        }
-        elseif ($this->headers->has('PHP_AUTH_DIGEST')) {
-            $this->headers->set('AUTHORIZATION', $this->headers->get('PHP_AUTH_DIGEST'));
-        }
-    }
-    */
-
-    /*
-    protected function makeFiles(array $files): void
-    {
-        $this->files = new FileBag();
-
-        foreach ($files as $key => $file) {
-            if (! is_array($file['tmp_name'])) {
-                if ($uploadedFile = UploadedFile::createFrom($file)) {
-                    $this->files->set($key, $uploadedFile);
-                }
-                continue;
-            }
-
-            $uploadedFiles = [];
-            for ($i = 0; $i < count($file['tmp_name']); $i++) {
-                $uploadedFile = UploadedFile::createFrom([
-                    'tmp_name' => $file['tmp_name'][$i] ?? '',
-                    'name' => $file['name'][$i] ?? '',
-                    'type' => $file['type'][$i] ?? '',
-                    'size' => $file['size'][$i] ?? 0,
-                    'error' => $file['error'][$i] ?? -1
-                ]);
-
-                if ($uploadedFile) $uploadedFiles[] = $uploadedFile;
-            }
-
-            if (count($uploadedFiles) > 0) {
-                $this->files->set($key, $uploadedFiles);
-            }
-        }
-    }
-    */
 
     protected function makeJson(): void
     {

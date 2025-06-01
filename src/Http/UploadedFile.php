@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Http;
 
@@ -100,27 +98,6 @@ class UploadedFile extends \SplFileInfo
         return ($this->error === UPLOAD_ERR_OK && $this->isUploaded() && $this->getSize());
     }
 
-    public function isValidImage(): bool
-    {
-        $isValid = $this->isValid();
-
-        if ($this->test) {
-            return $isValid;
-        }
-
-        if (exif_imagetype($this->path) === false) {
-            return false;
-        }
-
-        list($width, $height) = getimagesize($this->path);
-
-        if ($width > 0 && $height > 0) {
-            return true;
-        }
-
-        return false;
-    }
-
     public function store(string $path, string|array $options = null): bool|string
     {
         $name = $this->hashName;
@@ -128,8 +105,6 @@ class UploadedFile extends \SplFileInfo
         if ($extension = $this->extension()) {
             $name = $name.'.'.$extension;
         }
-
-        dd($name);
 
         return $this->storeAs($path, $name, $options);
     }

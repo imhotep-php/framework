@@ -20,13 +20,15 @@ class Response implements ResponseContract
 
     protected string $statusText = '';
 
-    protected ?string $content = null;
+    protected mixed $content = null;
+
+    protected bool $isJson = false;
 
     public function __construct(string $content = '', int $statusCode = 200, array $headers = [])
     {
         $this->setContent($content)
-             ->setStatusCode($statusCode)
-             ->setHeaders($headers);
+            ->setStatusCode($statusCode)
+            ->setHeaders($headers);
     }
 
     public function setStatusCode(int $statusCode): static
@@ -107,16 +109,16 @@ class Response implements ResponseContract
         return $this->setCookie($cookie);
     }
 
-    public function setContent(?string $content): static
+    public function setContent(mixed $content): static
     {
         $this->content = $content;
 
         return $this;
     }
 
-    public function getContent(): string
+    public function getContent(): mixed
     {
-        return $this->content ?? '';
+        return $this->content;
     }
 
     public function content(mixed $content = null): static|string|null
@@ -128,9 +130,11 @@ class Response implements ResponseContract
         return $this->setContent($content);
     }
 
-    public function json(array $data): static
+    public function json(mixed $data): static
     {
-        $this->content = json_encode($data, JSON_UNESCAPED_UNICODE);
+        $this->isJson = true;
+
+        $this->content = (array)$data;
 
         $this->header('Content-Type', 'application/json');
 
@@ -189,7 +193,12 @@ class Response implements ResponseContract
 
     protected function sendContent(): static
     {
-        echo $this->getContent();
+        if ($this->isJson) {
+            echo json_encode((array)$this->content, JSON_UNESCAPED_UNICODE);
+        }
+        else {
+            echo $this->content ?? '';
+        }
 
         return $this;
     }
@@ -213,6 +222,6 @@ class Response implements ResponseContract
     public function isRedirect(string $location = null): bool
     {
         return in_array($this->statusCode, [201, 301, 302, 303, 307, 308])
-                && (null === $location || $location == ($this->headers['Location'] ?? null));
+            && (null === $location || $location == ($this->headers['Location'] ?? null));
     }
 }

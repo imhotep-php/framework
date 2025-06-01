@@ -6,7 +6,7 @@ namespace Imhotep\Contracts\Http;
 
 use Imhotep\Contracts\Routing\Route;
 use Imhotep\Contracts\Session\SessionInterface;
-use Imhotep\Contracts\Validation\Validator;
+use Imhotep\Contracts\Validation\IValidator;
 use Imhotep\Http\UploadedFile;
 
 /**

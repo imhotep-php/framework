@@ -37,8 +37,8 @@ class HttpException extends RuntimeException implements HttpExceptionContract
         $this->headers = $headers;
     }
 
-    /*public function report()
+    public function report()
     {
         return false;
-    }*/
+    }
 }

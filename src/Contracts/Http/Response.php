@@ -1,10 +1,8 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Contracts\Http;
 
 interface Response
 {
-    public function getContent(): ?string;
+    public function getContent(): mixed;
 }

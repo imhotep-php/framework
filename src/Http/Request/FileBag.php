@@ -38,8 +38,8 @@ class FileBag extends ParameterBug
 
     protected function convert(array $files): array|UploadedFile
     {
-        if (isset($data['tmp_name']) && is_string($data['tmp_name'])) {
-            return UploadedFile::createFrom($data);
+        if (isset($files['tmp_name']) && is_string($files['tmp_name'])) {
+            return UploadedFile::createFrom($files);
         }
 
         return array_map(function ($v) {

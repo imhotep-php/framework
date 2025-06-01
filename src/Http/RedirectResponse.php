@@ -35,7 +35,7 @@ class RedirectResponse extends Response
             return $this->getUrl();
         }
 
-       return $this->setUrl($url);
+        return $this->setUrl($url);
     }
 
     public function getUrl(): string
