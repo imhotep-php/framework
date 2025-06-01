@@ -3,7 +3,7 @@
 namespace Imhotep\Validation;
 
 use Exception;
-use Imhotep\Contracts\Validation\Validator as ValidatorContract;
+use Imhotep\Contracts\Validation\IValidator as ValidatorContract;
 use Imhotep\Facades\Validator as ValidatorFacade;
 use Imhotep\Support\MessageBag;
 

@@ -1,47 +1,119 @@
 <?php
 
-namespace Imhotep\Tests\Filesystem;
+namespace Imhotep\Tests\Validation\Rules;
 
-use Imhotep\Validation\Rules\Email;
+use Imhotep\Support\Str;
+use Imhotep\Validation\Factory;
 use PHPUnit\Framework\TestCase;
 
 class EmailTest extends TestCase
 {
-    public function test_valids()
-    {
-        $rule = (new Email())->setParameters(['filter','idn']);
+    protected Factory $validator;
 
-        $this->assertTrue($rule->check('imhotep@тест.рф'));
-        $this->assertTrue($rule->check('imhotep@gmail.com'));
-        $this->assertTrue($rule->check('imhotep@foo.bar'));
-        $this->assertTrue($rule->check('imhotep1213@foo.bar.baz'));
+    protected function setUp(): void
+    {
+        $this->validator = new Factory();
     }
 
-    public function test_invalids()
+    public function testEmptyValue()
     {
-        $rule = (new Email())->setParameters(['filter']);
+        $validation = $this->validator->make(['foo' => ''], ['foo' => 'email']);
+        $this->assertTrue($validation->passes());
 
-        $this->assertFalse($rule->check(1));
-        $this->assertFalse($rule->check('имхотеп@тест.рф')); // idn is false
-        $this->assertFalse($rule->check('imho tep@gmail.com'));
-        $this->assertFalse($rule->check('imhotep@gmail'));
-        $this->assertFalse($rule->check('imhotep.gmail.com'));
+        $validation = $this->validator->make(['foo' => ''], ['foo' => 'required|email']);
+        $this->assertFalse($validation->passes());
     }
 
-    public function test_lowercase()
+    public function testNullValue()
     {
-        $rule = (new Email())->setParameters(['lower']);
+        $validation = $this->validator->make(['foo' => null], ['foo' => 'email']);
+        $this->assertFalse($validation->passes());
 
-        $this->assertSame("imhotep@gmail.com", $rule->modifyValue("ImhoTep@gmail.com"));
+        $validation = $this->validator->make(['foo' => null], ['foo' => 'nullable|email']);
+        $this->assertTrue($validation->passes());
+
+        $validation = $this->validator->make(['foo' => null], ['foo' => 'required|email']);
+        $this->assertFalse($validation->passes());
     }
 
-    public function test_mx()
+    public function testBasic()
     {
-        $rule = (new Email())->setParameters(['idn','dns']);
+        $values = [
+            'ImhoTep@тест.рф',
+            'ImhoTep@gmail.com',
+            'ImhoTep@foo.bar',
+            'ImhoTep1213@foo.bar.baZ',
+        ];
 
-        $this->assertTrue($rule->check('imhotep@объясняем.рф'));
-        $this->assertTrue($rule->check('imhotep@gmail.com'));
-        $this->assertFalse($rule->check('imhotep@пример.рф'));
-        $this->assertFalse($rule->check('imhotep@foo.bar'));
+        foreach ($values as $value) {
+            $validation = $this->validator->make(['email' => $value], ['email' => 'email']);
+
+            $this->assertTrue($validation->passes());
+            $this->assertSame(Str::lower($value), $validation->validated()->get('email'));
+        }
+    }
+
+    public function testValidWithFilterAndIdn()
+    {
+        $values = [
+            'ImhoTep@тест.рф',
+            'ImhoTep@gmail.com',
+            'ImhoTep@foo.bar',
+            'ImhoTep1213@foo.bar.baZ',
+        ];
+
+        foreach ($values as $value) {
+            $validation = $this->validator->make(['email' => $value], ['email' => 'email:filter,idn']);
+
+            $this->assertTrue($validation->passes());
+            $this->assertSame(Str::lower($value), $validation->validated()->get('email'));
+        }
+    }
+
+    public function testInvalidWithFilterWithoutIdn()
+    {
+        $values = [
+            'имхотеп@тест.рф', // idn is false
+            'imho tep@gmail.com',
+            'imhotep@gmail',
+            'imhotep.gmail.com',
+        ];
+
+        foreach ($values as $value) {
+            $validation = $this->validator->make(['email' => $value], ['email' => 'email:filter']);
+
+            $this->assertFalse($validation->passes());
+            $this->assertSame(['email'], $validation->errors()->all());
+        }
+    }
+
+    public function testValidWithDns()
+    {
+        $values = [
+            'Imhotep@объясняем.рф',
+            'Imhotep@gmail.com',
+        ];
+
+        foreach ($values as $value) {
+            $validation = $this->validator->make(['email' => $value], ['email' => 'email:dns,idn']);
+
+            $this->assertTrue($validation->passes());
+            $this->assertSame(Str::lower($value), $validation->validated()->get('email'));
+        }
+    }
+
+    public function testInvalidWithDns()
+    {
+        $values = [
+            'imhotep@несуществующийдомен.рф',
+            'imhotep@foo.bar'
+        ];
+
+        foreach ($values as $value) {
+            $validation = $this->validator->make(['email' => $value], ['email' => 'email:dns,idn']);
+
+            $this->assertFalse($validation->passes());
+            $this->assertSame(['email'], $validation->errors()->all());
+        }
     }
 }

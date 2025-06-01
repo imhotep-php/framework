@@ -1,52 +1,85 @@
 <?php
 
-namespace Imhotep\Tests\Filesystem;
+namespace Imhotep\Tests\Validation\Rules;
 
 use Imhotep\Http\UploadedFile;
-use Imhotep\Validation\Rules\Min;
+use Imhotep\Validation\Factory;
 use PHPUnit\Framework\TestCase;
 
 class MinTest extends TestCase
 {
-    protected Min $rule;
+    protected Factory $validator;
 
     protected function setUp(): void
     {
-        $this->rule = new Min;
+        $this->validator = new Factory();
     }
 
-    public function test_valids()
+    public function testStringValue(): void
     {
-        $this->assertTrue($this->rule->setParameters([100])->check(123));
-        $this->assertTrue($this->rule->setParameters([6])->check('foobar'));
-        $this->assertTrue($this->rule->setParameters([3])->check([1,2,3]));
+        $validation = $this->validator->make(['foo' => 'hello'], ['foo' => 'required|string|min:4']);
+        $this->assertTrue($validation->passes());
+
+        $validation = $this->validator->make(['foo' => 'hello'], ['foo' => 'required|string|min:10']);
+        $this->assertFalse($validation->passes());
+        $this->assertSame(['min'], $validation->errors()->all());
     }
 
-    public function test_invalids()
+    public function testIntegerValue(): void
     {
-        $this->assertFalse($this->rule->setParameters([4])->check([1,2,3]));
-        $this->assertFalse($this->rule->setParameters([200])->check(123));
-        $this->assertFalse($this->rule->setParameters([7])->check('foobar'));
-        $this->assertFalse($this->rule->setParameters([4])->check('мин'));
-        $this->assertFalse($this->rule->setParameters([5])->check('كلمة'));
-        $this->assertFalse($this->rule->setParameters([4])->check('ワード'));
-        $this->assertFalse($this->rule->setParameters([2])->check('字'));
+        $validation = $this->validator->make(['foo' => 10], ['foo' => 'required|int|min:4']);
+        $this->assertTrue($validation->passes());
+
+        $validation = $this->validator->make(['foo' => 10], ['foo' => 'required|int|min:15']);
+        $this->assertFalse($validation->passes());
+        $this->assertSame(['min'], $validation->errors()->all());
     }
 
-    public function test_uploaded_file()
+    public function testFloatValue(): void
+    {
+        $validation = $this->validator->make(['foo' => 4.1], ['foo' => 'required|float|min:4.1']);
+        $this->assertTrue($validation->passes());
+
+        $validation = $this->validator->make(['foo' => 4.1], ['foo' => 'required|float|min:4.2']);
+        $this->assertFalse($validation->passes());
+        $this->assertSame(['min'], $validation->errors()->all());
+    }
+
+    public function testArrayValue(): void
+    {
+        $validation = $this->validator->make(
+            ['foo' => [1,2,3,4,5,6,7,8,9]],
+            ['foo' => 'required|array|min:4']
+        );
+        $this->assertTrue($validation->passes());
+
+        $validation = $this->validator->make(
+            ['foo' => [1,2]],
+            ['foo' => 'required|array|min:4']
+        );
+        $this->assertFalse($validation->passes());
+        $this->assertSame(['min'], $validation->errors()->all());
+    }
+
+    public function testFileValue(): void
     {
         $file = UploadedFile::createFrom([
             'name' => pathinfo(__FILE__, PATHINFO_BASENAME),
             'type' => 'text/plain',
-            'size' => 1024, // 1kb
+            'size' => 2048, // 1kb
             'tmp_name' => __FILE__,
             'error' => 0
         ], true);
 
-        $this->assertTrue($this->rule->setParameters([1024])->check($file));
-        $this->assertTrue($this->rule->setParameters(['1K'])->check($file));
+        $validation = $this->validator->make(
+            ['foo' => $file], ['foo' => 'required|file|min:1kb']
+        );
+        $this->assertTrue($validation->passes());
 
-        $this->assertFalse($this->rule->setParameters([1025])->check($file));
-        $this->assertFalse($this->rule->setParameters(['1.1kb'])->check($file));
+        $validation = $this->validator->make(
+            ['foo' => $file], ['foo' => 'required|file|min:3kb']
+        );
+        $this->assertFalse($validation->passes());
+        $this->assertSame(['min'], $validation->errors()->all());
     }
 }

@@ -41,11 +41,11 @@ trait UtilsTrait
             return $value;
         }
 
-        if (is_array($value) && is_string($value['tmp_name'])) {
-            return UploadedFile::createFrom($value);
+        if (! is_array($value)) {
+            return null;
         }
 
-        return null;
+        return UploadedFile::createFrom($value);
     }
 
     public function getBytesSize(mixed $size): ?float
@@ -93,5 +93,30 @@ trait UtilsTrait
         }
 
         return null;
+    }
+
+    public function getValueType(mixed $value): string
+    {
+        if (is_int($value) || is_float($value) || is_numeric($value)) {
+            return 'numeric';
+        }
+        elseif (is_string($value)) {
+            return 'string';
+        }
+        elseif (is_array($value)) {
+            return 'array';
+        }
+        elseif ($file = $this->makeUploadedFile($value)) {
+            return 'file';
+        }
+
+        return 'unknow';
+    }
+
+    protected function isTrueValue(mixed $value): bool
+    {
+        $haystack = ['true','yes','y','on','1',1];
+
+        return ($value === true || in_array($value, $haystack, true));
     }
 }

@@ -2,40 +2,53 @@
 
 namespace Imhotep\Validation;
 
-use Imhotep\Contracts\Validation\Validator;
+use Imhotep\Contracts\Validation\IValidator;
+use Imhotep\Contracts\Validation\IModifyValue;
+use Imhotep\Validation\Data\InputData;
 
 class Attribute
 {
+    protected array $rules = [];
+
+    protected array $ruleNames = [];
+
+    protected bool $bail = false;
+
     public function __construct(
-        protected Validator $validator,
-        protected string $inputKey,
-        protected array $rules
+        protected string       $key,
+        protected string       $name,
+        string|array           $rules
     )
     {
+        $parser = RuleParser::parse($rules);
 
+        $this->rules = $parser['rules'];
+        $this->ruleNames = $parser['names'];
+        $this->bail = $parser['bail'];
     }
 
-    public function getInputKey(): string
+    public function key(): string
     {
-        return $this->inputKey;
+        return $this->key;
     }
 
-    public function getRules(): array
+    public function name(): string
+    {
+        return $this->name;
+    }
+
+    public function bail(): bool
+    {
+        return $this->bail;
+    }
+
+    public function rules(): array
     {
         return $this->rules;
     }
 
-    public function getValue(string $key = null): mixed
+    public function hasRule(string $name): bool
     {
-        return $this->validator->getValue($key ?: $this->inputKey);
-    }
-
-    public function hasRules(string $key): bool
-    {
-        foreach ($this->rules as $rule) {
-            if ($rule->getKey() === $key) return true;
-        }
-
-        return false;
+        return in_array($name, $this->ruleNames);
     }
 }

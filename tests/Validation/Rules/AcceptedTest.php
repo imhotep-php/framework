@@ -5,7 +5,7 @@ namespace Imhotep\Tests\Validation\Rules;
 use Imhotep\Validation\Factory;
 use PHPUnit\Framework\TestCase;
 
-class UppercaseTest extends TestCase
+class AcceptedTest extends TestCase
 {
     protected Factory $validator;
 
@@ -16,43 +16,42 @@ class UppercaseTest extends TestCase
 
     public function testEmptyValue()
     {
-        $validation = $this->validator->make(['foo' => ''], ['foo' => 'uppercase']);
+        $validation = $this->validator->make(['foo' => ''], ['foo' => 'accepted']);
         $this->assertTrue($validation->passes());
 
-        $validation = $this->validator->make(['foo' => ''], ['foo' => 'required|uppercase']);
+        $validation = $this->validator->make(['foo' => ''], ['foo' => 'required|accepted']);
         $this->assertFalse($validation->passes());
     }
 
     public function testNullValue()
     {
-        $validation = $this->validator->make(['foo' => null], ['foo' => 'uppercase']);
+        $validation = $this->validator->make(['foo' => null], ['foo' => 'accepted']);
         $this->assertFalse($validation->passes());
 
-        $validation = $this->validator->make(['foo' => null], ['foo' => 'nullable|uppercase']);
+        $validation = $this->validator->make(['foo' => null], ['foo' => 'nullable|accepted']);
         $this->assertTrue($validation->passes());
 
-        $validation = $this->validator->make(['foo' => null], ['foo' => 'required|uppercase']);
+        $validation = $this->validator->make(['foo' => null], ['foo' => 'required|accepted']);
         $this->assertFalse($validation->passes());
     }
 
     public function testValidValue()
     {
-        $values = ['USERNAME', 'USER NAME', 'USER_NAME', '1234', '#@$%^!'];
+        $values = [true, 'true', 1, '1', 'yes', 'y', 'on'];
 
         foreach ($values as $value) {
-            $validation = $this->validator->make(['foo' => $value], ['foo' => 'uppercase']);
+            $validation = $this->validator->make(['foo' => $value], ['foo' => 'accepted']);
             $this->assertTrue($validation->passes());
         }
     }
-
     public function testInvalidValue()
     {
-        $values = ['username', 'Username', 'user Name'];
+        $values = [false, 'no', 0];
 
         foreach ($values as $value) {
-            $validation = $this->validator->make(['foo' => $value], ['foo' => 'required|uppercase']);
+            $validation = $this->validator->make(['foo' => $value], ['foo' => 'accepted']);
             $this->assertFalse($validation->passes());
-            $this->assertSame(['uppercase'], $validation->errors()->all());
+            $this->assertSame(['accepted'], $validation->errors()->all());
         }
     }
 }

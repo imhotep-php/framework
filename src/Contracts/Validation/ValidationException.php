@@ -2,6 +2,8 @@
 
 namespace Imhotep\Contracts\Validation;
 
-class ValidationException extends \Exception {
+use Exception;
+
+class ValidationException extends Exception {
 
 }

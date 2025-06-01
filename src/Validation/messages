@@ -1,0 +1,71 @@
+The :attribute must be uppercase
+The :attribute must be a string.
+The :attribute must be same with :field
+The :attribute must be a float.
+The :attribute must be a boolean.
+The :attribute must be an array.
+The :attribute is required
+The :attribute is not a valid phone number.
+The :attribute minimum is :min
+The :attribute maximum is :max
+The :attribute must be lowercase
+The :attribute is not valid email
+The :attribute must be different with :field
+
+'numeric' => 'The :attribute must be :size.',
+'file' => 'The :attribute must be :size.',
+'string' => 'The :attribute must be :size characters.',
+'array' => 'The :attribute must contain :size items.',
+'unknow' => 'The :attribute is not a valid size.',
+
+'numeric' => 'The :attribute must be greater than :value.',
+'string'  => 'The :attribute must be greater than :value.',
+'file'    => 'The :attribute must be greater than :value.',
+'array'   => 'The :attribute must have more than :value items.',
+'unknow'  => 'The :attribute has unknow data type',
+
+'numeric' => 'The :attribute must be greater than or equal to :value.',
+'string'  => 'The :attribute must be greater than or equal to :value.',
+'file'    => 'The :attribute must be greater than or equal to :value.',
+'array'   => 'The :attribute must have :value items or more.',
+'unknow'  => 'The :attribute has unknow data type',
+
+
+
+accepted
+accepted_if
+
+required
+required_if
+required_unless
+
+email
+phone
+
+
+Тип данных:
+array
+boolean
+float
+integer
+string
+
+Файлы и изображения:
+file
+dimensions
+image
+
+Строки:
+lowercase
+uppercase
+
+Сравнение:
+different
+same
+
+Размеры:
+max
+min
+size
+gt
+gte

@@ -1,35 +1,37 @@
 <?php
 
-namespace Imhotep\Tests\Filesystem;
+namespace Imhotep\Tests\Validation\Rules;
 
-use Imhotep\Validation\Rules\Required;
+use Imhotep\Validation\Factory;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
 class RequiredTest extends TestCase
 {
-    protected Required $rule;
+    protected Factory $validator;
 
     protected function setUp(): void
     {
-        $this->rule = new Required;
+        $this->validator = new Factory();
     }
 
-    public function test_valids()
+    public function testValidValue(): void
     {
-        $this->assertTrue($this->rule->check('foo'));
-        $this->assertTrue($this->rule->check([1]));
-        $this->assertTrue($this->rule->check(1));
-        $this->assertTrue($this->rule->check(true));
-        $this->assertTrue($this->rule->check('0'));
-        $this->assertTrue($this->rule->check(0));
-        $this->assertTrue($this->rule->check(new stdClass));
+        $values = ['imhotep', 0, 0.1, false, '0', [0], new stdClass()];
+
+        foreach ($values as $value) {
+            $validation = $this->validator->make(['foo' => $value], ['foo' => 'required']);
+            $this->assertTrue($validation->passes());
+        }
     }
 
-    public function test_invalids()
+    public function testInvalidValue(): void
     {
-        $this->assertFalse($this->rule->check(null));
-        $this->assertFalse($this->rule->check(''));
-        $this->assertFalse($this->rule->check([]));
+        $values = [null, '', []];
+
+        foreach ($values as $value) {
+            $validation = $this->validator->make(['foo' => $value], ['foo' => 'required']);
+            $this->assertFalse($validation->passes());
+        }
     }
 }
