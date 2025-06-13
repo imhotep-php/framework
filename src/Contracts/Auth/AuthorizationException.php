@@ -2,38 +2,13 @@
 
 namespace Imhotep\Contracts\Auth;
 
-use Imhotep\Http\Request;
+use Imhotep\Http\Exceptions\HttpException;
 use Throwable;
 
-class AuthorizationException extends \Exception
+class AuthorizationException extends HttpException
 {
-    /**
-     * The HTTP response status code
-     * @var int|null
-     */
-    protected ?int $status = null;
-
     public function __construct(string $message = "This action is unauthorized.", ?int $code = null, ?Throwable $previous = null)
     {
-        parent::__construct($message, 0, $previous);
-
-        $this->code = $code ?: 0;
-    }
-
-    public function withStatus(?int $status): static
-    {
-        $this->status = $status;
-
-        return $this;
-    }
-
-    public function getStatus(): ?int
-    {
-        return $this->status;
-    }
-
-    public function hasStatus(): bool
-    {
-        return ! is_null($this->status);
+        parent::__construct(403, $message, [], $previous, $code ?: 0);
     }
 }
