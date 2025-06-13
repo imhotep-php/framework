@@ -9,17 +9,17 @@ use Imhotep\Cache\Stores\MemcachedStore;
 use Imhotep\Cache\Stores\MemcacheStore;
 use Imhotep\Cache\Stores\RedisStore;
 use Imhotep\Contracts\Cache\CacheException;
-use Imhotep\Contracts\Cache\CacheFactoryInterface;
-use Imhotep\Contracts\Cache\CacheInterface;
-use Imhotep\Contracts\Cache\CacheStoreInterface;
+use Imhotep\Contracts\Cache\ICache;
+use Imhotep\Contracts\Cache\ICacheFactory;
+use Imhotep\Contracts\Cache\ICacheStore;
 use Imhotep\Contracts\DriverManager;
 use InvalidArgumentException;
 
-class CacheManager extends DriverManager implements CacheFactoryInterface
+class CacheManager extends DriverManager implements ICacheFactory
 {
     protected array $stores = [];
 
-    public function store(?string $name = null): CacheInterface
+    public function store(?string $name = null): ICache
     {
         if (empty($name)) {
             $name = $this->getDefaultDriver();
@@ -28,7 +28,7 @@ class CacheManager extends DriverManager implements CacheFactoryInterface
         return $this->stores[$name] ?? $this->stores[$name] = $this->resolve($name);
     }
 
-    protected function resolve(string $name): CacheInterface
+    protected function resolve(string $name): ICache
     {
         $config = $this->config->get("cache.stores.{$name}");
 
@@ -39,12 +39,12 @@ class CacheManager extends DriverManager implements CacheFactoryInterface
         return new Repository($this->driver($name, [$config]), $config['ttl'] ?? 3600);
     }
 
-    protected function createArrayDriver(): CacheStoreInterface
+    protected function createArrayDriver(): ICacheStore
     {
         return new ArrayStore();
     }
 
-    protected function createFileDriver(array $config): CacheStoreInterface
+    protected function createFileDriver(array $config): ICacheStore
     {
         return new FileStore($config['path'],
             is_int($config['permission']) ? $config['permission'] : null,
@@ -52,21 +52,21 @@ class CacheManager extends DriverManager implements CacheFactoryInterface
         );
     }
 
-    protected function createRedisDriver(array $config): CacheStoreInterface
+    protected function createRedisDriver(array $config): ICacheStore
     {
         $connection = is_string($config['connection']) ? $config['connection'] : 'default';
 
         return new RedisStore($this->container['redis'], $connection, $this->getPrefix($config));
     }
 
-    protected function createMemcacheDriver(array $config): CacheStoreInterface
+    protected function createMemcacheDriver(array $config): ICacheStore
     {
         $memcache = MemcacheStore::memcache($config['servers'] ?? []);
 
         return new MemcacheStore($memcache, $this->getPrefix($config));
     }
 
-    protected function createMemcachedDriver(array $config): CacheStoreInterface
+    protected function createMemcachedDriver(array $config): ICacheStore
     {
         $memcached = MemcachedStore::memcached(
             $config['servers'] ?? [],
@@ -78,7 +78,7 @@ class CacheManager extends DriverManager implements CacheFactoryInterface
         return new MemcachedStore($memcached, $this->getPrefix($config));
     }
 
-    protected function createDatabaseDriver(array $config): CacheStoreInterface
+    protected function createDatabaseDriver(array $config): ICacheStore
     {
         return new DatabaseStore(
             $this->container['db']->connection($config['connection'] ?? null),

@@ -3,12 +3,13 @@
 namespace Imhotep\Cache;
 
 use Imhotep\Cache\Commands\CacheTableCommand;
+use Imhotep\Contracts\Cache\ICacheFactory;
 use Imhotep\Framework\Providers\ServiceProvider;
 
 class CacheServiceProvider extends ServiceProvider
 {
     public array $aliases = [
-        'cache' => CacheManager::class
+        'cache' => [CacheManager::class, ICacheFactory::class],
     ];
 
     public function register(): void

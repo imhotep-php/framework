@@ -4,7 +4,7 @@ namespace Imhotep\Contracts\Config;
 
 use ArrayAccess;
 
-interface ConfigRepositoryInterface extends ArrayAccess
+interface IConfigRepository extends ArrayAccess
 {
     /**
      * Determine if the given configuration value exists.

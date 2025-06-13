@@ -3,10 +3,10 @@
 namespace Imhotep\Facades;
 
 use Closure;
-use Imhotep\Contracts\Cache\CacheInterface;
+use Imhotep\Contracts\Cache\ICache;
 
 /**
- * @method static CacheInterface store(string|null $name = null)
+ * @method static ICache store(string|null $name = null)
  * @method static bool has(string $key)
  * @method static bool missing(string $key)
  * @method static mixed get(string $key)

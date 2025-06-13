@@ -3,16 +3,16 @@
 namespace Imhotep\Cache;
 
 use Closure;
-use Imhotep\Contracts\Cache\CacheInterface;
-use Imhotep\Contracts\Cache\CacheStoreInterface;
+use Imhotep\Contracts\Cache\ICache;
+use Imhotep\Contracts\Cache\ICacheStore;
 use Imhotep\Support\Traits\Macroable;
 
-class Repository implements CacheInterface
+class Repository implements ICache
 {
     use Macroable;
 
     public function __construct(
-        protected CacheStoreInterface $store,
+        protected ICacheStore $store,
         protected int                 $ttl,
     ) {}
 
@@ -131,12 +131,12 @@ class Repository implements CacheInterface
         $this->ttl = $ttl;
     }
 
-    public function getStore(): CacheStoreInterface
+    public function getStore(): ICacheStore
     {
         return $this->store;
     }
 
-    public function setStore(CacheStoreInterface $store): void
+    public function setStore(ICacheStore $store): void
     {
         $this->store = $store;
     }

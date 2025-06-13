@@ -2,11 +2,11 @@
 
 namespace Imhotep\Cache\Stores;
 
-use Imhotep\Contracts\Cache\CacheStoreInterface;
+use Imhotep\Contracts\Cache\ICacheStore;
 use Imhotep\Contracts\Redis\Factory as Redis;
 use Imhotep\Redis\Connections\Connection;
 
-class RedisStore implements CacheStoreInterface
+class RedisStore implements ICacheStore
 {
     public function __construct(
         protected Redis $redis,

@@ -5,7 +5,7 @@ namespace Imhotep\Contracts\Cache;
 use ArrayAccess;
 use Closure;
 
-interface CacheInterface extends ArrayAccess
+interface ICache extends ArrayAccess
 {
     public function has(string $key): bool;
 
@@ -45,7 +45,7 @@ interface CacheInterface extends ArrayAccess
 
     public function setTtl(int $ttl): void;
 
-    public function getStore(): CacheStoreInterface;
+    public function getStore(): ICacheStore;
 
-    public function setStore(CacheStoreInterface $store): void;
+    public function setStore(ICacheStore $store): void;
 }

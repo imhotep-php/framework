@@ -2,12 +2,12 @@
 
 namespace Imhotep\Cache\Stores;
 
-use Imhotep\Contracts\Cache\CacheStoreInterface;
+use Imhotep\Contracts\Cache\ICacheStore;
 use Imhotep\Contracts\Database\Connection;
 use Imhotep\Database\Query\Builder;
 use Throwable;
 
-class DatabaseStore implements CacheStoreInterface
+class DatabaseStore implements ICacheStore
 {
     public function __construct(
         protected Connection $connection,

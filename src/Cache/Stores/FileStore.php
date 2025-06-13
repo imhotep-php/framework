@@ -3,9 +3,9 @@
 namespace Imhotep\Cache\Stores;
 
 use FilesystemIterator;
-use Imhotep\Contracts\Cache\CacheStoreInterface;
+use Imhotep\Contracts\Cache\ICacheStore;
 
-class FileStore implements CacheStoreInterface
+class FileStore implements ICacheStore
 {
     protected array $config;
 

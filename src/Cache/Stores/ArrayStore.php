@@ -2,9 +2,9 @@
 
 namespace Imhotep\Cache\Stores;
 
-use Imhotep\Contracts\Cache\CacheStoreInterface;
+use Imhotep\Contracts\Cache\ICacheStore;
 
-class ArrayStore implements CacheStoreInterface
+class ArrayStore implements ICacheStore
 {
     protected array $storage = [];
 
