@@ -8,7 +8,6 @@ use Imhotep\Contracts\Arrayable;
 use Imhotep\Contracts\Auth\Authenticatable;
 use Imhotep\Contracts\Auth\UserProvider;
 use Imhotep\Contracts\Database\Connection;
-use Imhotep\Support\Timebox;
 
 class DatabaseUserProvider implements UserProvider
 {

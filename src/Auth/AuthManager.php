@@ -3,13 +3,11 @@
 namespace Imhotep\Auth;
 
 use Closure;
-use Imhotep\Auth\Guards\RequestGuard;
 use Imhotep\Auth\Guards\SessionGuard;
 use Imhotep\Auth\Guards\TokenGuard;
 use Imhotep\Auth\UserProviders\DatabaseUserProvider;
 use Imhotep\Container\Container;
 use Imhotep\Contracts\Auth\Authenticatable;
-use Imhotep\Contracts\Auth\AuthenticationException;
 use Imhotep\Contracts\Auth\Factory;
 use Imhotep\Contracts\Auth\Guard;
 use Imhotep\Contracts\Auth\UserProvider;
@@ -34,7 +32,7 @@ class AuthManager implements Factory
         //'token'    => TokenGuard::class
     ];
 
-    public function guard(string $name = null): Guard
+    public function guard(?string $name = null): Guard
     {
         $name = empty($name) ? $this->getDefaultGuard() : $name;
 
@@ -201,9 +199,11 @@ class AuthManager implements Factory
 
     public function createRequestDriver(): Guard
     {
+        /*
         return new RequestGuard(function () {
 
         });
+        */
     }
 
     public function createDatabaseUserProvider(array $config): UserProvider

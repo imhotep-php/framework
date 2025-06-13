@@ -8,7 +8,7 @@ use Imhotep\Contracts\Console\Command;
 use Imhotep\Contracts\Database\Connection;
 use Imhotep\Contracts\Database\ConnectionResolver;
 use Imhotep\Contracts\Database\DatabaseException;
-use Imhotep\Database\Migrations\Migration;use SplFileInfo;
+use SplFileInfo;
 
 class Migrator
 {
