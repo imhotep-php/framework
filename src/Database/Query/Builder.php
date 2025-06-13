@@ -136,7 +136,7 @@ abstract class Builder implements QueryBuilderContract
 
         $result = $this->connection->selectOne($sql, $bindings, false);
 
-        return is_numeric($result[$keyName]) ? (int)$result[$keyName] : $result[$keyName];
+        return is_numeric($result->$keyName) ? (int)$result->$keyName : $result->$keyName;
     }
 
     public function upsert(string $uniqueColumn, array $insertValues, array $updateValues): int
