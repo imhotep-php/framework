@@ -3,7 +3,7 @@
 namespace Imhotep\Container;
 
 use Closure;
-use Imhotep\Contracts\ContainerInterface;
+use Imhotep\Contracts\IContainer;
 use Imhotep\Support\Reflector;
 use Imhotep\Support\RewindableGenerator;
 use LogicException;
@@ -13,7 +13,7 @@ use ReflectionNamedType;
 use ReflectionParameter;
 use Throwable;
 
-class Container implements ContainerInterface
+class Container implements IContainer
 {
     use Traits\HasMethodBindings, Traits\HasCallbacks, Traits\HasContextual;
 

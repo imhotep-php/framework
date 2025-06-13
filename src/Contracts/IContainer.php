@@ -5,7 +5,7 @@ namespace Imhotep\Contracts;
 use ArrayAccess;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
 
-interface ContainerInterface extends ArrayAccess, PsrContainerInterface
+interface IContainer extends ArrayAccess, PsrContainerInterface
 {
 
 }

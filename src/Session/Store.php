@@ -4,13 +4,13 @@ namespace Imhotep\Session;
 
 use Closure;
 use Imhotep\Contracts\Http\Request;
-use Imhotep\Contracts\Session\SessionInterface;
+use Imhotep\Contracts\Session\ISession;
 use Imhotep\Support\Arr;
 use Imhotep\Support\Str;
 use Imhotep\Support\Traits\Macroable;
 use SessionHandlerInterface;
 
-class Store implements SessionInterface
+class Store implements ISession
 {
     use Macroable;
 

@@ -3,11 +3,11 @@
 namespace Imhotep\Config;
 
 use Closure;
-use Imhotep\Contracts\Config\ConfigRepositoryInterface;
+use Imhotep\Contracts\Config\IConfigRepository;
 use Imhotep\Support\Arr;
 use InvalidArgumentException;
 
-class Repository implements ConfigRepositoryInterface
+class Repository implements IConfigRepository
 {
     public function __construct(
         protected array $items = []

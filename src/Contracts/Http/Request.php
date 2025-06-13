@@ -1,12 +1,9 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Contracts\Http;
 
 use Imhotep\Contracts\Routing\Route;
-use Imhotep\Contracts\Session\SessionInterface;
-use Imhotep\Contracts\Validation\IValidator;
+use Imhotep\Contracts\Session\ISession;
 use Imhotep\Http\UploadedFile;
 
 /**
@@ -171,13 +168,13 @@ interface Request
 
     public function route(Route $route = null): static|Route|null;
 
-    public function setSession(SessionInterface $session): void;
+    public function setSession(ISession $session): void;
 
     public function hasSession(): bool;
 
-    public function getSession(): SessionInterface;
+    public function getSession(): ISession;
 
-    public function session(): SessionInterface;
+    public function session(): ISession;
 
     public function old(string $key, mixed $default = null): mixed;
 

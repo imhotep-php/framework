@@ -3,23 +3,23 @@
 namespace Imhotep\Contracts;
 
 use Closure;
-use Imhotep\Contracts\Config\ConfigRepositoryInterface;
+use Imhotep\Contracts\Config\IConfigRepository;
 use InvalidArgumentException;
 
 abstract class DriverManager
 {
-    protected ContainerInterface $container;
+    protected IContainer $container;
 
-    protected ConfigRepositoryInterface $config;
+    protected IConfigRepository $config;
 
     protected array $drivers = [];
 
     protected array $customDrivers = [];
 
-    public function __construct(ContainerInterface $container)
+    public function __construct(IContainer $container)
     {
         $this->container = $container;
-        $this->config = $container->make(ConfigRepositoryInterface::class);
+        $this->config = $container->make(IConfigRepository::class);
     }
 
     /**
@@ -44,9 +44,17 @@ abstract class DriverManager
      * @param array $parameters
      * @return mixed
      */
-    public function driver(?string $driver = null, array $parameters = []): mixed
+    public function driver(?string $driver = null, array|Closure $parameters = []): mixed
     {
         $driver = $driver ?: $this->getDefaultDriver();
+
+        if ($parameters instanceof Closure)  {
+            $parameters = $parameters($driver);
+
+            if (!is_array($parameters)) {
+                throw new InvalidArgumentException('In the [driver] method, the closure [parameters] must return an array.');
+            }
+        }
 
         return $this->drivers[$driver] ??
             $this->drivers[$driver] = $this->createDriver($driver, $parameters);
@@ -123,9 +131,9 @@ abstract class DriverManager
     /**
      * Get a container instance.
      *
-     * @return ContainerInterface
+     * @return IContainer
      */
-    public function getContainer(): ContainerInterface
+    public function getContainer(): IContainer
     {
         return $this->container;
     }
@@ -133,10 +141,10 @@ abstract class DriverManager
     /**
      * Set a container instance.
      *
-     * @param ContainerInterface $container
+     * @param IContainer $container
      * @return $this
      */
-    public function setContainer(ContainerInterface $container): static
+    public function setContainer(IContainer $container): static
     {
         $this->container = $container;
 

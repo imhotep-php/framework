@@ -2,7 +2,7 @@
 
 namespace Imhotep\Session\Handlers;
 
-use Imhotep\Contracts\Cache\CacheInterface as CacheContract;
+use Imhotep\Contracts\Cache\ICache;
 use SessionHandlerInterface;
 
 class CacheHandler implements SessionHandlerInterface
@@ -10,7 +10,7 @@ class CacheHandler implements SessionHandlerInterface
     protected array $config;
 
     public function __construct(
-        protected CacheContract $cache,
+        protected ICache $cache,
         protected int $lifetime
     ) { }
 

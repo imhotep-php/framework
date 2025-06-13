@@ -353,7 +353,7 @@ if (!function_exists('decryptString')) {
 
 if (!function_exists('session')) {
     /**
-     * @return void|mixed|\Imhotep\Contracts\Session\SessionInterface
+     * @return void|mixed|\Imhotep\Contracts\Session\ISession
      */
     function session(string|array $key = null, mixed $default = null): mixed
     {

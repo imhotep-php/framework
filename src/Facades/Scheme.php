@@ -24,7 +24,7 @@ namespace Imhotep\Facades;
  * @method static void dropColumn(string $table, string|array $columns)
  * @method static void dropColumns(string $table, array $columns)
  *
- * @see \Imhotep\Contracts\Session\SessionInterface
+ * @see \Imhotep\Contracts\Session\ISession
  */
 class Scheme extends Facade
 {

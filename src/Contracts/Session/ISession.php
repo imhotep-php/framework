@@ -6,7 +6,7 @@ use Closure;
 use Imhotep\Contracts\Http\Request;
 use SessionHandlerInterface;
 
-interface SessionInterface
+interface ISession
 {
     public function isStarted();
 

@@ -6,7 +6,7 @@ use Imhotep\Auth\Remember;
 use Imhotep\Contracts\Auth\Authenticatable;
 use Imhotep\Contracts\Auth\StatefulGuard;
 use Imhotep\Contracts\Auth\UnauthorizedHttpException;
-use Imhotep\Contracts\Session\SessionInterface;
+use Imhotep\Contracts\Session\ISession;
 use Imhotep\Cookie\CookieJar;
 use Imhotep\Support\Str;
 use Imhotep\Support\Timebox;
@@ -22,11 +22,11 @@ class SessionGuard implements StatefulGuard
     protected int $rememberDuration = 86400 * 14; // 2 weeks
 
     public function __construct(
-        protected string           $name,
-        protected SessionInterface $session,
-        protected CookieJar        $cookie,
-        protected Timebox          $timebox,
-        protected int              $remember = 0,
+        protected string $name,
+        protected ISession $session,
+        protected CookieJar $cookie,
+        protected Timebox $timebox,
+        protected int $remember = 0,
     ) { }
 
     public function user(): mixed
@@ -120,7 +120,7 @@ class SessionGuard implements StatefulGuard
         return false;
     }
 
-
+    
     public function validate(array $credentials = []): bool
     {
         $this->lastAttemptedUser = $user = $this->provider->getByCredentials($credentials);

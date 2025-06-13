@@ -3,7 +3,7 @@
 namespace Imhotep\Facades;
 
 use Closure;
-use Imhotep\Contracts\Session\SessionInterface;
+use Imhotep\Contracts\Session\ISession;
 use SessionHandlerInterface;
 
 /**
@@ -25,40 +25,40 @@ use SessionHandlerInterface;
  * @method static bool has(string $key)
  * @method static bool hasAny(array|string $keys)
  * @method static mixed get(string $key, mixed $default = null)
- * @method static SessionInterface set(string $key, string|int|float|bool|array $value)
- * @method static SessionInterface put(string $key, string|int|float|bool|array $value)
- * @method static SessionInterface push(string $key, string|int|float|bool|array $value)
+ * @method static ISession set(string $key, string|int|float|bool|array $value)
+ * @method static ISession put(string $key, string|int|float|bool|array $value)
+ * @method static ISession push(string $key, string|int|float|bool|array $value)
  * @method static int increment(string $key, int $amount = 1)
  * @method static int decrement(string $key, int $amount = 1)
  * @method static mixed delete(string $key)
- * @method static SessionInterface forget(string|array $keys)
- * @method static SessionInterface flush()
+ * @method static ISession forget(string|array $keys)
+ * @method static ISession flush()
  *
- * @method static SessionInterface remember(string $key, Closure $callback)
- * @method static SessionInterface now(string $key, string|int|float|bool|array $value)
- * @method static SessionInterface flash(string $key, string|int|float|bool|array $value)
- * @method static SessionInterface reflash()
- * @method static SessionInterface keep(string|array $keys)
+ * @method static ISession remember(string $key, Closure $callback)
+ * @method static ISession now(string $key, string|int|float|bool|array $value)
+ * @method static ISession flash(string $key, string|int|float|bool|array $value)
+ * @method static ISession reflash()
+ * @method static ISession keep(string|array $keys)
  * @method static mixed getOldInput(string|null $key = null, mixed $default = null)
  * @method static bool hasOldInput(string|null $key = null)
- * @method static SessionInterface flashInput(array $value)
+ * @method static ISession flashInput(array $value)
  *
  * @method static string getPreviousUrl()
- * @method static SessionInterface setPreviousUrl(string $url)
+ * @method static ISession setPreviousUrl(string $url)
  *
  * @method static string csrf()
- * @method static SessionInterface regenerateCsrf()
+ * @method static ISession regenerateCsrf()
  * @method static bool invalidate()
  * @method static bool regenerate(bool $destroy = false)
  * @method static bool migrate(bool $destroy = false)
  * @method static bool isStarted()
  * @method static SessionHandlerInterface getHandler()
- * @method static SessionInterface setHandler(SessionHandlerInterface $handler)
+ * @method static ISession setHandler(SessionHandlerInterface $handler)
  * @method static array getConfig()
- * @method static SessionInterface garbageCollect()
+ * @method static ISession garbageCollect()
  *
  * @see \Imhotep\Session\SessionManager
- * @see \Imhotep\Contracts\Session\SessionInterface
+ * @see \Imhotep\Contracts\Session\ISession
  */
 class Session extends Facade
 {

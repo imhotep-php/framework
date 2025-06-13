@@ -5,7 +5,7 @@ namespace Imhotep\Session\Middleware;
 use Closure;
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Http\Response;
-use Imhotep\Contracts\Session\SessionInterface;
+use Imhotep\Contracts\Session\ISession;
 use Imhotep\Cookie\Cookie;
 use Imhotep\Session\SessionManager;
 
@@ -24,7 +24,7 @@ class StartSession
         return $this->handleStatefulRequest($request, $session, $next);
     }
 
-    public function handleStatefulRequest(Request $request, SessionInterface $session, Closure $next): Response
+    public function handleStatefulRequest(Request $request, ISession $session, Closure $next): Response
     {
         $request->setSession($session);
 
@@ -41,7 +41,7 @@ class StartSession
         return $response;
     }
 
-    public function addCookieToResponse(Response $response, SessionInterface $session): void
+    public function addCookieToResponse(Response $response, ISession $session): void
     {
         if (is_null($session->getId())) {
             return;

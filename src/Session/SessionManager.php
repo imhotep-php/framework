@@ -4,7 +4,7 @@ namespace Imhotep\Session;
 
 use Imhotep\Contracts\DriverManager;
 use Imhotep\Contracts\Session\SessionException;
-use Imhotep\Contracts\Session\SessionInterface;
+use Imhotep\Contracts\Session\ISession;
 use Imhotep\Filesystem\Filesystem;
 use Imhotep\Session\Handlers\ArrayHandler;
 use Imhotep\Session\Handlers\CacheHandler;
@@ -16,9 +16,9 @@ use SessionHandlerInterface;
 
 class SessionManager extends DriverManager
 {
-    protected ?SessionInterface $store = null;
+    protected ?ISession $store = null;
 
-    public function store(): SessionInterface
+    public function store(): ISession
     {
         if ($this->store) {
             return $this->store;
