@@ -52,7 +52,7 @@ class Events implements Dispatcher
     public function dispatch(string|object $event, array $payload = [], bool $halt = false)
     {
         if (is_object($event)) {
-            $payload = $event;
+            $payload = [$event];
             $event = get_class($event);
         }
 
