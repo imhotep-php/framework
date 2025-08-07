@@ -2,244 +2,115 @@
 
 namespace Imhotep\Debug\Dumper;
 
+use Imhotep\Debug\Data;
+
 class HtmlDumper extends AbstractDumper
 {
     //protected string $output = 'php://output';
 
     protected array $styles = [
-        'str' => 'color: #ffffff;',
-        'num' => 'color: #00a8f9;',
-        'const' => 'color: #ff8400;',
-        'type' => 'color: #808080;',
-        'def' => 'color: #808080;',
-        'err' => 'color: red;'
+        'default' => 'color:#fff; background-color:#2b2b2b; padding:1px 4px; border-radius:4px; font-family: Menlo, Monaco, Consolas, monospace; font-size: 14px; line-height: 1.6;',
+        'meta' => 'color:#FF8400;',
+        'type' => 'color:#909090;',
+        'string' => 'color:#479a47;',
+        'number' => 'color:#00a8f9;',
+        'boolean' => 'color:#FF8400;',
+        'null' => 'color:#FF8400;',
+        'const' => 'color:#FF8400;',
+        'property' => 'color:#9cdcfe;',
+        'visibility' => 'color:#909090;',
+        'recursion' => 'color:#FF8400;',
+        'uninitialized' => 'color:#909090;',
     ];
 
-
-    public function dumpArray(array $values, array $attrs = []): string
-    {
-        $result = '';
-
-        foreach ($values as $key => $value) {
-            $result.= '<li><span style="'.$this->styles['def'].'">'.$key.'</span> <span style="'.$this->styles['def'].'">=></span> '.$value->dump($this).'</li>';
-        }
-
-        $tpl = '<div class="imht-dump-array">';
-        $tpl.= '<div style="'.$this->styles['const'].'">array (<span style="'.$this->styles['num'].'">'.$attrs['count'].'</span>) [</div>';
-        $tpl.= '<ul>'.$result.'</ul>';
-        $tpl.= '<div style="'.$this->styles['const'].'">]</div>';
-        $tpl.= '</div>';
-
-        return $tpl;
-    }
-
-    public function dumpObject(array $values, array $attrs = []): string
-    {
-        $result = '';
-
-        foreach ($values as $value) {
-            $result.= '<li>'.$value->dump($this).'</li>';
-        }
-
-        $tpl = '<div class="imht-dump-array">';
-        $tpl.= '<div style="'.$this->styles['const'].'">'.$attrs['class_name'].' (#'.$attrs['object_id'].') {</div>';
-        $tpl.= '<ul>'.$result.'</ul>';
-        $tpl.= '<div style="'.$this->styles['const'].'">}</div>';
-        $tpl.= '</div>';
-
-        return $tpl;
-    }
-
-    public function dumpProperty(string $name, Data $data, bool $isPublic): string
-    {
-        $value = $data->dump($this);
-
-        $tpl = '<div class="imht-dump-object">';
-        $tpl.= '<span style="'.$this->styles['const'].'">'.($isPublic ? '+' : '-').'</span>';
-        $tpl.= '<span style="'.$this->styles['def'].'">'.$name.' = </span>';
-        $tpl.= $value;
-        $tpl.= '</div>';
-
-        return $tpl;
-    }
-
-
+    protected static int $uid = 0;
 
     public function dump(Data $data)
     {
-        $result = $data->dump($this);
-
-        $result = sprintf('<div class="imht-dump">%s</div><style>%s</style>', $result, $this->getStyles());
-
+        $result = $this->dumpData($data);
+        $result = $this->getHtmlHeader() . sprintf('<pre class="imhotep-dump" style="%s">%s</pre>', $this->styles['default'], $result);
         $this->write($result);
-
-
-        return;
-
-        $output = '';
-        $depth = 0;
-        //ob_start();
-
-        $type = '';
-        $value = '';
-        $count = '';
-        $name = '';
-
-        $type = $this->getType($var);
-
-        if ($this->isSimple($type)) {
-            $output = $this->formatSimple($type, $this->getValue($var));
-
-            //$tpl = '<div class="iht-dump-%s">';
-            //$tpl.= '<span>%s</span>';
-            //$tpl.= '<span> : %s%s</span>';
-            //$tpl.= '</div>';
-
-            //$length = $type === 'string' ? '('.mb_strlen($var, 'UTF-8').')' : '';
-
-            //$output = sprintf($tpl, $type, $this->getValue($var), $type, $length);
-
-            //$this->dumpLine($output, $depth++);
-        }
-        elseif (is_array($var)) {
-            $output = '';
-
-            foreach ($var as $key => $val) {
-                $tpl = '<li class="iht-dump-row">';
-                $tpl.= '<span>%s</span>';
-                $tpl.= '<span> => </span>';
-                    $tpl.= '<span class="iht-dump-%s">';
-                        $tpl.= '<span>%s</span>';
-                        $tpl.= '<span> : %s%s</span>';
-                    $tpl.= '</span>';
-                $tpl.= '</li>';
-
-                $length = $this->getType($val) === 'string' ? '('.mb_strlen($val, 'UTF-8').')' : '';
-
-                $output.= sprintf($tpl, $key, gettype($val), $this->getValue($val), $this->getType($val), $length);
-            }
-
-            $tpl = '<div class="iht-dump-array">';
-            $tpl.= '<div style="imht-dump-const">array(<span class="imht-dump-num">%s</span>) [</div>';
-            $tpl.= '<ul>%s</ul>';
-            $tpl.= '<div class="imht-dump-const">]</div>';
-            $tpl.= '</div>';
-
-            $output = sprintf($tpl, count($var), $output);
-        }
-
-        echo sprintf('<div class="iht-dump">%s</div><style>%s</style>', $output, $this->getStyles());
-
-        //echo $this->output;
-
-        //$content = ob_get_clean();
     }
 
-    protected function _dump(mixed $var, $depth = 0)
+    protected function dumpData(Data $data, int $indent = 0): string
     {
-        $type = gettype($var);
+        $indentStr = str_repeat('  ', $indent);
+        $result = '';
 
-        if (in_array($type, ['string', 'integer', 'double', 'boolean'])) {
-            return $this->formatSimple($type, $this->getValue($var));
-        }
+        $type = $data['type'];
+        $value = $data['value'];
 
-        if ($type === 'array') {
-            $output = $this->_dump();
-            foreach ($var as $key => $val) {
-                $output.= sprintf('<div></div>');
-
-                    $this->style('');
-                    $this->_dump($val);
-            }
-        }
-    }
-
-    protected function formatSimple(string $type, string $value): string
-    {
         if ($type === 'string') {
-            $value = $this->style($type, $value, ['length' => mb_strlen($value, 'UTF-8')]);
-        }
-        else {
-            $value = $this->style($type, $value);
+            $result = $this->style('string', sprintf('"%s"', htmlspecialchars($value)));
+            $result .= ' ' . $this->style('type', 'string(' . $data['length'] . ')');
+        } elseif ($type === 'integer' || $type === 'double') {
+            $result = $this->style('number', (string)$value);
+            $result .= ' ' . $this->style('type', $type);
+        } elseif ($type === 'boolean') {
+            $result = $this->style('boolean', $value ? 'true' : 'false');
+        } elseif ($type === 'NULL') {
+            $result = $this->style('null', 'null');
+        } elseif ($type === 'array') {
+            $uid = ++self::$uid;
+            $result = '<span class="imht-toggle" data-uid="'.$uid.'" style="cursor:pointer;user-select:none;">&#9654;</span> ';
+            $result .= $this->style('meta', 'array:' . $data['count']);
+            $result .= " <span class=\"imht-collapsible\" id=\"imht-collapsible-$uid\" style=\"display:none;\">(\n";
+            foreach ($value as $key => $item) {
+                $result .= sprintf('%s  [%s] => %s', $indentStr, $key, $this->dumpData($item, $indent + 1)) . "\n";
+            }
+            $result .= $indentStr . ')</span>';
+        } elseif ($type === 'object') {
+            $uid = ++self::$uid;
+            $result = '<span class="imht-toggle" data-uid="'.$uid.'" style="cursor:pointer;user-select:none;">&#9654;</span> ';
+            $result .= $this->style('meta', 'object:' . $data['class_name']) . '#' . $data['object_id'];
+            $result .= " <span class=\"imht-collapsible\" id=\"imht-collapsible-$uid\" style=\"display:none;\">(\n";
+            foreach ($value as $item) {
+                $result .= $indentStr . '  ' . $this->dumpData($item, $indent + 1) . "\n";
+            }
+            $result .= $indentStr . ')</span>';
+        } elseif ($type === 'property') {
+            $visibility = $this->style('visibility', $data['visibility']);
+            $name = $this->style('property', '$' . $data['name']);
+            $value = $this->dumpData($data['value'], $indent);
+            $result = sprintf('%s %s: %s', $visibility, $name, $value);
+        } elseif ($type === 'recursion' || $type === 'uninitialized' || $type === 'meta') {
+            $result = $this->style($type, (string)$value);
+        } else {
+            $result = htmlspecialchars((string)$value);
         }
 
-        return sprintf('<div class="imh-dump-row">%s</div>', $value);
-    }
-
-    protected function formatArray(string $value): string
-    {
-        return sprintf('<div class="imh-dump-array">%s</div>', $value);
+        return $result;
     }
 
     protected function style(string $style, string $value, array $attrs = []): string
     {
-        if ($style === 'def') {
-            return sprintf("<span style='%s'>%s</span>", $this->styles[$style], $value);
-        }
-
-        if (in_array($style, ['str', 'num', 'const', 'err'])) {
-            if ($style === 'str') {
-                $value = sprintf('"%s"', $value);
-            }
-            return sprintf("<span style='%s'>%s</span>", $this->styles[$style], $value);
-        }
-
-        if ($style === 'row') {
-
-        }
-
-        return '';
+        return sprintf('<span style="%s">%s</span>', $this->styles[$style] ?? '', $value);
     }
 
-    public function dumpLine(string $output, int $depth)
+    protected function getHtmlHeader(): string
     {
+        static $header = null;
+        if ($header !== null) return '';
 
-    }
+        $header = '<script>
+            (function(){
+                if(window.__imht_dump_inited)return;window.__imht_dump_inited=1;
+                document.addEventListener("DOMContentLoaded",function(){
+                    document.querySelectorAll(".imht-toggle").forEach(function(btn){
+                        btn.addEventListener("click",function(){
+                            var uid=btn.getAttribute("data-uid");
+                            var coll=document.getElementById("imht-collapsible-"+uid);
+                            if(!coll)return;
+                            var open=coll.style.display!=="none";
+                            coll.style.display=open?"none":"inline";
+                            btn.innerHTML=open?"&#9654;":"&#9660;";
+                        });
+                    });
+                });
+            })();</script>';
 
-    public function escape(mixed $value, bool $doubleEncode = true): string
-    {
-        return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8', $doubleEncode);
-    }
+        $header .= '<style>.imht-toggle{font-weight:bold;margin-right:2px;} .imht-collapsible{}</style>';
 
-
-    public function getStyles()
-    {
-        $style = '
-            .imht-dump {
-                position: relative;
-                z-index: 10000000;
-                background: #2b2b2b;
-                color: #fff;
-                font-size: 14px;
-                padding: 6px 10px;
-                font-family: Menlo, Monaco, Consolas, monospace;
-                margin-bottom: 6px;
-            }
-            .imht-dump-row {
-                
-            }
-            
-            .imht-dump-integer span:first-child { color: #00a8f9; }
-            .imht-dump-integer span:first-child { color: #00a8f9; }
-            .imht-dump-boolean span:first-child { color: #FF8400; }
-            .imht-dump-double span:first-child { color: #00a8f9; }
-            .imht-dump-string span:first-child::before, .iht-dump-string span:first-child::after { content: \'"\'; }
-            .imht-dump-integer span:last-child, .iht-dump-boolean span:last-child,
-            .imht-dump-double span:last-child, .iht-dump-string span:last-child { opacity: 0.4; }
-            
-            .imht-dump-array-start,
-            .imht-dump-array-end {
-                color: #FF8400;
-            }
-            .imht-dump-array-start span {
-                color: #00a8f9;
-            }
-            .imht-dump-array ul{
-                list-style: none;
-                margin: 5px 0;
-            }
-        ';
-
-        return $style;
+        return $header;
     }
 }
