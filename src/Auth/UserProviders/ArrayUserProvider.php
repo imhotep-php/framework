@@ -15,10 +15,7 @@ class ArrayUserProvider implements UserProvider
     public function getById(mixed $id): ?Authenticatable
     {
         if (isset($this->users[$id])) {
-            return $this->makeGenericUser([
-                'id' => $id,
-                'password' => $this->users[$id],
-            ]);
+            return $this->makeGenericUser([...$this->users[$id], 'id' => $id]);
         }
 
         return null;
