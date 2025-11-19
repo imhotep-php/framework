@@ -12,20 +12,23 @@ trait InteractsWithRedis
 {
     protected array $redis = [];
 
-    protected array $redisDrivers = ['predis'];
+    protected array $redisDrivers = ['predis','phpredis'];
+
+    protected string $defaultDriver = 'phpredis';
 
     public function setUpRedis(): void
     {
-        if (! extension_loaded('redis')) {
-            //$this->markTestSkipped('The Redis extension is not installed. Please install the extension to enable '.__CLASS__);
-        }
-
-        if (! class_exists(Client::class)) {
-            $this->markTestSkipped('The Predis package is not installed. Please install the package with command "composer require predis/predis" to enable '.__CLASS__);
+        if (! extension_loaded('redis') && ! class_exists(Client::class)) {
+            if (! extension_loaded('redis')) {
+                $this->markTestSkipped('The Redis extension is not installed. Please install the extension to enable '.__CLASS__);
+            }
+            elseif (! class_exists(Client::class)) {
+                $this->markTestSkipped('The Predis package is not installed. Please install the package with command "composer require predis/predis" to enable '.__CLASS__);
+            }
         }
 
         $app = $this->app ?? new Container;
-        $host = Env::get('REDIS_HOST', '127.0.0.1');
+        $host = Env::get('REDIS_HOST', 'redis');
         $port = Env::get('REDIS_PORT', 6379);
 
         foreach ($this->redisDrivers as $driver) {
@@ -45,7 +48,7 @@ trait InteractsWithRedis
         }
 
         try {
-            $redis = reset($this->redis);
+            $redis = $this->redis[$this->defaultDriver];
 
             $redis->connection()->flushdb();
         } catch (Throwable) {
@@ -58,7 +61,7 @@ trait InteractsWithRedis
     public function tearDownRedis(): void
     {
         foreach ($this->redisDrivers as $driver) {
-            $this->redis[$driver]->connection()->disconnect();
+            //$this->redis[$driver]->connection()->disconnect();
         }
     }
 

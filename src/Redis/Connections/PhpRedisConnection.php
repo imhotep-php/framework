@@ -46,6 +46,11 @@ class PhpRedisConnection extends Connection
         ]);
     }
 
+    public function eval($script, $numberOfKeys, ...$arguments)
+    {
+        return $this->command('eval', [$script, $arguments, $numberOfKeys]);
+    }
+
     public function command(string $method, array $parameters = []): mixed
     {
         try {
@@ -66,5 +71,10 @@ class PhpRedisConnection extends Connection
     protected function fixReturnFalse(mixed $value): mixed
     {
         return $value === false ? null : $value;
+    }
+
+    public function disconnect()
+    {
+        $this->client->close();
     }
 }

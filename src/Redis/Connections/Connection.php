@@ -4,11 +4,12 @@ namespace Imhotep\Redis\Connections;
 
 use Closure;
 use Imhotep\Contracts\Events\Dispatcher;
+use Imhotep\Contracts\Redis\IConnection;
 use Imhotep\Redis\Events\CommandExecuted;
 use Imhotep\Support\Stopwatch;
 use Imhotep\Support\Traits\Macroable;
 
-abstract class Connection
+abstract class Connection implements IConnection
 {
     use Macroable {
         __call as macroCall;

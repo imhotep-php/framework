@@ -2,8 +2,6 @@
 
 namespace Imhotep\Contracts\Redis;
 
-use Imhotep\Redis\Connections\Connection;
-
 interface Connector
 {
     /**
@@ -11,16 +9,16 @@ interface Connector
      *
      * @param  array  $config
      * @param  array  $options
-     * @return Connection
+     * @return IConnection
      */
-    public function connect(array $config, array $options): Connection;
+    public function connect(array $config, array $options): IConnection;
 
     /**
      * Create a connection to a Redis instance.
      *
      * @param  array  $config
      * @param  array  $options
-     * @return Connection
+     * @return IConnection
      */
-    public function connectToCluster(array $config, array $options): Connection;
+    public function connectToCluster(array $config, array $options): IConnection;
 }
