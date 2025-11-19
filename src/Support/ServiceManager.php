@@ -10,7 +10,7 @@ abstract class ServiceManager
 
     public function __construct(protected Container $app) {}
 
-    public function driver(string $name = null)
+    public function driver(string|null $name = null)
     {
         $name = $name ?: $this->getDefault();
 

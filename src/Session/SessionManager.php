@@ -40,7 +40,7 @@ class SessionManager extends DriverManager
 
     protected function createArrayDriver(): SessionHandlerInterface
     {
-        return new ArrayHandler($this->config->get('session', []));
+        return new ArrayHandler($this->getLifetime());
     }
 
     protected function createFileDriver(): SessionHandlerInterface
