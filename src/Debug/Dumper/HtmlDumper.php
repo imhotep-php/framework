@@ -54,7 +54,7 @@ class HtmlDumper extends AbstractDumper
             $uid = ++self::$uid;
             $result = '<span class="imht-toggle" data-uid="'.$uid.'" style="cursor:pointer;user-select:none;">&#9654;</span> ';
             $result .= $this->style('meta', 'array:' . $data['count']);
-            $result .= " <span class=\"imht-collapsible\" id=\"imht-collapsible-$uid\" style=\"display:none;\">(\n";
+            $result .= " <span class=\"imht-collapsible\" id=\"imht-collapsible-$uid\">(\n"; //  style=\"display:none;\"
             foreach ($value as $key => $item) {
                 $result .= sprintf('%s  [%s] => %s', $indentStr, $key, $this->dumpData($item, $indent + 1)) . "\n";
             }
@@ -63,7 +63,7 @@ class HtmlDumper extends AbstractDumper
             $uid = ++self::$uid;
             $result = '<span class="imht-toggle" data-uid="'.$uid.'" style="cursor:pointer;user-select:none;">&#9654;</span> ';
             $result .= $this->style('meta', 'object:' . $data['class_name']) . '#' . $data['object_id'];
-            $result .= " <span class=\"imht-collapsible\" id=\"imht-collapsible-$uid\" style=\"display:none;\">(\n";
+            $result .= " <span class=\"imht-collapsible\" id=\"imht-collapsible-$uid\">(\n"; //  style=\"display:none;\"
             foreach ($value as $item) {
                 $result .= $indentStr . '  ' . $this->dumpData($item, $indent + 1) . "\n";
             }
@@ -94,9 +94,12 @@ class HtmlDumper extends AbstractDumper
 
         $header = '<script>
             (function(){
-                if(window.__imht_dump_inited)return;window.__imht_dump_inited=1;
+                if(window.__imht_dump_inited)return; window.__imht_dump_inited=1;
                 document.addEventListener("DOMContentLoaded",function(){
                     document.querySelectorAll(".imht-toggle").forEach(function(btn){
+                        var coll = document.getElementById("imht-collapsible-"+uid);
+                        if (coll) coll.style.display = "none";
+                      
                         btn.addEventListener("click",function(){
                             var uid=btn.getAttribute("data-uid");
                             var coll=document.getElementById("imht-collapsible-"+uid);

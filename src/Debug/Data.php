@@ -68,7 +68,7 @@ class Data implements \ArrayAccess
 
     public function __set(string $name, mixed $value): void
     {
-        $this->data[$offset] = $value;
+        $this->data[$name] = $value;
     }
 
     public function offsetExists(mixed $offset): bool
@@ -81,12 +81,12 @@ class Data implements \ArrayAccess
         return $this->data[$offset] ?? null;
     }
 
-    public function offsetSet(mixed $offset, mixed $value)
+    public function offsetSet(mixed $offset, mixed $value): void
     {
         $this->data[$offset] = $value;
     }
 
-    public function offsetUnset(mixed $offset)
+    public function offsetUnset(mixed $offset): void
     {
         unset($this->data[$offset]);
     }

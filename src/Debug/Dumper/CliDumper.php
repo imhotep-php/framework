@@ -31,7 +31,7 @@ class CliDumper extends AbstractDumper
 
     public function dump(Data $data)
     {
-        $this->write(PHP_EOL.PHP_EOL);
+        //$this->write(PHP_EOL.PHP_EOL);
         $this->write($this->dumpData($data));
         $this->write(PHP_EOL);
     }
