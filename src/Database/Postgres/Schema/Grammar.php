@@ -457,7 +457,7 @@ class Grammar extends GrammarBase
 
     protected function modifyDefault(Column $column): string
     {
-        return $column->default ? ' DEFAULT '.$this->getDefaultValue($column->default) : '';
+        return is_null($column->default) ? '' : ' DEFAULT '.$this->getDefaultValue($column->default);
     }
 
     protected function modifyVirtualAs(Column $column): string
@@ -468,5 +468,14 @@ class Grammar extends GrammarBase
     protected function modifyStoredAs(Column $column): string
     {
         return $column->storedAs ? " GENERATED ALWAYS AS ({$column->storedAs}) STORED" : '';
+    }
+
+    protected function getDefaultValue(mixed $value = null): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        return parent::getDefaultValue($value);
     }
 }

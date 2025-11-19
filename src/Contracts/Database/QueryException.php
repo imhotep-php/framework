@@ -1,19 +1,20 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Contracts\Database;
 
 use Imhotep\Support\Str;
+use PDOException;
 use Throwable;
 
 class QueryException extends DatabaseException
 {
-    protected $sql;
+    protected string $sql;
 
-    protected $bindings;
+    protected array $bindings;
 
-    public function __construct($sql, array $bindings, Throwable $previous)
+    protected array|null $errorInfo;
+
+    public function __construct(string $sql, array $bindings, Throwable $previous)
     {
         parent::__construct('', 0, $previous);
 
@@ -22,22 +23,22 @@ class QueryException extends DatabaseException
         $this->code = 0;
         $this->message = $this->formatMessage($sql, $bindings, $previous);
 
-        if ($previous instanceof \PDOException) {
+        if ($previous instanceof PDOException) {
             $this->errorInfo = $previous->errorInfo;
         }
     }
 
-    protected function formatMessage(string $sql, array $bindings, Throwable $previous)
+    protected function formatMessage(string $sql, array $bindings, Throwable $previous): string
     {
         return $previous->getMessage().' (SQL: '.Str::replaceArray('?', $bindings, $sql).')';
     }
 
-    public function getSql()
+    public function getSql(): string
     {
         return $this->sql;
     }
 
-    public function getBindings()
+    public function getBindings(): array
     {
         return $this->bindings;
     }

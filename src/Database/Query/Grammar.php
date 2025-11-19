@@ -3,9 +3,10 @@
 namespace Imhotep\Database\Query;
 
 use Imhotep\Contracts\Database\QueryGrammar as QueryGrammarContract;
+use Imhotep\Database\Expression;
 use Imhotep\Database\Grammar as BaseGrammar;
 
-abstract class Grammar extends BaseGrammar implements QueryGrammarContract
+class Grammar extends BaseGrammar implements QueryGrammarContract
 {
     public function compileInsert(Builder $query, $values, $returning = null): string
     {
@@ -97,11 +98,14 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
         $sql = [];
         $sql[] = $this->compileColumns($query);
         $sql[] = $this->compileFroms($query);
+        $sql[] = $this->compileJoins($query);
         $sql[] = $this->compileWheres($query);
+        $sql[] = $this->compileGroups($query);
         $sql[] = $this->compileOrders($query);
         $sql[] = $this->compileLimit($query);
+        $sql[] = $this->compileLock($query);
 
-        return "SELECT ".implode("", $sql);
+        return "SELECT ".implode(' ', array_filter($sql));
     }
 
     public function compileColumns(Builder $query): string
@@ -119,7 +123,21 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
 
     public function compileFroms(Builder $query): string
     {
-        return " FROM ".$this->wrapTable($query->from);
+        return "FROM ".$this->wrapTable($query->from);
+    }
+
+    public function compileJoins(Builder $query): string
+    {
+        $sql = [];
+
+        foreach ($query->joins as $join) {
+            $table = $this->wrapTable($join->from);
+            $where = $this->compileWheres($join);
+
+            $sql[] = sprintf('%s JOIN %s %s', $join->type, $table, $where);
+        }
+
+        return implode(' ', $sql);
     }
 
     public function compileWheres(Builder $query): string
@@ -138,7 +156,9 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
             $sql.= $this->{"where".$where['type']}($query, $where);
         }
 
-        return " WHERE ".$sql;
+        $conjunction = $query instanceof JoinClause ? 'ON' : 'WHERE';
+
+        return $conjunction.' '.$sql;
     }
 
     protected function compileAggregate(Builder $query): string
@@ -165,21 +185,24 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
 
     protected function whereRaw(Builder $query, array $where): string
     {
-        if (! empty($where['bindings'])) {
-            $query->addBinding($where['bindings'], 'where');
-        }
-
         return $where['expression'];
     }
 
     protected function whereBasic(Builder $query, array $where): string
     {
-        $query->addBinding($where['value'], 'where');
-
         return sprintf('%s %s %s',
             $this->wrap($where['column']),
             $where['operator'],
             $this->prepareValue($where['value'])
+        );
+    }
+
+    protected function whereColumn(Builder $query, array $where): string
+    {
+        return sprintf('%s %s %s',
+            $this->wrap($where['first']),
+            $where['operator'],
+            $this->wrap($where['second']),
         );
     }
 
@@ -195,9 +218,9 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
 
     protected function whereIn(Builder $query, array $where): string
     {
-        foreach ($where['values'] as $value) {
-            $query->addBinding($value, 'where');
-        }
+        //foreach ($where['values'] as $value) {
+        //    $query->addBinding($value, 'where');
+        //}
 
         return sprintf('%s IN (%s)',
             $this->wrap($where['column']),
@@ -207,14 +230,34 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
 
     protected function whereNotIn(Builder $query, array $where): string
     {
-        foreach ($where['values'] as $value) {
-            $query->addBinding($value, 'where');
-        }
+        //foreach ($where['values'] as $value) {
+        //    $query->addBinding($value, 'where');
+        //}
 
         return sprintf('%s NOT IN (%s)',
             $this->wrap($where['column']),
             $this->prepareValues($where['values'])
         );
+    }
+
+    protected function whereNested(Builder $query, array $where): string
+    {
+        // compileWhere возвращает строку SQL с WHERE,
+        // которое нужно удалить
+        $wheres = substr($this->compileWheres($where['query']), 6);
+
+        return sprintf('(%s)', $wheres);
+    }
+
+    protected function compileGroups(Builder $query): string
+    {
+        $sql = [];
+
+        foreach ($query->groups as $column) {
+            $sql[] = $this->wrap($column);
+        }
+
+        return count($sql) > 0 ? 'GROUP BY '.implode(', ', $sql) : '';
     }
 
     protected function compileOrders(Builder $query): string
@@ -225,15 +268,22 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
             $sql[] = $this->wrap($order['column']).' '.strtoupper($order['direction']);
         }
 
-        return count($sql) > 0 ? ' ORDER BY '.implode(', ', $sql) : '';
+        return count($sql) > 0 ? 'ORDER BY '.implode(', ', $sql) : '';
     }
 
     protected function compileLimit(Builder $query): string
     {
         $sql = '';
-        if ($query->limit) $sql.= ' LIMIT '.$query->limit;
+        if ($query->limit) $sql.= 'LIMIT '.$query->limit;
         if ($query->limit && $query->offset) $sql.= ' OFFSET '.$query->offset;
         return $sql;
+    }
+
+    public function compileLock(Builder $query): string
+    {
+        $lock = $query->getLock();
+
+        return is_string($lock) ? ' '.$lock : '';
     }
 
 
@@ -268,7 +318,7 @@ abstract class Grammar extends BaseGrammar implements QueryGrammarContract
 
     public function prepareValue(mixed $value): string
     {
-        return "?";
+        return $value instanceof Expression ? $value->getValue() : '?';
     }
 
 }

@@ -76,6 +76,11 @@ abstract class Connection implements ConnectionContract
         return Arr::get($this->config, $key, $default);
     }
 
+    public function raw(mixed $value): Expression
+    {
+        return new Expression($value);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Querying

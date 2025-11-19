@@ -11,7 +11,7 @@ trait ConnectionTransactions
 {
     protected int $transactions = 0;
 
-    public function transaction(Closure $callback, int $attempts = 1)
+    public function transaction(Closure $callback, int $attempts = 1): mixed
     {
         for ($curAttempt = 1; $curAttempt <= $attempts; $curAttempt++) {
             $this->beginTransaction();
@@ -41,6 +41,8 @@ trait ConnectionTransactions
 
             return $callbackResult;
         }
+
+        return null;
     }
 
     protected function handleTransactionException(Throwable $e, int $curAttempt, int $maxAttempts): void

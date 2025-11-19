@@ -8,9 +8,9 @@ class Expression
         protected mixed $value
     ) {}
 
-    public function getValue(): mixed
+    public function getValue(): string
     {
-        return $this->value;
+        return (string)$this->value;
     }
 
     public function _toString(): string

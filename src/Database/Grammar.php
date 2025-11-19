@@ -39,7 +39,16 @@ abstract class Grammar
             return $value->getValue();
         }
 
-        return sprintf('"%s"', $value);
+        $segments = explode('.', $value);
+        foreach ($segments as $index => $segment) {
+            if ($index === 0 && count($segments) > 1) {
+                $segments[$index] = $this->wrapTable($segment);
+            } else {
+                $segments[$index] = $this->wrapValue($segment);
+            }
+        }
+
+        return implode('.', $segments);
     }
 
     protected function wrapTable(string|array|Table $table): string
@@ -49,7 +58,9 @@ abstract class Grammar
         }
 
         if (is_array($table)) {
-            if (is_null($table[1])) return $this->wrapTable($table[0]);
+            if (count($table) === 1) {
+                return $this->wrapTable($table[0]);
+            }
 
             return $this->wrapTable($table[0]).' as '.$this->wrap($table[1]);
         }
@@ -61,11 +72,11 @@ abstract class Grammar
         return $this->wrap($table);
     }
 
-    protected function wrapValue(string $value): string
+    protected function wrapValue(mixed $value): string
     {
         if ($value === '*') return $value;
 
-        return '"'.str_replace('"', '""', $value).'"';
+        return '"'.str_replace('"', '""', (string)$value).'"';
     }
 
     protected function getDefaultValue(mixed $value = null): string

@@ -21,7 +21,7 @@ class MigrationCreator
         return $path;
     }
 
-    public function guessTable($migration): array
+    public function guessTable(string $migration): array
     {
         if (preg_match("/create_([a-z0-9_]+)/", $migration, $match)) {
             $table = preg_replace('/(_table)$/', '', $match[1]);
@@ -29,8 +29,8 @@ class MigrationCreator
         }
 
         if (preg_match("/(to|from|in)_([a-z0-9_]+)/", $migration, $match)) {
-            $table = preg_replace('/(_table)$/', '', $match[1]);
-            return [$table, $create = true];
+            $table = preg_replace('/(_table)$/', '', $match[2]);
+            return [$table, $create = false];
         }
 
         return ['', $create = false];
