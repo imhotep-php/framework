@@ -11,6 +11,8 @@ class FileBag extends ParameterBug
 
     public function __construct(array $files = [])
     {
+        parent::__construct();
+
         foreach ($files as $key => $file) {
             $this->set($key, $file);
         }

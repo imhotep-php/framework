@@ -42,7 +42,7 @@ class UploadedFile extends \SplFileInfo
 
     public function originalExtension(): string
     {
-        return pathinfo($this->name, PATHINFO_EXTENSION);
+        return strtolower(pathinfo($this->name, PATHINFO_EXTENSION));
     }
 
     public function originalMimeType(): string

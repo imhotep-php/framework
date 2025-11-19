@@ -49,17 +49,17 @@ abstract class ServiceProvider
     protected $bootingCallbacks = [];
     protected $bootedCallbacks = [];
 
-    public function booting(Closure $callback)
+    public function booting(Closure $callback): void
     {
         $this->bootingCallbacks[] = $callback;
     }
 
-    public function booted(Closure $callback)
+    public function booted(Closure $callback): void
     {
         $this->bootedCallbacks[] = $callback;
     }
 
-    public function callBootingCallbacks()
+    public function callBootingCallbacks(): void
     {
         $index = 0;
 
@@ -70,7 +70,7 @@ abstract class ServiceProvider
         }
     }
 
-    public function callBootedCallbacks()
+    public function callBootedCallbacks(): void
     {
         $index = 0;
 
@@ -81,6 +81,11 @@ abstract class ServiceProvider
         }
     }
 
+    public function loadRoutesFrom(string $path): void
+    {
+        require $path;
+    }
+
     public function loadViewFrom(string|array $path, string $namespace): static
     {
         return $this->callAfterResolving('view', function ($view) use ($path, $namespace) {
@@ -88,7 +93,7 @@ abstract class ServiceProvider
         });
     }
     
-    public function loadLangFrom(string|array $path, string $namespace)
+    public function loadLangFrom(string|array $path, string $namespace): static
     {
         return $this->callAfterResolving('localizator', function ($lang) use ($path, $namespace) {
             $lang->addNamespace($namespace, $path);
