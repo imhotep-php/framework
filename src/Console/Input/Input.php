@@ -44,7 +44,15 @@ abstract class Input implements InputContract
     {
         $arguments = $this->getArguments();
 
-        return $arguments[$name] ?? $default;
+        if (array_key_exists($name, $arguments)) {
+            return $arguments[$name];
+        }
+
+        if ($default instanceof \Closure) {
+            return $default();
+        }
+
+        return $default;
     }
 
     public function setArgument(string $name, mixed $value): void
@@ -66,7 +74,15 @@ abstract class Input implements InputContract
     {
         $options = $this->getOptions();
 
-        return $options[$name] ?? $default;
+        if (array_key_exists($name, $options)) {
+            return $options[$name];
+        }
+
+        if ($default instanceof \Closure) {
+            return $default();
+        }
+
+        return $default;
     }
 
     public function setOption(string $name, mixed $value = null): void

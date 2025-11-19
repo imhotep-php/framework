@@ -98,8 +98,12 @@ class SignatureParser
         }
 
         $shortcut = empty($match[1]) ? null : $match[1];
+
+        $default = isset($match[5]) ? trim($match[5]) : '';
+        $hasDefault = !empty($default);
+
         $isArray = isset($match[4]) && str_contains($match[4], '*');
-        $isValueOptional = isset($match[4]) && str_contains($match[4], '?');
+        $isValueOptional = (isset($match[4]) && str_contains($match[4], '?')) || $hasDefault;
         $isValueRequired = (isset($match[3]) && $match[3] === '=') && ! $isValueOptional;
 
         $option = InputOption::builder($match[2], $shortcut);
@@ -107,7 +111,7 @@ class SignatureParser
         if ($isArray) $option->array();
         if ($isValueOptional) $option->valueOptional();
         if ($isValueRequired) $option->valueRequired();
-        if (! empty($match[5])) $option->default(trim($match[5]));
+        if ($hasDefault) $option->default($default);
 
         return $option->description($desc)->build();
     }
