@@ -4,6 +4,8 @@ namespace Imhotep\Contracts\Cache;
 
 interface ICacheStore
 {
+    public function has(string $key): bool;
+
     /**
      * Retrieve an item from the cache by key.
      *
@@ -22,6 +24,8 @@ interface ICacheStore
      */
     public function many(array $keys): array;
 
+    public function add(string $key, mixed $value, ?int $ttl = null): bool;
+
     /**
      * Store an item in the cache for a given number of seconds.
      *
@@ -30,7 +34,7 @@ interface ICacheStore
      * @param  int  $ttl
      * @return bool
      */
-    public function set(string $key, array|string|int|float|bool $value, int $ttl): bool;
+    public function set(string $key, mixed $value, ?int $ttl = null): bool;
 
     /**
      * Store multiple items in the cache for a given number of seconds.
@@ -39,7 +43,7 @@ interface ICacheStore
      * @param  int  $ttl
      * @return bool
      */
-    public function setMany(array $values, int $ttl): bool;
+    public function setMany(array $values, ?int $ttl = null): bool;
 
     /**
      * Increment the value of an item in the cache.
@@ -48,7 +52,7 @@ interface ICacheStore
      * @param  int  $value
      * @return int|bool
      */
-    public function increment(string $key, int $value = 1, int $ttl = 0): int|bool;
+    public function increment(string $key, int $value = 1, ?int $ttl = null): int|bool;
 
     /**
      * Decrement the value of an item in the cache.
@@ -57,7 +61,7 @@ interface ICacheStore
      * @param  int  $value
      * @return int|bool
      */
-    public function decrement(string $key, int $value = 1, int $ttl = 0): int|bool;
+    public function decrement(string $key, int $value = 1, ?int $ttl = null): int|bool;
 
     /**
      * Remove all items from the cache.
@@ -66,7 +70,6 @@ interface ICacheStore
      * @return bool
      */
     public function delete(string $key): bool;
-
 
     /**
      * Remove all items from the cache.
