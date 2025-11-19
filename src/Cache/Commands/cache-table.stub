@@ -9,14 +9,21 @@ return new class extends Migration
     public function up(): void
     {
         Scheme::create('cache', function (Table $table) {
-            $table->string('key', 255)->unique();
+            $table->string('key', 255)->primary();
             $table->text('value');
-            $table->int('expire');
+            $table->int('expires_at');
+        });
+
+        Scheme::create('cache_locks', function (Table $table) {
+            $table->string('key', 255)->primary();
+            $table->text('owner');
+            $table->int('expires_at');
         });
     }
 
     public function down(): void
     {
         Scheme::dropIfExists('cache');
+        Scheme::dropIfExists('cache_locks');
     }
 };

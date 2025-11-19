@@ -6,12 +6,11 @@ use Imhotep\Cache\Stores\ArrayStore;
 use Imhotep\Cache\Stores\DatabaseStore;
 use Imhotep\Cache\Stores\FileStore;
 use Imhotep\Cache\Stores\MemcachedStore;
-use Imhotep\Cache\Stores\MemcacheStore;
 use Imhotep\Cache\Stores\RedisStore;
-use Imhotep\Contracts\Cache\CacheException;
 use Imhotep\Contracts\Cache\ICache;
 use Imhotep\Contracts\Cache\ICacheFactory;
 use Imhotep\Contracts\Cache\ICacheStore;
+use Imhotep\Contracts\Config\IConfigRepository;
 use Imhotep\Contracts\DriverManager;
 use InvalidArgumentException;
 
@@ -30,13 +29,13 @@ class CacheManager extends DriverManager implements ICacheFactory
 
     protected function resolve(string $name): ICache
     {
-        $config = $this->config->get("cache.stores.{$name}");
+        $driverConfig = $this->config->subsetOrFail("cache.stores.{$name}",
+            "Cache store [:path] not configured."
+        );
 
-        if (is_null($config)) {
-            throw new CacheException("Cache store [{$name}] not configured.");
-        }
-
-        return new Repository($this->driver($name, [$config]), $config['ttl'] ?? 3600);
+        return new Repository(
+            $this->driver($driverConfig->stringOrFail('driver'), [$driverConfig]),
+        );
     }
 
     protected function createArrayDriver(): ICacheStore
@@ -44,52 +43,61 @@ class CacheManager extends DriverManager implements ICacheFactory
         return new ArrayStore();
     }
 
-    protected function createFileDriver(array $config): ICacheStore
+    protected function createFileDriver(IConfigRepository $driverConfig): ICacheStore
     {
-        return new FileStore($config['path'],
-            is_int($config['permission']) ? $config['permission'] : null,
-            is_int($config['dirPermission']) ? $config['dirPermission'] : null
+        return new FileStore(
+            $driverConfig->stringOrFail('path'),
+            $driverConfig->stringOrFail('lock_path'),
+            $driverConfig->int('permission'),
+            $driverConfig->int('dir_permission'),
         );
     }
 
-    protected function createRedisDriver(array $config): ICacheStore
+    protected function createRedisDriver(IConfigRepository $driverConfig): ICacheStore
     {
-        $connection = is_string($config['connection']) ? $config['connection'] : 'default';
+        $connection = $driverConfig->string('connection', 'default');
 
-        return new RedisStore($this->container['redis'], $connection, $this->getPrefix($config));
+        return new RedisStore(
+            $this->container['redis'],
+            $connection,
+            $driverConfig->string('lock_connection', $connection),
+            $this->getPrefix($driverConfig)
+        );
     }
 
-    protected function createMemcacheDriver(array $config): ICacheStore
-    {
-        $memcache = MemcacheStore::memcache($config['servers'] ?? []);
-
-        return new MemcacheStore($memcache, $this->getPrefix($config));
-    }
-
-    protected function createMemcachedDriver(array $config): ICacheStore
+    protected function createMemcachedDriver(IConfigRepository $driverConfig): ICacheStore
     {
         $memcached = MemcachedStore::memcached(
-            $config['servers'] ?? [],
-            $config['persistent_id'] ?? null,
-            $config['options'] ?? [],
-            array_filter($config['sasl'] ?? [])
+            $driverConfig->array('servers', []),
+            $driverConfig->string('persistent_id'),
+            $driverConfig->array('options', []),
+            $driverConfig->array('servers', [])
         );
 
-        return new MemcachedStore($memcached, $this->getPrefix($config));
+        return new MemcachedStore($memcached, $this->getPrefix($driverConfig));
     }
 
-    protected function createDatabaseDriver(array $config): ICacheStore
+    protected function createDatabaseDriver(IConfigRepository $driverConfig): ICacheStore
     {
         return new DatabaseStore(
-            $this->container['db']->connection($config['connection'] ?? null),
-            $config['table'],
-            $this->getPrefix($config)
+            $this->container['db']->connection($driverConfig->string('connection')),
+            $driverConfig->stringOrFail('table'),
+            $this->getPrefix($driverConfig),
+            $this->container['db']->connection($driverConfig->string('lock_connection')),
+            $driverConfig->stringOrFail('lock_table'),
+            $driverConfig->array('lock_lottery', [2,100]),
+            $driverConfig->int('lock_timeout', 86400),
         );
     }
 
-    protected function getPrefix(array $config): string
+    protected function getPrefix(IConfigRepository $driverConfig): string
     {
-        return $config['prefix'] ?? $this->config->get('cache.prefix', '');
+        return $driverConfig->string('prefix', $this->config->string('cache.prefix', ''));
+    }
+
+    protected function getTtl(IConfigRepository $driverConfig): int
+    {
+        return $driverConfig->int('ttl', $this->config->int('cache.ttl', 3600));
     }
 
     public function getStores(): array
@@ -99,7 +107,7 @@ class CacheManager extends DriverManager implements ICacheFactory
 
     public function getDefaultDriver(): string
     {
-        return $this->config['cache.default'];
+        return $this->config->stringOrFail('cache.default');
     }
 
     public function setDefaultDriver(string $driver): static

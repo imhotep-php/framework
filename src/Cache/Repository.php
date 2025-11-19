@@ -3,22 +3,29 @@
 namespace Imhotep\Cache;
 
 use Closure;
+use DateInterval;
+use DateTime;
 use Imhotep\Contracts\Cache\ICache;
 use Imhotep\Contracts\Cache\ICacheStore;
 use Imhotep\Support\Traits\Macroable;
+use InvalidArgumentException;
 
 class Repository implements ICache
 {
-    use Macroable;
+    use Macroable {
+        __call as macroCall;
+    }
 
     public function __construct(
         protected ICacheStore $store,
-        protected int                 $ttl,
+        protected bool $validateKeys = false
     ) {}
 
     public function has(string $key): bool
     {
-        return ! is_null($this->get($key));
+        $this->validateKeys($key);
+
+        return $this->store->has($key);
     }
 
     public function missing(string $key): bool
@@ -26,110 +33,237 @@ class Repository implements ICache
         return ! $this->has($key);
     }
 
-    public function get(string $key): mixed
-    {
-        return $this->store->get($key);
-    }
 
-    public function many(array $keys): array
+    public function pull(string $key, mixed $default = null): mixed
     {
-        return $this->store->many($keys);
-    }
+        $this->validateKeys($key);
 
-    public function add(string $key, array|string|int|float|bool $value, ?int $ttl = null): bool
-    {
-        if ($this->has($key)) {
-            return false;
+        $value = $this->store->get($key);
+
+        if (is_null($value)) {
+            $value = value($default);
+        }
+        else {
+            $this->store->delete($key);
         }
 
-        return $this->put($key, $value, $ttl);
+        return $value;
     }
 
-    public function set(string $key, array|string|int|float|bool $value, ?int $ttl = null): bool
+    public function get(string $key, mixed $default = null): mixed
     {
-        return $this->put($key, $value, $ttl);
+        $this->validateKeys($key);
+
+        $value = $this->store->get($key);
+
+        if (is_null($value)) {
+            $value = value($default);
+        }
+
+        return $value;
     }
 
-    public function put(string $key, array|string|int|float|bool $value, ?int $ttl = null): bool
+    public function many(iterable $keys, mixed $default = null): array
     {
-        return $this->store->set($key, $value, $ttl ?? $this->ttl);
+        if ($keys instanceof \Traversable) {
+            $keys = iterator_to_array($keys);
+        }
+
+        $this->validateKeys($keys);
+
+        $values = $this->store->many($keys);
+
+        foreach ($values as $key => $value) {
+            if (is_null($value)) {
+                $values[$key] = value($default);
+            }
+        }
+
+        return $values;
     }
 
-    public function setMany(array $values, ?int $ttl = null): bool
+    public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
-        return $this->putMany($values, $ttl);
+        return $this->many($keys, $default);
     }
 
-    public function putMany(array $values, ?int $ttl = null): bool
+
+    public function add(string $key, mixed $value, DateInterval|int|null $ttl = null): bool
     {
-        return $this->store->setMany($values, $ttl ?? $this->ttl);
+        $this->validateKeys($key);
+
+        return $this->store->add($key, $value, $this->parseTtl($ttl));
     }
 
-    public function increment(string $key, int $value = 1, ?int $ttl = null): int|bool
+    public function set(string $key, mixed $value, DateInterval|int|null $ttl = null): bool
     {
-        return $this->store->increment($key, $value, $ttl ?? $this->ttl);
+        $this->validateKeys($key);
+
+        return $this->store->set($key, $value, $this->parseTtl($ttl));
     }
 
-    public function decrement(string $key, int $value = 1, ?int $ttl = null): int|bool
+    public function put(string $key, mixed $value, DateInterval|int|null $ttl = null): bool
     {
-        return $this->store->decrement($key, $value, $ttl ?? $this->ttl);
+        return $this->set($key, $value, $ttl);
     }
+
+
+    public function setMany(iterable $values, DateInterval|int|null $ttl = null): bool
+    {
+        if ($values instanceof \Traversable) {
+            $values = iterator_to_array($values);
+        }
+
+        if ($this->validateKeys) {
+            $this->validateKeys(array_keys($values));
+        }
+
+        return $this->store->setMany($values, $this->parseTtl($ttl));
+    }
+
+    public function putMany(iterable $values, DateInterval|int|null $ttl = null): bool
+    {
+        return $this->setMany($values, $ttl);
+    }
+
+    public function setMultiple(iterable $values, DateInterval|int|null $ttl = null): bool
+    {
+        return $this->setMany($values, $ttl);
+    }
+
+
+    public function forever(string $key, mixed $value): bool
+    {
+        $this->validateKeys($key);
+
+        return $this->store->set($key, $value);
+    }
+
+    public function remember(string $key, Closure $callback, DateInterval|int|null $ttl = null): mixed
+    {
+        $value = $this->get($key);
+
+        if (! is_null($value)) {
+            return $value;
+        }
+
+        $this->set($key, $value = $callback(), $this->parseTtl($ttl));
+
+        return $value;
+    }
+
+    /**
+     * Alias for remember() without ttl.
+     *
+     * @param string $key
+     * @param Closure $callback
+     * @return mixed
+     */
+    public function rememberForever(string $key, Closure $callback): mixed
+    {
+        return $this->remember($key, $callback);
+    }
+
+    public function increment(string $key, int $value = 1, DateInterval|int|null $ttl = null): int|bool
+    {
+        $this->validateKeys($key);
+
+        if ($value < 0) {
+            throw new InvalidArgumentException(
+                sprintf('Increment value must be greater than 0, %d given.', $value)
+            );
+        }
+
+        return $this->store->increment($key, $value, $this->parseTtl($ttl));
+    }
+
+    public function decrement(string $key, int $value = 1, DateInterval|int|null $ttl = null): int|bool
+    {
+        $this->validateKeys($key);
+
+        if ($value < 0) {
+            throw new InvalidArgumentException(
+                sprintf('Decrement value must be greater than 0, %d given.', $value)
+            );
+        }
+
+        return $this->store->decrement($key, $value, $this->parseTtl($ttl));
+    }
+
 
     public function delete(string $key): bool
     {
-        return $this->forget($key);
+        $this->validateKeys($key);
+
+        return $this->store->delete($key);
     }
 
     public function forget(string $key): bool
     {
-        return $this->store->delete($key);
+        return $this->delete($key);
     }
+
+    public function deleteMany(iterable $keys): bool
+    {
+        if ($keys instanceof \Traversable) {
+            $keys = iterator_to_array($keys);
+        }
+
+        $this->validateKeys($keys);
+
+        if (method_exists($this->store, 'deleteMany')) {
+            return $this->store->deleteMany($keys);
+        }
+
+        $result = true;
+
+        foreach ($keys as $key) {
+            if (! $this->store->delete($key)) {
+                $result = false;
+            }
+        }
+
+        return $result;
+    }
+
+    public function forgetMany(iterable $keys): bool
+    {
+        return $this->deleteMany($keys);
+    }
+
+    public function deleteMultiple(iterable $keys): bool
+    {
+        return $this->deleteMany($keys);
+    }
+
 
     public function flush(): bool
     {
         return $this->store->flush();
     }
 
-    public function forever(string $key, array|string|int|float|bool $value): bool
+    public function clear(): bool
     {
-        return $this->set($key, $value, 0);
+        return $this->flush();
     }
 
-    public function remember(string $key, Closure $callback, ?int $ttl = null): mixed
+
+    protected function parseTtl(DateInterval|int|null $ttl): ?int
     {
-        if ($value = $this->get($key)) {
-            return $value;
+        if (is_null($ttl)) {
+            return null;
         }
 
-        if ($value = $callback()) {
-            $this->set($key, $value = $callback(), $ttl ?? $this->ttl);
+        if ($ttl instanceof DateInterval) {
+            $now = new DateTime();
+            $future = (clone $now)->add($ttl);
+
+            $ttl = $future->getTimestamp() - $now->getTimestamp();
         }
 
-        return $value;
+        return $ttl;
     }
 
-    public function rememberForever(string $key, Closure $callback): mixed
-    {
-        if ($value = $this->get($key)) {
-            return $value;
-        }
-
-        if ($value = $callback()) {
-            $this->forever($key, $value);
-        }
-
-        return $value;
-    }
-
-    public function getTtl(): int
-    {
-        return $this->ttl;
-    }
-
-    public function setTtl(int $ttl): void
-    {
-        $this->ttl = $ttl;
-    }
 
     public function getStore(): ICacheStore
     {
@@ -140,6 +274,39 @@ class Repository implements ICache
     {
         $this->store = $store;
     }
+
+
+    public function enableKeyValidation(): void
+    {
+        $this->validateKeys = true;
+    }
+
+    public function disableKeyValidation(): void
+    {
+        $this->validateKeys = false;
+    }
+
+    protected function validateKeys(array|string $keys): void
+    {
+        if (! $this->validateKeys) {
+            return;
+        }
+
+        foreach ((array)$keys as $key) {
+            if ($key === '') {
+                throw new InvalidArgumentException('Cache key cannot be empty');
+            }
+
+            if (strlen($key) > 250) {
+                throw new InvalidArgumentException('Cache key too long (max: 250)');
+            }
+
+            if (preg_match('/[\s\r\n\t\f\v]/', $key)) {
+                throw new InvalidArgumentException('Cache key contains invalid characters');
+            }
+        }
+    }
+
 
     public function offsetExists(mixed $offset): bool
     {
@@ -153,11 +320,25 @@ class Repository implements ICache
 
     public function offsetSet(mixed $offset, mixed $value): void
     {
-        $this->set($offset, $value, $this->ttl);
+        $this->set($offset, $value);
     }
 
     public function offsetUnset(mixed $offset): void
     {
         $this->delete($offset);
+    }
+
+    public function __call($method, $parameters)
+    {
+        if (static::hasMacro($method)) {
+            return $this->macroCall($method, $parameters);
+        }
+
+        return $this->store->$method(...$parameters);
+    }
+
+    public function __clone(): void
+    {
+        $this->store = clone $this->store;
     }
 }
