@@ -16,7 +16,9 @@
     "psr/http-message": "^1.0",
     "psr/log": "^3.0",
     "psr/simple-cache": "^3.0",
-    "filp/whoops": "^2.15"
+    "filp/whoops": "^2.15",
+    "opis/closure": ">=4.3",
+    "predis/predis": "dev-main"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.5",
