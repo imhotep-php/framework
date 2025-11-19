@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Imhotep\Events;
 
+use Imhotep\Contracts\Events\Dispatcher;
 use Imhotep\Framework\Providers\ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
@@ -13,7 +14,7 @@ class EventServiceProvider extends ServiceProvider
     protected array $subscribe = [];
 
     public array $aliases = [
-        'events' => Events::class
+        'events' => [Events::class, Dispatcher::class],
     ];
 
     public function register()
