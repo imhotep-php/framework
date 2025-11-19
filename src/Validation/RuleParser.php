@@ -25,6 +25,7 @@ class RuleParser
         'dimensions' => Rules\DimensionsRule::class,
         'nullable' => Rules\NullableRule::class,
         'string' => Rules\StringRule::class,
+        'numeric' => Rules\NumericRule::class,
         'int' => Rules\IntegerRule::class,
         'float' => Rules\FloatRule::class,
         'bool' => Rules\BooleanRule::class,
@@ -34,6 +35,12 @@ class RuleParser
         'size' => Rules\SizeRule::class,
         'phone' => Rules\PhoneRule::class,
         'in' => Rules\InRule::class,
+        'coords' => Rules\CoordsRule::class,
+        'date' => Rules\DateRule::class,
+        'after' => Rules\DateAfterRule::class,
+        'before' => Rules\DateBeforeRule::class,
+        'url' => Rules\UrlRule::class,
+        'mimes' => Rules\MimeRule::class,
     ];
     
     public static function parse(string|array $rules): array

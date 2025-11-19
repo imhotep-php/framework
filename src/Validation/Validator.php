@@ -184,7 +184,7 @@ class Validator implements IValidator
 
                 $this->errors->add($attribute->key(), $this->prepareMessage($attribute->name(), $rule, $value));
 
-                if ($attribute->bail()) break;
+                if ($attribute->bail() || str_starts_with($rule->name(), 'required')) break;
             }
         }
 
@@ -200,10 +200,6 @@ class Validator implements IValidator
 
     protected function prepareMessage(string $attribute, AbstractRule $rule, mixed $value): string
     {
-        if ($rule->message()) {
-            return $this->replaceMessageParameters($rule->message(), $attribute, $rule->parameters());
-        }
-
         $key = $attribute.'.'.$rule->name();
 
         if (isset($this->messages[$key]) && is_string($this->messages[ $key ])) {
@@ -238,6 +234,10 @@ class Validator implements IValidator
             }
         }
 
+        if ($message = $rule->message()) {
+            return $this->replaceMessageParameters($message, $attribute, $rule->parameters());
+        }
+
         return $rule->name();
     }
 
@@ -249,6 +249,9 @@ class Validator implements IValidator
             }
             elseif (is_array($value)) {
                 $parameters[$name] = implode(", ", $value);
+            }
+            elseif ($value instanceof \DateTimeInterface) {
+                $parameters[$name] = $value->format('Y-m-d H:i:s');
             }
             else {
                 $parameters[$name] = (string)$value;
