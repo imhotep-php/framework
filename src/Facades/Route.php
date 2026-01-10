@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Imhotep\Facades;
 
+use Imhotep\Contracts\Routing\RouteCollection;
+
 /**
  * @method static \Imhotep\Routing\Route apiResource(string $name, string $controller, array $options = [])
  * @method static \Imhotep\Routing\Route resource(string $name, string $controller, array $options = [])
@@ -13,7 +15,7 @@ namespace Imhotep\Facades;
  * @method static \Imhotep\Routing\Route fallback(array|string|callable|null $action = null)
  * @method static \Imhotep\Routing\Route get(string $uri, array|string|callable|null $action = null)
  * @method static \Imhotep\Routing\Route|null getCurrentRoute()
- * @method static array getRoutes()
+ * @method static RouteCollection getRoutes()
  * @method static \Imhotep\Routing\Route match(array|string $methods, string $uri, array|string|callable|null $action = null)
  * @method static \Imhotep\Routing\Route options(string $uri, array|string|callable|null $action = null)
  * @method static \Imhotep\Routing\Route patch(string $uri, array|string|callable|null $action = null)
