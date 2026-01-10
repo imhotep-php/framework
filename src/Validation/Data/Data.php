@@ -10,6 +10,11 @@ class Data implements IData
         protected array $data = []
     ) { }
 
+    public function all(): array
+    {
+        return $this->data;
+    }
+
     public function get(string $key): mixed
     {
         if (array_key_exists($key, $this->data)) {
