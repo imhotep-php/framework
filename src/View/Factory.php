@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace Imhotep\View;
 
 use Imhotep\Container\Container;
+use Imhotep\Support\Traits\Macroable;
 use Imhotep\View\Engines\Engine;
 use Imhotep\View\Engines\EngineManager;
 
 class Factory
 {
+    use Macroable {
+        __call as macroCall;
+    }
+
     protected Container $container;
 
     protected Finder $finder;
@@ -59,6 +64,11 @@ class Factory
         $engine->setCache($this->cache, $this->cachePath);
 
         return $engine;
+    }
+
+    public function getFinder(): Finder
+    {
+        return $this->finder;
     }
 
     public function share(string|array $key, mixed $value = null): void
@@ -164,5 +174,14 @@ class Factory
         $this->finder->addNamespace($namespace, $paths, $prepend);
 
         return $this;
+    }
+
+    public function __call(string $method, array $parameters)
+    {
+        if (static::hasMacro($method)) {
+            return $this->macroCall($method, $parameters);
+        }
+
+        return $this->$method(...$parameters);
     }
 }
