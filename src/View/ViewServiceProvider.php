@@ -1,12 +1,9 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\View;
 
 use Imhotep\Filesystem\Filesystem;
 use Imhotep\Framework\Providers\ServiceProvider;
-use Imhotep\View\Compilers\MoonCompiler;
 use Imhotep\View\Engines\EngineManager;
 
 class ViewServiceProvider extends ServiceProvider
@@ -21,6 +18,10 @@ class ViewServiceProvider extends ServiceProvider
             return new Finder(new Filesystem(), $this->app['config']['view.paths']);
         });
 
+        $this->app->singleton('view.engine.resolver', function () {
+            return new EngineManager($this->app);
+        });
+
         $this->app->singleton('view', function () {
             return $this->createFactory();
         });
@@ -31,7 +32,7 @@ class ViewServiceProvider extends ServiceProvider
         $factory = new Factory(
             $this->app,
             $this->app['view.finder'],
-            new EngineManager($this->app),
+            $this->app['view.engine.resolver'],
             $this->app['config']['view']
         );
 
