@@ -97,6 +97,7 @@ class HtmlDumper extends AbstractDumper
                 if(window.__imht_dump_inited)return; window.__imht_dump_inited=1;
                 document.addEventListener("DOMContentLoaded",function(){
                     document.querySelectorAll(".imht-toggle").forEach(function(btn){
+                        var uid = btn.getAttribute("data-uid");
                         var coll = document.getElementById("imht-collapsible-"+uid);
                         if (coll) coll.style.display = "none";
                       
