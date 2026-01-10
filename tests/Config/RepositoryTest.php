@@ -3,7 +3,7 @@
 namespace Imhotep\Tests\Config;
 
 use Imhotep\Config\Repository;
-use InvalidArgumentException;
+use RuntimeException;
 use PHPUnit\Framework\TestCase;
 
 class RepositoryTest extends TestCase
@@ -90,14 +90,14 @@ class RepositoryTest extends TestCase
     {
         $this->assertSame('bar', $this->repo->required('foo'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Required configuration [not-exist] is not set.');
         $this->repo->required('not-exist');
     }
 
     public function testRequiredWithCustomMessage()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Custom error message for key [not-exist].');
         $this->repo->required('not-exist', '', 'Custom error message for key [:key].');
     }
@@ -111,7 +111,7 @@ class RepositoryTest extends TestCase
     {
         $this->assertSame('bar', $this->repo->getOrFail('foo'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Required configuration [not-exist] is not set.');
         $this->repo->getOrFail('not-exist');
     }
@@ -176,7 +176,7 @@ class RepositoryTest extends TestCase
         $this->assertSame('bar', $this->repo->string('foo'));
         $this->assertNull($this->repo->string('null'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Configuration value for key [number] must be a string, integer given.');
         $this->repo->string('number');
     }
@@ -185,13 +185,13 @@ class RepositoryTest extends TestCase
     {
         $this->assertSame('bar', $this->repo->stringOrFail('foo'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->stringOrFail('null');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->stringOrFail('not-exist');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->stringOrFail('number');
     }
 
@@ -200,7 +200,7 @@ class RepositoryTest extends TestCase
         $this->assertSame(123, $this->repo->int('number'));
         $this->assertNull($this->repo->int('null'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Configuration value for key [foo] must be an integer, string given.');
         $this->repo->int('foo');
     }
@@ -209,13 +209,13 @@ class RepositoryTest extends TestCase
     {
         $this->assertSame(123, $this->repo->intOrFail('number'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->intOrFail('null');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->intOrFail('not-exist');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->intOrFail('string');
     }
 
@@ -224,7 +224,7 @@ class RepositoryTest extends TestCase
         $this->assertSame(30.12, $this->repo->float('position'));
         $this->assertNull($this->repo->float('null'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Configuration value for key [foo] must be a float, string given.');
         $this->repo->float('foo');
     }
@@ -233,13 +233,13 @@ class RepositoryTest extends TestCase
     {
         $this->assertSame(30.12, $this->repo->floatOrFail('position'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->floatOrFail('null');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->floatOrFail('not-exist');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->floatOrFail('int');
     }
 
@@ -248,7 +248,7 @@ class RepositoryTest extends TestCase
         $this->assertSame(true, $this->repo->bool('boolean'));
         $this->assertNull($this->repo->bool('null'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Configuration value for key [number] must be a bool, integer given.');
         $this->repo->bool('number');
     }
@@ -257,13 +257,13 @@ class RepositoryTest extends TestCase
     {
         $this->assertTrue($this->repo->boolOrFail('boolean'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->boolOrFail('null');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->boolOrFail('not-exist');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->boolOrFail('int');
     }
 
@@ -272,7 +272,7 @@ class RepositoryTest extends TestCase
         $this->assertSame(['aaa', 'zzz'], $this->repo->array('array'));
         $this->assertNull($this->repo->array('null'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Configuration value for key [number] must be an array, integer given.');
         $this->repo->array('number');
     }
@@ -281,13 +281,13 @@ class RepositoryTest extends TestCase
     {
         $this->assertSame(['aaa', 'zzz'], $this->repo->arrayOrFail('array'));
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->arrayOrFail('null');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->arrayOrFail('not-exist');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->repo->arrayOrFail('int');
     }
 
@@ -372,12 +372,12 @@ class RepositoryTest extends TestCase
         $this->assertSame('xxx', $subset->get('x'));
 
         // With default exception message
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Required configuration [not-exist] is not set.');
         $this->repo->subsetOrFail('not-exist');
 
         // With custom exception message
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Custom subset error for key not-exist');
         $this->repo->subsetOrFail('not-exist', 'Custom subset error for key :key');
     }
@@ -386,17 +386,17 @@ class RepositoryTest extends TestCase
     {
         $subset = $this->repo->subset('associate');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Required configuration [associate.z] is not set.');
         $subset->required('z');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Configuration value for key [associate.x] must be an integer, string given.');
         $subset->required('x', 'int');
 
         // Subset nested path
         $nestedSubset = $subset->subset('x');
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Required configuration [associate.x.nonexistent] is not set.');
         $nestedSubset->required('nonexistent');
     }
