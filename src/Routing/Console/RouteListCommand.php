@@ -13,7 +13,7 @@ class RouteListCommand extends Command
 
     public function handle(): int
     {
-        $routes = Route::getRoutes();
+        $routes = Route::getRoutes()->all();
 
         if (empty($routes)) {
             $this->components()->info('No routes found');
@@ -37,7 +37,11 @@ class RouteListCommand extends Command
                 $action = 'closure';
             }
             elseif (is_array($action)) {
-                $action = implode('@', $action);
+                if ($action['type'] === 'closure') {
+                    $action = 'closure';
+                } else {
+                    $action = implode('@', $action);
+                }
             }
             $action = str_replace('App\\Http\\Controllers\\', '', $action);
 
