@@ -25,11 +25,11 @@ trait HasGuardAttributes
             return false;
         }
 
-        if (in_array($key, $this->fillable)) {
-            return true;
+        if (! empty($this->fillable) && ! in_array($key, $this->fillable)) {
+            return false;
         }
 
-        return false;
+        return true;
     }
 
     protected function isGuarded($key): bool

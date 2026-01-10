@@ -4,9 +4,13 @@ namespace Imhotep\Database\Model;
 
 class Attribute
 {
-    public $get;
+    public mixed $get;
 
-    public $set;
+    public mixed $set;
+
+    public bool $withCaching = false;
+
+    public bool $withObjectCaching = true;
 
     public function __construct(callable $get = null, callable $set = null)
     {
@@ -27,5 +31,19 @@ class Attribute
     public static function set(callable $set): static
     {
         return new static(set: $set);
+    }
+
+    public function shouldCache(): static
+    {
+        $this->withCaching = true;
+
+        return $this;
+    }
+
+    public function withoutObjectCaching(): static
+    {
+        $this->withObjectCaching = false;
+
+        return $this;
     }
 }

@@ -4,17 +4,24 @@ namespace Imhotep\Database\Model;
 
 trait HasSoftDeletes
 {
-    protected string $deletedAt = 'deleted_at';
+    protected string $deletedAtColumn = 'deleted_at';
 
-    protected bool $softDelete = true;
+    protected bool $softDeletes = true;
 
-    public function delete(): static
+    protected bool $trashed = false;
+
+    public function getDeletedAtColumn(): string
     {
-        return $this->setAttribute($this->deletedAt, date('Y-m-d H:i:s'));
+        return $this->deletedAtColumn;
     }
 
-    public function restore(): static
+    public function usesSoftDeletes(): bool
     {
-        return $this->setAttribute($this->deletedAt, null);
+        return $this->softDeletes;
+    }
+
+    public function isTrashed(): bool
+    {
+        return $this->trashed;
     }
 }

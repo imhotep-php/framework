@@ -2,39 +2,39 @@
 
 namespace Imhotep\Database\Model;
 
+use Imhotep\Contracts\Database\IModel;
+use InvalidArgumentException;
 use stdClass;
 
-/**
- * @property string $updateAt
- * @property string $createdAt
- * @property string $deletedAt
- */
-class Model
+abstract class Model implements IModel
 {
-    use HasAttributes, HasGuardAttributes, HasTimestamps, HasSoftDeletes;
+    use HasAttributes, HasGuardAttributes, HasPrimaryKey, HasTimestamps, HasSoftDeletes;
 
     // Поля, которые можно наполнять
     protected array $fillable = [];
 
+    // Поля, которые нужно скрыть при сериализации в toArray
     protected array $hidden = [];
+
+    protected array $casts = [];
+
+    protected bool $exists = false;
 
     public function __construct(array $attributes = [])
     {
-        $this->attributes = $attributes;;
+        $this->fill($attributes);
     }
 
+    /* the function intersects with a function from the repository
     public static function create(array|stdClass $attributes): static
     {
         return new static($attributes);
     }
+    */
 
-    public static function newFrom(array|stdClass $attributes): static
+    public static function newFrom(array $attributes): static
     {
-        $model = new static();
-
-        $model->setAttributes((array)$attributes)->syncOriginals();
-
-        return $model;
+        return (new static())->setRawAttributes($attributes)->syncOriginals();
     }
 
     public function fill(array $attributes): static
@@ -44,13 +44,13 @@ class Model
         }
 
         $error = function (string|array $keys) {
-            throw new \Exception(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'Add [%s] to fillable property to allow mass assignment on [%s].',
                 implode(", ", (array)$keys), get_class($this)
             ));
         };
 
-        if($this->totallyGuarded()){
+        if ($this->totallyGuarded()) {
             $error(
                 (count($this->fillable) === 0)
                     ? array_keys($attributes)
@@ -59,7 +59,7 @@ class Model
         }
 
         foreach ($attributes as $key => $val) {
-            if(! $this->isFillable($key)){
+            if (! $this->isFillable($key)) {
                 $error($key);
             }
 
@@ -67,6 +67,39 @@ class Model
         }
 
         return $this;
+    }
+
+    public function forceFill(array $attributes): static
+    {
+        // unguard
+        $this->fill($attributes);
+        // guarded
+
+        return $this;
+    }
+
+
+
+
+    public function toArray(): array
+    {
+        $attributes = $this->getAttributes();
+
+        foreach ($this->hidden as $key) {
+            unset($attributes[$key]);
+        }
+
+        return $attributes;
+    }
+
+    public function toJson(int $options = 0): string
+    {
+        return json_encode($this->toArray(), $options);
+    }
+
+    public function __toString(): string
+    {
+        return $this->toJson();
     }
 
     public function __get(string $name): mixed
