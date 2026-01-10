@@ -3,13 +3,17 @@
 namespace Imhotep\Database\Query;
 
 use Closure;
+use Imhotep\Contracts\Database\IModel;
 use Imhotep\Contracts\Database\QueryBuilder as QueryBuilderContract;
 use Imhotep\Database\Connection;
 use Imhotep\Database\Expression;
+use Imhotep\Database\Model\Model;
 use Imhotep\Database\Query\Traits\PrepareWhereExpression;
 use Imhotep\Database\Query\Grammar;
+use Imhotep\Database\Utils\MorphHelper;
 use Imhotep\Support\Arr;
 use InvalidArgumentException;
+use stdClass;
 
 class Builder implements QueryBuilderContract
 {
@@ -55,6 +59,8 @@ class Builder implements QueryBuilderContract
     public ?int $limit = null;
 
     public ?int $offset = null;
+
+    public ?string $modelClass = null;
 
     protected bool $withDump = false;
 
@@ -444,7 +450,6 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-
     public function whereNull(string|array $columns, string $boolean = 'and', bool $not = false): static
     {
         $type = $not ? 'NotNull' : 'Null';
@@ -490,6 +495,35 @@ class Builder implements QueryBuilderContract
         return $this->whereIn($column, $values, $boolean, true);
     }
 
+    public function whereMorph(string $column, mixed $value, string $boolean = 'and'): static
+    {
+        $morph = MorphHelper::extract($value);
+
+        return $this->whereNested(function (Builder $query) use ($column, $morph) {
+            $query->where($column."_type", $morph->type);
+            $query->where($column."_id", $morph->id);
+        }, $boolean);
+    }
+
+    protected function getMorphType(mixed $recipient): string
+    {
+        if (is_object($recipient)) {
+            return get_class($recipient);
+        }
+
+        return '';
+    }
+
+    protected function getMorphId(mixed $recipient): string
+    {
+        if (is_object($recipient) && method_exists($recipient, 'getKey')) {
+            return (string)$recipient->getKey();
+        }
+
+        return (string)$recipient;
+    }
+
+
     public function groupBy(): static
     {
         $args = func_get_args();
@@ -520,6 +554,7 @@ class Builder implements QueryBuilderContract
     {
         return $this->orderBy($column, 'desc');
     }
+
 
     public function offset(?int $offset): static
     {
@@ -588,10 +623,18 @@ class Builder implements QueryBuilderContract
     {
         $sql = $this->grammar->compileSelect($this);
 
-        return $this->connection->select($sql, $this->bindings['where']);
+        $result = $this->connection->select($sql, $this->bindings['where']);
+
+        if ($this->modelClass) {
+            return array_map(function($item) {
+                return $this->modelClass::newFrom((array)$item);
+            }, $result);
+        }
+
+        return $result;
     }
 
-    public function first(): null|array|\stdClass
+    public function first(): null|array|stdClass|IModel
     {
         return $this->take(1)->get()[0] ?? null;
     }
@@ -629,7 +672,7 @@ class Builder implements QueryBuilderContract
         );
     }
 
-    public function find($id, $columns = ['*'])
+    public function find(int|string $id, array $columns = ['*']): ?object
     {
         return $this->where('id', '=', $id)->first();
     }
@@ -682,5 +725,18 @@ class Builder implements QueryBuilderContract
     public function getLock(): mixed
     {
         return $this->lock;
+    }
+
+    public function setModel(string $model): static
+    {
+        if (! (class_exists($model) && is_subclass_of($model, Model::class)) ) {
+            throw new InvalidArgumentException(
+                'Model ['.$model.'] must be extend '.Model::class
+            );
+        }
+
+        $this->modelClass = $model;
+
+        return $this;
     }
 }
