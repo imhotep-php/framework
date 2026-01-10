@@ -47,7 +47,7 @@ class StringTest extends TestCase
 
     public function testInvalidValue()
     {
-        $values = [true, ['bar'], 124];
+        $values = [true, ['bar'], new \stdClass()];
 
         foreach ($values as $value) {
             $validation = $this->validator->make(['foo' => $value], ['foo' => 'required|string']);
