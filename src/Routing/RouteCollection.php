@@ -13,6 +13,22 @@ class RouteCollection implements RouteCollectionContract
      */
     protected array $routes = [];
 
+    public function all(): array
+    {
+        return $this->routes;
+    }
+
+    public function has(string $name): bool
+    {
+        foreach ($this->routes as $route) {
+            if ($route->named($name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function add(Route $route): static
     {
         $this->routes[] = $route;
@@ -60,16 +76,5 @@ class RouteCollection implements RouteCollectionContract
     public function getRoutes(): array
     {
         return $this->routes;
-    }
-
-    public function has(string $name): bool
-    {
-        foreach ($this->routes as $route) {
-            if ($route->named($name)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

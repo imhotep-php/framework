@@ -6,6 +6,10 @@ use Imhotep\Contracts\Http\Request;
 
 interface RouteCollection
 {
+    public function all(): array;
+
+    public function has(string $name): bool;
+
     public function add(Route $route): static;
 
     public function match(Request $request): ?Route;
@@ -15,6 +19,4 @@ interface RouteCollection
     public function getByAction(string|array $action): ?Route;
 
     public function getRoutes(): array;
-
-    public function has(string $name): bool;
 }
