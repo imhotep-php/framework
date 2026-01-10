@@ -2,7 +2,7 @@
 
 namespace Imhotep\Validation\Rules;
 
-class RequiredRuleUnlessRule extends RequiredRule
+class RequiredUnlessRule extends RequiredRule
 {
     public function setParameters(array $parameters): static
     {
