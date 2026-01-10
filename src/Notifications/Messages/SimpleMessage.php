@@ -1,15 +1,14 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications\Messages;
 
-use Imhotep\Contracts\Notifications\Message;
+use Imhotep\Contracts\Notifications\INotificationMessage;
 
-class SimpleMessage implements Message
+class SimpleMessage implements INotificationMessage
 {
     public function __construct(
-        protected array $data
-    )
-    {}
+        public array $data = []
+    ) {}
 
     public function data(array $data): static
     {
@@ -20,6 +19,6 @@ class SimpleMessage implements Message
 
     public function toArray(): array
     {
-        return [];
+        return $this->data;
     }
 }

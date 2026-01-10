@@ -1,15 +1,15 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications;
 
-use Imhotep\Contracts\Notifications\Notification;
+use Imhotep\Contracts\Notifications\INotification as INotification;
 use Imhotep\Contracts\Queue\ShouldQueue;
 
 class QueuedNotification implements ShouldQueue
 {
-    public array $recipients;
+    public mixed $recipient;
 
-    public Notification $notification;
+    public INotification $notification;
 
     public ?array $channels;
 
@@ -17,15 +17,15 @@ class QueuedNotification implements ShouldQueue
 
     public ?int $timeout;
 
-    public function __construct(array $recipients, Notification $notification, array $channels = null)
+    public function __construct(mixed $recipient, INotification $notification, array $channels = null)
     {
         $this->channels = $channels;
-        $this->recipients = $recipients;
+        $this->recipient = $recipient;
         $this->notification = $notification;
     }
 
-    public function handle(ChannelManager $manager)
+    public function handle(ChannelManager $manager): void
     {
-        $manager->sendNow($this->recipients, $this->notification, $this->channels);
+        $manager->sendNow($this->recipient, $this->notification, $this->channels);
     }
 }

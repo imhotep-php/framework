@@ -1,38 +1,38 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications;
 
-use Imhotep\Contracts\Notifications\Notification as NotificationContract;
-use Imhotep\Contracts\Queue\ShouldQueue;
+use Imhotep\Container\Container;
+use Imhotep\Contracts\Events\Dispatcher;
+use Imhotep\Contracts\Localization\HasLocalePreference;
+use Imhotep\Contracts\Notifications\INotification;
+use Imhotep\Notifications\Events\NotificationFailed;
+use Imhotep\Notifications\Events\NotificationSending;
+use Imhotep\Notifications\Events\NotificationSent;
+use Imhotep\Notifications\Events\NotificationSkipped;
 use Imhotep\Queue\QueueManager;
 use Imhotep\Support\Str;
+use Throwable;
 
 class NotificationSender
 {
-    //protected string $defaultChannel = 'mail';
-
-    //protected ?string $locale = null;
-
-    //protected $manager;
-
-    //protected $events;
-
     public function __construct(
-        protected $manager,
-        protected QueueManager $queue
+        protected ChannelManager $manager,
+        protected ?Dispatcher $events = null,
+        protected ?QueueManager $queue = null,
+        protected ?string $locale = null,
     ) {}
 
-    public function send($recipients, NotificationContract $notification): void
+    public function send(mixed $recipients, INotification $notification): void
     {
-        if ($notification instanceof ShouldQueue) {
+        if ($notification->shouldBeQueued()) {
             $this->sendQueue($recipients, $notification);
-            return;
+        } else {
+            $this->sendNow($recipients, $notification);
         }
-
-        $this->sendNow($recipients, $notification);
     }
 
-    public function sendNow($recipients, NotificationContract $notification, array $channels = null): void
+    public function sendNow(mixed $recipients, INotification $notification, array $channels = null): void
     {
         $recipients = $this->formatRecipients($recipients);
 
@@ -41,44 +41,107 @@ class NotificationSender
                 continue;
             }
 
-            foreach ($viaChannels as $channel) {
-                $this->sendToRecipient($recipient, $notification, $channel);
-            }
+            $cloneNotification = clone $notification;
+            $cloneNotification->id ??= Str::uuid();
+
+            $locale = $this->preferredLocale($recipient, $notification);
+
+            $this->withLocale($locale, function() use ($recipient, $cloneNotification, $viaChannels) {
+                foreach ($viaChannels as $channel) {
+                    if ($channel === 'database' && $recipient instanceof AnonymousRecipient) {
+                        continue;
+                    }
+
+                    $this->sendToRecipient($recipient, clone $cloneNotification, $channel);
+                }
+            });
         }
     }
 
-    protected function sendToRecipient($recipient, NotificationContract $notification, $channel): void
+    protected function sendToRecipient(mixed $recipient, INotification $notification, string $channel): void
     {
-        if (empty($notification->id)) {
-            $notification->id = Str::uuid();
-        }
+        if (! $this->shouldSendNotification($recipient, $notification, $channel)) {
+            $this->events?->dispatch(new NotificationSkipped($recipient, $notification, $channel));
 
-        if (! $notification->shouldSend($recipient, $channel)) {
             return;
         }
 
-        $this->manager->driver($channel)->send($recipient, $notification);
+        try {
+            $response = $this->manager->channel($channel)->send($recipient, $notification);
+        }
+        catch (Throwable $e) {
+            $this->events?->dispatch(new NotificationFailed($recipient, $notification, $channel, $e));
+
+            throw $e;
+        }
+
+        $this->events?->dispatch(new NotificationSent($recipient, $notification, $channel, $response));
     }
 
-    protected function sendQueue($recipients, NotificationContract $notification): void
+    protected function shouldSendNotification(mixed $recipient, INotification $notification, string $channel): bool
+    {
+        if (! $notification->shouldSend($recipient, $channel)) {
+            return false;
+        }
+
+        return $this->events?->until(
+            new NotificationSending($recipient, $notification, $channel)
+        ) !== false;
+    }
+
+    protected function sendQueue(mixed $recipients, INotification $notification): void
     {
         $recipients = $this->formatRecipients($recipients);
 
         foreach ($recipients as $recipient) {
+            $cloneNotification = clone $notification;
+            $cloneNotification->id ??= Str::uuid();
+
             foreach ($notification->via($recipient) as $channel) {
-                $this->queue->dispatch(new QueuedNotification($recipients, $notification, [$channel]));
+                $this->queue?->dispatch(new QueuedNotification($recipient, clone $cloneNotification, [$channel]));
             }
         }
-
-
     }
 
-    protected function formatRecipients($recipients): array
+    protected function preferredLocale(mixed $recipient, INotification $notification): ?string
     {
-        if (! is_array($recipients)) {
-            return [$recipients];
+        if ($notification->locale) {
+            return $notification->locale;
         }
 
-        return $recipients;
+        if ($this->locale) {
+            return $this->locale;
+        }
+
+        if ($recipient instanceof HasLocalePreference) {
+            return $recipient->preferredLocale();
+        }
+
+        return null;
+    }
+
+    protected function withLocale(?string $locale, callable $callback): mixed
+    {
+        if (is_null($locale)) {
+            return $callback();
+        }
+
+        $app = Container::getInstance();
+
+        $original = $app->locale();
+
+        try {
+            $app->setLocale($locale);
+
+            return $callback();
+        }
+        finally {
+            $app->setLocale($original);
+        }
+    }
+
+    protected function formatRecipients(mixed $recipients): array
+    {
+        return array_filter(is_array($recipients) ? $recipients : [$recipients]);
     }
 }

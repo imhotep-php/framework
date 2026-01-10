@@ -1,80 +1,123 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Notifications;
 
-use Imhotep\Container\Container;
-use Imhotep\Contracts\Notifications\Notification as NotificationContract;
-use Imhotep\Notifications\Drivers\AbstractDriver;
-use Imhotep\Notifications\Drivers\SMTPDriver;
+use Closure;
+use Imhotep\Contracts\Config\IConfigRepository;
+use Imhotep\Contracts\DriverManager;
+use Imhotep\Contracts\Notifications\INotificationDispatcher;
+use Imhotep\Contracts\Notifications\INotificationDriver;
+use Imhotep\Contracts\Notifications\INotification;
+use Imhotep\Notifications\Drivers\DatabaseDriver;
+use Imhotep\Notifications\Drivers\FcmDriver;
+use Imhotep\Notifications\Drivers\MailDriver;
+use Imhotep\Notifications\Drivers\SmsDriver;
 use Imhotep\Notifications\Drivers\TelegramDriver;
 
-class ChannelManager
+class ChannelManager extends DriverManager implements INotificationDispatcher
 {
-    protected array $channels = [];
+    protected ?string $locale = null;
 
-    public function __construct(protected Container $app) {}
-
-    public function send($recipients, NotificationContract $notification): void
+    public function locale(string $locale): static
     {
-        (new NotificationSender($this, $this->app['queue']))->send($recipients, $notification);
+        $this->locale = $locale;
+
+        return $this;
     }
 
-    public function sendNow($recipients, NotificationContract $notification, array $channels = null): void
+    public function send(mixed $recipients, INotification $notification): void
     {
-        (new NotificationSender($this, $this->app['queue']))->send($recipients, $notification, $channels);
+        (new NotificationSender($this, $this->container['events'], $this->container['queue'], $this->locale))
+            ->send($recipients, $notification);
     }
 
-    public function channel(string $name = null)
+    public function sendNow(mixed $recipients, INotification $notification, array $channels = null): void
     {
-        if (is_null($name)) {
-            $name = $this->getDefaultChannel();
-        }
-
-        if (isset($this->channels[$name])) {
-            return $this->channels[$name];
-        }
-
-        $config = $this->getChannelConfig($name);
-
-        $createMethod = "create".ucfirst($config['driver'])."Driver";
-
-        if (method_exists($this, $createMethod)) {
-            return $this->channels[$name] = $this->{$createMethod}($config);
-        }
-
-        throw new \Exception("Notification driver [{$config['driver']}] is not configured.");
+        (new NotificationSender($this, $this->container['events'], $this->container['queue'], $this->locale))
+            ->sendNow($recipients, $notification, $channels);
     }
 
-    public function driver(string $name = null)
+    public function route(string $driver, mixed $route): AnonymousRecipient
     {
-        return $this->channel($name);
+        return (new AnonymousRecipient($this))->route($driver, $route);
+    }
+
+    public function routes(array $routes): AnonymousRecipient
+    {
+        $recipient = new AnonymousRecipient($this);
+
+        foreach ($routes as $driver => $route) {
+            $recipient->route($driver, $route);
+        }
+
+        return $recipient;
+    }
+
+    public function channel(?string $name = null): INotificationDriver
+    {
+        return $this->driver($name);
+    }
+
+    public function driver(?string $driver = null, array|Closure $parameters = []): INotificationDriver
+    {
+        if (is_null($driver)) {
+            $driver = $this->config->getOrFail('notifications.default');
+        }
+
+        $channelDriver = $this->config->stringOrFail(
+            "notifications.channels.$driver.driver",
+            'Notifications channel driver [:key] not configured.'
+        );
+
+        $channelConfig = $this->config->subset("notifications.channels.$driver");
+
+        return parent::driver($channelDriver, [$channelConfig]);
+    }
+
+    protected function createDatabaseDriver(IConfigRepository $config): INotificationDriver
+    {
+        return new DatabaseDriver($config, $this->container['db']);
+    }
+
+    protected function createMailDriver(IConfigRepository $config): INotificationDriver
+    {
+        return new MailDriver($config);
+    }
+
+    protected function createTelegramDriver(IConfigRepository $config): INotificationDriver
+    {
+        return new TelegramDriver($config);
+    }
+
+    protected function createSmsDriver(IConfigRepository $config): INotificationDriver
+    {
+        return new SmsDriver($config);
+    }
+
+    protected function createFcmDriver(IConfigRepository $config): INotificationDriver
+    {
+        return new FcmDriver($config);
     }
 
     public function getDefaultChannel(): string
     {
-        if ($default = $this->app['config']->get('notification.default')) {
-            return $default;
-        }
-
-        throw new \Exception('Default channel is not configured.');
+        return $this->getDefaultDriver();
     }
 
-    public function getChannelConfig(string $name): array
+    public function setDefaultChannel(string $channel): static
     {
-        if ($config = $this->app['config']->get("notification.channels.{$name}")) {
-            return $config;
-        }
-
-        throw new \Exception("Notification channel [{$name}] is not configured.");
+        return $this->setDefaultDriver($channel);
     }
 
-    protected function createSmtpDriver($config): AbstractDriver
+    public function getDefaultDriver(): string
     {
-        return new SMTPDriver($config);
+        return $this->config->stringOrFail('notifications.default');
     }
 
-    protected function createTelegramDriver(array $config): AbstractDriver
+    public function setDefaultDriver(string $driver): static
     {
-        return new TelegramDriver($config);
+        $this->config['notifications.default'] = $driver;
+
+        return $this;
     }
 }

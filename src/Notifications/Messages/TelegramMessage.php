@@ -1,10 +1,10 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications\Messages;
 
-use Imhotep\Contracts\Notifications\Message;
+use Imhotep\Contracts\Notifications\INotificationMessage;
 
-class TelegramMessage implements Message
+class TelegramMessage implements INotificationMessage
 {
     //protected string $chatId = '';
 

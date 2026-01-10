@@ -1,11 +1,13 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications\Drivers;
 
-use Imhotep\Contracts\Notifications\Notification;
-use Imhotep\Contracts\Notifications\NotificationException;
+use Imhotep\Contracts\Config\IConfigRepository;
+use Imhotep\Contracts\Notifications\INotificationDriver;
+use Imhotep\Contracts\Notifications\INotification;
+use RuntimeException;
 
-class TelegramDriver extends AbstractDriver
+class TelegramDriver implements INotificationDriver
 {
     protected string $token = '';
 
@@ -13,35 +15,44 @@ class TelegramDriver extends AbstractDriver
 
     protected bool $disableWebPagePreview = true;
 
-    public function __construct(array $config)
+    public function __construct(IConfigRepository $config)
     {
-        if (empty($config['token'])) {
-            throw new NotificationException("Property [token] is not configured for driver [telegram]");
-        }
-
-        $this->token = $config['token'];
-        $this->parseMode = $config['parse_mode'] ?? 'MarkdownV2';
-        $this->disableWebPagePreview = (bool)$config['disable_web_page_preview'] ?? true;
+        $this->token = $config->stringOrFail('token');
+        $this->parseMode = $config->string('parse_mode', 'MarkdownV2');
+        $this->disableWebPagePreview = $config->bool('disable_web_page_preview', true);
     }
 
-    public function send($recipient, Notification $notification): bool
+    public function send(mixed $recipient, INotification $notification): bool
     {
         if (! method_exists($notification, 'toTelegram')) {
-            throw new NotificationException("Method [toTelegram] not exists");
+            throw new RuntimeException("Method [toTelegram] not exists");
         }
 
-        $message = $notification->toTelegram();
+        $recipientChatId = null;
 
-        if ($message->parseMode() === null) {
+        if (is_string($recipient)) {
+            $recipientChatId = $recipient;
+        }
+        elseif (method_exists($recipient, 'routeNotificationFor')) {
+            $recipientChatId = $recipient->routeNotificationFor('telegram', $notification);
+        }
+
+        if (is_null($recipientChatId)) {
+            return false;
+        }
+
+        $message = $notification->toTelegram($recipient);
+
+        if (is_null($message->parseMode())) {
             $message->parseMode($this->parseMode);
         }
 
-        if ($message->disableWebPagePreview() === null) {
-            $message->parseMode($this->disableWebPagePreview);
+        if (is_null($message->disableWebPagePreview())) {
+            $message->disableWebPagePreview($this->disableWebPagePreview);
         }
 
         $params = [
-            'chat_id' => $recipient,
+            'chat_id' => $recipientChatId,
             'text' => $message->text(),
             'parse_mode' => $message->parseMode(),
             'disable_web_page_preview' => $message->disableWebPagePreview()

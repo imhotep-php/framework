@@ -1,12 +1,14 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications\Drivers;
 
-use Imhotep\Contracts\Notifications\Notification;
-use Imhotep\Contracts\Notifications\NotificationException;
+use Imhotep\Contracts\Config\IConfigRepository;
+use Imhotep\Contracts\Notifications\INotificationDriver;
+use Imhotep\Contracts\Notifications\INotification;
 use Imhotep\Notifications\Messages\MailMessage;
+use RuntimeException;
 
-class SMTPDriver extends AbstractDriver
+class MailDriver implements INotificationDriver
 {
     protected mixed $socket = null;
 
@@ -14,116 +16,119 @@ class SMTPDriver extends AbstractDriver
 
     protected string $server;
 
-    protected string $port;
-
-    //protected string $domain;
+    protected int $port;
 
     protected string $login;
 
     protected string $password;
 
-    protected int $timeout = 5;
+    protected int $timeout;
 
     protected object $from;
 
     protected ?string $error = null;
 
-    protected Notification $notification;
+    protected INotification $notification;
 
     protected MailMessage $message;
 
-    protected array|string $recipient;
+    protected mixed $recipient;
 
-    public function __construct(array $config)
+    public function __construct(IConfigRepository $config)
     {
-        if (empty($config['server'])) {
-            throw new NotificationException("Property [server] is not configured for driver [smtp]");
-        }
-
-        if (empty($config['port'])) {
-            throw new NotificationException("Property [port] is not configured for driver [smtp]");
-        }
-
-        if (empty($config['login'])) {
-            throw new NotificationException("Property [login] is not configured for driver [smtp]");
-        }
-
-        if (empty($config['password'])) {
-            throw new NotificationException("Property [password] is not configured for driver [smtp]");
-        }
-
-        if (isset($config['timeout'])) {
-            $this->timeout = (int)$config['timeout'];
-        }
-
-        $this->server = $config['server'];
-        //$this->domain = $config['domain'];
-        $this->port = (int)$config['port'];
-        $this->login = $config['login'];
-        $this->password = $config['password'];
-
-        if (isset($config['from'])) {
-            $this->from = (object)$config['from'];
-        }
+        $this->server   = $config->stringOrFail('server');
+        $this->port     = $config->intOrFail('port');
+        $this->login    = $config->stringOrFail('login');
+        $this->password = $config->stringOrFail('password');
+        $this->timeout  = $config->int('timeout', 5);
+        $this->from     = (object)$config->arrayOrFail('from');
     }
 
-    public function send($recipient, Notification $notification): bool
+    public function send(mixed $recipient, INotification $notification): bool
     {
         if (! method_exists($notification, 'toMail')) {
-            throw new NotificationException("Method [toMail] not exists");
+            throw new RuntimeException("Method [toMail] not exists");
+        }
+
+        $recipientTo = null;
+
+        if (is_string($recipient)) {
+            $recipientTo = $recipient;
+        }
+        elseif (method_exists($recipient, 'routeNotificationFor')) {
+            $recipientTo = $recipient->routeNotificationFor('mail', $notification);
+        }
+
+        if (is_null($recipientTo)) {
+            return false;
         }
 
         $this->notification = $notification;
-        $this->message = $notification->toMail();
+        $this->message = $notification->toMail($recipient);
         $this->recipient = $recipient;
 
         if (! $this->_connect()) {
             return $this->_error("Fail connect to socket");
         }
 
-        if ($this->_code() != 220) {
+        if ($this->_code() !== 220) {
             return $this->_error("CONNECT: ".$this->_data());
         }
 
         $data = "EHLO {$this->server}";
-        if ($this->_send($data) != 250) {
+        if ($this->_send($data) !== 250) {
             return $this->_error("EHLO: ".$this->_data());
         }
 
-        if($this->login != '' && $this->password != ''){
+        if (str_contains($this->_data(), 'STARTTLS')) {
+            if ($this->_send("STARTTLS") !== 220) {
+                return $this->_error("STARTTLS: ".$this->_data());
+            }
+
+            if (! stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                return $this->_error("Failed to enable TLS encryption");
+            }
+
+            $data = "EHLO {$this->server}";
+            if ($this->_send($data) !== 250) {
+                return $this->_error("EHLO after TLS: ".$this->_data());
+            }
+        }
+
+        if($this->login !== '' && $this->password !== ''){
             $data = "AUTH LOGIN";
-            if ($this->_send($data) != 334) {
-                return $this->_error("AUTH LOGIN: ".$this->_data());
+            if ($this->_send($data) !== 334) {
+                return $this->_error("AUTH LOGIN: " . $this->_data());
             }
 
             $data = base64_encode($this->login);
-            if ($this->_send($data) != 334) {
-                return $this->_error("AUTH LOGIN: ".$this->_data());
+            if ($this->_send($data) !== 334) {
+                return $this->_error("AUTH LOGIN: " . $this->_data());
             }
 
             $data = base64_encode($this->password);
-            if ($this->_send($data) != 235) {
-                return $this->_error("AUTH LOGIN: ".$this->_data());
+            if ($this->_send($data) !== 235) {
+                return $this->_error("AUTH LOGIN: " . $this->_data());
             }
         }
 
         $data = "MAIL FROM:<".$this->from->mail.">";
-        if ($this->_send($data) != 250) {
+        if ($this->_send($data) !== 250) {
             return $this->_error("MAIL FROM: ".$this->_data());
         }
 
-        $data = "RCPT TO:<".$recipient.">";
+        $data = "RCPT TO:<".$recipientTo.">";
         if (! in_array($this->_send($data), [250, 251])) {
             return $this->_error("RCPT TO: ".$this->_data());
         }
 
         $data = "DATA";
-        if ($this->_send($data) != 354) {
+        if ($this->_send($data) !== 354) {
             return $this->_error("DATA: " . $this->_data());
         }
 
-        $data = sprintf("%s\r\n%s\r\n.", $this->getHeaders(), $this->message->toHtml());
-        if ($this->_send($data) != 250) {
+        $data = sprintf("%s\r\n%s\r\n.", $this->getHeaders($recipientTo), $this->message->toHtml());
+        if ($this->_send($data) !== 250) {
             return $this->_error("DATA: ".$this->_data());
         }
 
@@ -136,11 +141,25 @@ class SMTPDriver extends AbstractDriver
 
     protected function _connect(): bool
     {
-        $this->socket = fsockopen($this->server, $this->port, $errno, $errstr, $this->timeout);
+        $hostname = $this->server;
+
+        if ($this->port === 465) {
+            $hostname = 'ssl://'.$hostname;
+        }
+
+        $this->socket = fsockopen(
+            $hostname, $this->port,
+            $errno, $errstr,
+            $this->timeout
+        );
+
+        if (!$this->socket) {
+            throw new RuntimeException("Failed to connect to SMTP server: {$errstr} ({$errno})");
+        }
 
         stream_set_timeout($this->socket, $this->timeout);
 
-        return (bool)$this->socket;
+        return true;
     }
 
     protected function _send(string $data, string $end = "\r\n"): int
@@ -152,7 +171,7 @@ class SMTPDriver extends AbstractDriver
         return $this->_code();
     }
 
-    protected function _close()
+    protected function _close(): void
     {
         fclose($this->socket);
     }
@@ -187,10 +206,11 @@ class SMTPDriver extends AbstractDriver
         return false;
     }
 
-    protected function getHeaders(): string
+    protected function getHeaders(string $recipientTo): string
     {
-        list($user, $domain) = explode('@', $this->from->mail);
-        $messageId = $this->notification->id.'@'.$domain;
+        $exploded = explode('@', $this->from->mail);
+
+        $messageId = $this->notification->id.'@'.$exploded[1];
 
         $headers = [];
         $headers['From'] = $this->formatAddress($this->from->mail, $this->from->name);
@@ -199,7 +219,7 @@ class SMTPDriver extends AbstractDriver
             $headers['Reply-To'] = $this->formatAddresses($this->message->replyTo);
         }
 
-        $headers['To'] = $this->formatAddress($this->recipient);
+        $headers['To'] = $recipientTo;
 
         if (! empty($this->message->cc)) {
             $headers['Cc'] = $this->formatAddresses($this->message->cc);
@@ -213,8 +233,8 @@ class SMTPDriver extends AbstractDriver
         $headers['Date'] = date("D, j M Y G:i:s")." +0000";
         $headers['Message-ID'] = $this->formatAddress($messageId);
 
-        $headers['X-Mailer'] = "Imhotep Mailer";
-        if ( !is_null($this->message->priority) ) {
+        $headers['X-Mailer'] = "Imhotep Notification";
+        if ($this->message->priority >= 1 && $this->message->priority <= 5) {
             $headers['X-Priority'] = $this->message->priority;
         }
 
@@ -253,7 +273,7 @@ class SMTPDriver extends AbstractDriver
         $result = "<{$address}>";
 
         if (! empty($name)) {
-            $result = $this->encodeHeader($name, '') . ' ' . $result;
+            $result = $this->encodeHeader($name) . ' ' . $result;
         }
 
         return $result;
@@ -267,19 +287,5 @@ class SMTPDriver extends AbstractDriver
     protected function encodeHeader(string $string): string
     {
         return mb_encode_mimeheader($string, 'utf-8');
-
-
-        $encoding = 'utf-8';
-        $result = '';
-
-        while($length = mb_strlen($string, $encoding)) {
-            $result .= "=?{$encoding}?B?"
-                . base64_encode(mb_substr($string, 0, 24, $encoding))
-                . "?=\r\n";
-
-            $string = mb_substr($string,24, $length,  $encoding);
-        }
-
-        return $result;
     }
 }

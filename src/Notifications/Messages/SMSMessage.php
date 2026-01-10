@@ -1,18 +1,15 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications\Messages;
 
-use Imhotep\Contracts\Notifications\Message;
+use Imhotep\Contracts\Notifications\INotificationMessage;
 
-class SMSMessage implements Message
+class SmsMessage implements INotificationMessage
 {
-    protected string $from = '';
-
-    protected string $to = '';
-
-    protected string $content = '';
-
-    protected bool $isUnicode = false;
+    public function __construct(
+        public string $text,
+        public ?string $from = null
+    ) {}
 
     public function from(string $from): static
     {
@@ -21,33 +18,15 @@ class SMSMessage implements Message
         return $this;
     }
 
-    public function to(string $to): static
+    public function text(string $text): static
     {
-        $this->to = $to;
-
-        return $this;
-    }
-
-    public function content(string $content): static
-    {
-        $this->content = $content;
-
-        return $this;
-    }
-
-    public function unicode(): static
-    {
-        $this->isUnicode = true;
+        $this->text = $text;
 
         return $this;
     }
 
     public function toArray(): array
     {
-        return [
-            'from' => $this->from,
-            'to' => $this->to,
-            'content' => $this->content
-        ];
+        return [];
     }
 }

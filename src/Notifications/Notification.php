@@ -1,16 +1,22 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications;
 
-use Imhotep\Contracts\Notifications\Notification as NotificationContract;
-use Imhotep\Notifications\Messages\MailMessage;
+use Imhotep\Contracts\Notifications\INotification;
+use Imhotep\Contracts\Queue\ShouldQueue;
 
-class Notification implements NotificationContract
+abstract class Notification implements INotification
 {
-    public string $id;
+    public ?string $id = null;
 
-    public string $locale;
+    public ?string $locale = null;
 
+    /**
+     * Устанавливаем язык уведомления
+     *
+     * @param string|null $locale
+     * @return $this
+     */
     public function locale(string $locale = null): static
     {
         $this->locale = $locale;
@@ -18,28 +24,48 @@ class Notification implements NotificationContract
         return $this;
     }
 
-    public function via($recipient): array
+    /**
+     * Получаем каналы отправки для указанного получателя
+     *
+     * @param string $recipient
+     * @return array
+     *
+     * @noinspection PhpUnusedParameterInspection
+     */
+    public function via(string $recipient): array
     {
         return [];
     }
 
-    public function shouldSend($recipient, string $channel): bool
+    /**
+     * Можно ли отправить данное уведомление получателю по указанному каналу
+     *
+     * @param mixed $recipient
+     * @param string $channel
+     * @return bool
+     *
+     * @noinspection PhpUnusedParameterInspection
+     */
+    public function shouldSend(mixed $recipient, string $channel): bool
     {
         return true;
     }
 
-    public function toArray($recipient): array
+    /**
+     * Данные уведомления
+     *
+     * @param string $recipient
+     * @return array
+     *
+     * @noinspection PhpUnusedParameterInspection
+     */
+    public function toArray(mixed $recipient): array
     {
         return [];
     }
 
-    /*
-    public function toMail()
+    public function shouldBeQueued(): bool
     {
-        return (new MailMessage())
-            ->line('')
-            ->action('', '')
-            ->line('');
+        return $this instanceof ShouldQueue;
     }
-    */
 }

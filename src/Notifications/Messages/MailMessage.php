@@ -1,21 +1,24 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Imhotep\Notifications\Messages;
 
-use Imhotep\Contracts\Notifications\Message;
+use Imhotep\Contracts\Notifications\INotificationMessage;
 
-class MailMessage implements Message
+class MailMessage implements INotificationMessage
 {
+    protected array $headers = [];
+
     protected string $view;
 
     protected array $viewData;
 
     protected ?string $subject = null;
 
+    protected ?string $greeting = null;
+
     protected array $lines = [];
 
     protected ?array $action = null;
-
 
     /**
      * Уникальный идентификатор уведомления
@@ -26,10 +29,11 @@ class MailMessage implements Message
 
     /**
      * Уровень приоритета сообщения
+     * 0 - приоритет не задан
      *
      * @var int
      */
-    public ?int $priority = null;
+    public int $priority = 0;
 
     /**
      * Список адресов для обратного ответа на сообщения
@@ -52,9 +56,15 @@ class MailMessage implements Message
      */
     public array $bcc = [];
 
+    public function addHeader(string $name, string $value): static
+    {
+        $this->headers[$name] = $value;
+
+        return $this;
+    }
 
     /**
-     * Устанавливает уровень приоритет сообщения. Значение от 1 (очень важное) до 5 (неважно)
+     * Устанавливает уровень приоритета сообщения. Значение от 1 (очень важное) до 5 (неважно)
      *
      * @param int $priority
      * @return static
@@ -151,15 +161,13 @@ class MailMessage implements Message
 
     public function getHeaders(): object
     {
-        return (object)[
+        return (object)array_merge([
             'priority' => $this->priority,
             'reply-to' => $this->replyTo,
             'cc' => $this->cc,
             'bcc' => $this->bcc,
-        ];
+        ], $this->headers);
     }
-
-
 
     public function view(string $view, array $data = []): static
     {
@@ -169,7 +177,6 @@ class MailMessage implements Message
 
         return $this;
     }
-
 
 
     public function subject(string $subject = null): static|string
@@ -188,6 +195,13 @@ class MailMessage implements Message
         return $this->subject ?? '';
     }
 
+    public function greeting(string $greeting): static
+    {
+        $this->greeting = $greeting;
+
+        return $this;
+    }
+
     public function line(string|array $line): static
     {
         $this->lines = array_merge($this->lines, (array)$line);
@@ -204,9 +218,11 @@ class MailMessage implements Message
         return $this;
     }
 
-    public function newLine(): static
+    public function newLine(int $lines = 1): static
     {
-        $this->lines[] = "&nbsp;";
+        for ($i = 1; $i <= $lines; $i++) {
+            $this->lines[] = "&nbsp;";
+        }
 
         return $this;
     }
@@ -216,6 +232,30 @@ class MailMessage implements Message
         $this->action = [$text, $url];
 
         return $this;
+    }
+
+    public function actionIf(bool $boolean, string $text, string $url): static
+    {
+        if ($boolean) {
+            return $this->action($text, $url);
+        }
+
+        return $this;
+    }
+
+    public function attach(string $filename, array $mime = []): static
+    {
+        return $this;
+    }
+
+    public function attachData(string $data, array $mime = []): static
+    {
+        return $this;
+    }
+
+    public function render(): string
+    {
+        return '';
     }
 
     public function toHtml(): string

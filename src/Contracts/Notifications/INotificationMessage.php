@@ -1,8 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Contracts\Notifications;
 
-interface Message
+interface INotificationMessage
 {
     public function toArray(): array;
 }
