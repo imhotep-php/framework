@@ -39,7 +39,7 @@ class XMLParser
             $type = $this->getType($name, $prefix);
 
             if ($type === 'array') {
-                $result[] = $this->parse($value, "{$prefix}.{$name}");
+                $result[$name][] = $this->parse($value, "{$prefix}.{$name}");
             }
             elseif ($type === 'object') {
                 $result[$name] = $this->parse($value, "{$prefix}.{$name}");
@@ -144,5 +144,15 @@ class XMLParser
         'ListBucketResult.Contents.ETag' => 'etag',
         'ListBucketResult.Contents.Size' => 'int',
         'ListBucketResult.Contents.StorageClass' => 'string',
+
+        'AccessControlPolicy' => 'object',
+        'AccessControlPolicy.Owner' => 'object',
+        'AccessControlPolicy.Owner.ID' => 'string',
+        'AccessControlPolicy.Owner.DisplayName' => 'string',
+        'AccessControlPolicy.AccessControlList' => 'array',
+        'AccessControlPolicy.AccessControlList.Grant' => 'object',
+        'AccessControlPolicy.AccessControlList.Grant.Grantee' => 'object',
+        'AccessControlPolicy.AccessControlList.Grant.Grantee.Type' => 'string',
+        'AccessControlPolicy.AccessControlList.Grant.Permission' => 'string',
     ];
 }

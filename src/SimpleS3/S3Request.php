@@ -31,11 +31,14 @@ class S3Request
         $this->endpoint = $endpoint;
         $this->path = $path;
 
+        $parsedUrl = parse_url($endpoint);
+        $hostname = $parsedUrl['host'] ?? $endpoint;
+
         $this->headers = [
             'Content-MD5' => '',
             'Content-Type' => '',
             'Date' => gmdate('D, d M Y H:i:s T'),
-            'Host' => $this->endpoint
+            'Host' => $hostname
         ];
 
         $this->curl = curl_init();
@@ -147,7 +150,7 @@ class S3Request
 
         curl_setopt_array($this->curl, array(
             CURLOPT_USERAGENT => 'imhotep/s3-client',
-            CURLOPT_URL => "https://{$this->endpoint}/{$this->path}{$queryParams}",
+            CURLOPT_URL => "{$this->endpoint}/{$this->path}{$queryParams}",
             CURLOPT_HTTPHEADER => $http_headers,
             CURLOPT_HEADER => false,
             CURLOPT_RETURNTRANSFER => false,

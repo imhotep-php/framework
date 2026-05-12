@@ -1,13 +1,13 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\SimpleS3;
+
+use ArrayAccess;
 
 /**
  *
  */
-class S3Result
+class S3Result implements ArrayAccess
 {
     public int $statusCode = 0;
 
@@ -19,14 +19,14 @@ class S3Result
         $this->statusCode = $this->meta['statusCode'];
     }
 
-    public function get(string $name = null): mixed
+    public function get(?string $name = null, mixed $default = null): mixed
     {
         if (! empty($name) && is_array($this->data)) {
             if (isset($this->data[$name])) {
                 return $this->data[$name];
             }
 
-            return null;
+            return $default;
         }
 
         return $this->data;
@@ -37,7 +37,12 @@ class S3Result
         return $this->data;
     }
 
-    public function getMeta(string $name = null)
+    public function data(): array
+    {
+        return $this->data;
+    }
+
+    public function getMeta(?string $name = null, mixed $default = null)
     {
         if (! empty($name)) {
             if (isset($this->meta[$name])) {
@@ -47,10 +52,15 @@ class S3Result
                 return $this->meta['headers'][$name];
             }
 
-            return null;
+            return $default;
         }
 
         return $this->meta;
+    }
+
+    public function meta(?string $name = null, mixed $default = null): mixed
+    {
+        return $this->getMeta($name, $default);
     }
 
     public function toArray(): array
@@ -59,5 +69,49 @@ class S3Result
             'data' => $this->data,
             '@metadata' => $this->meta
         ];
+    }
+
+    public function offsetExists(mixed $offset): bool
+    {
+        if (array_key_exists($offset, $this->data)) {
+            return true;
+        }
+
+        if (array_key_exists($offset, $this->meta)) {
+            return true;
+        }
+
+        if (array_key_exists($offset, $this->meta['headers'])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function offsetGet(mixed $offset): mixed
+    {
+        if (array_key_exists($offset, $this->data)) {
+            return $this->data[$offset];
+        }
+
+        if (array_key_exists($offset, $this->meta)) {
+            return $this->meta[$offset];
+        }
+
+        if (array_key_exists($offset, $this->meta['headers'])) {
+            return $this->meta['headers'][$offset];
+        }
+
+        return null;
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+
+    }
+
+    public function offsetUnset(mixed $offset): void
+    {
+
     }
 }

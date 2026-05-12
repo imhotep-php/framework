@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\SimpleS3;
 
@@ -25,7 +25,10 @@ class S3Client
         $this->curl_opts = array(
             CURLOPT_CONNECTTIMEOUT => 30,
             CURLOPT_LOW_SPEED_LIMIT => 1,
-            CURLOPT_LOW_SPEED_TIME => 30
+            CURLOPT_LOW_SPEED_TIME => 30,
+            CURLOPT_TIMEOUT => 60,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         );
     }
 
@@ -152,6 +155,24 @@ class S3Client
         return $request->getResult();
     }
 
+    public function getObjectAcl(string $bucket, string $key, array $args = []): S3Result
+    {
+        $headers = $this->makeHeaders(__FUNCTION__, $args);
+
+        $request = $this->request('GET', "{$bucket}/{$key}?acl", [], $headers);
+
+        return $request->getResult();
+    }
+
+    public function putObjectAcl(string $bucket, string $key, array $args = []): S3Result
+    {
+        $headers = $this->makeHeaders(__FUNCTION__, $args);
+
+        $request = $this->request('PUT', "{$bucket}/{$key}?acl", [], $headers);
+
+        return $request->getResult();
+    }
+
 
 
     public function listBuckets(array $args = []): S3Result
@@ -257,11 +278,11 @@ class S3Client
         'X-Amz-Bypass-Governance-Retention' => ['deleteObjects'],
 
         // Acl
-        'X-Amz-Acl' => ['putObject'],
-        'X-Amz-Grant-Read' => ['putObject'],
-        'X-Amz-Grant-Read-Acp' => ['putObject'],
-        'X-Amz-Grant-Write-Acp' => ['putObject'],
-        'X-Amz-Grant-Full-Control' => ['putObject'],
+        'X-Amz-Acl' => ['putObject', 'putObjectAcl'],
+        'X-Amz-Grant-Read' => ['putObject', 'putObjectAcl'],
+        'X-Amz-Grant-Read-Acp' => ['putObject', 'putObjectAcl'],
+        'X-Amz-Grant-Write-Acp' => ['putObject', 'putObjectAcl'],
+        'X-Amz-Grant-Full-Control' => ['putObject', 'putObjectAcl'],
     ];
 
     protected function makeQuery(string $method, array $args): array

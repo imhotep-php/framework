@@ -14,7 +14,7 @@ class S3Response
 
     protected mixed $body = null;
 
-    protected mixed $data;
+    protected mixed $data = null;
 
     public function __construct()
     {
@@ -65,7 +65,7 @@ class S3Response
                 'message' => curl_error($ch),
             ];
         }
-        elseif (str_contains($this->contentType, 'application/xml') && ! empty($this->body) && is_string($this->body)) {
+        elseif ($this->isXmlContent()) {
             $parser = new XMLParser($this->body);
 
             if ($parser->isError()) {
@@ -78,6 +78,23 @@ class S3Response
         else {
             $this->data = $this->body;
         }
+    }
+
+    protected function isXmlContent(): bool
+    {
+        if (! is_string($this->body) || empty($this->body)) {
+            return false;
+        }
+
+        if (str_contains($this->contentType, 'application/xml')) {
+            return true;
+        }
+
+        if (str_starts_with($this->body, '<AccessControlPolicy>')) {
+            return true;
+        }
+
+        return false;
     }
 
     public function getResult(): S3Result
