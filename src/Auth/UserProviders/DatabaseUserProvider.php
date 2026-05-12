@@ -84,8 +84,8 @@ class DatabaseUserProvider implements UserProvider
             return null;
         }
 
-        if ($this->userClass) {
-            return new $this->userClass((array)$user);
+        if ($this->userClass && class_exists($this->userClass) && method_exists($this->userClass, 'newFrom')) {
+            return $this->userClass::newFrom((array)$user);
         }
 
         return new GenericUser((array)$user);
