@@ -8,18 +8,28 @@ class SizeRule extends AbstractRule
 
     public function setParameters(array $parameters): static
     {
-        $this->parameters['size'] = array_shift($parameters);
+        if (count($parameters) > 0) {
+            $this->parameters['sizes'] = $parameters;
+        }
 
         return $this;
     }
 
     public function check(mixed $value): bool
     {
-        $this->requireParameters(['size']);
+        $this->requireParameters(['sizes']);
 
         $valueSize = $this->getValueSize($value);
-        $equalSize = $this->getBytesSize($this->parameters['size']);
 
-        return is_float($valueSize) && is_float($equalSize) && $valueSize === $equalSize;
+        $sizes = $this->parameters['sizes'];
+        foreach ($sizes as $size) {
+            $equalSize = $this->getBytesSize($size);
+
+            if (is_float($valueSize) && is_float($equalSize) && $valueSize === $equalSize) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

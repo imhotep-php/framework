@@ -33,6 +33,7 @@ class AcceptedIfTest extends TestCase
         );
         $this->assertTrue($validation->passes());
     }
+
     public function testInvalidValue()
     {
         $values = [false, 'no', 0];

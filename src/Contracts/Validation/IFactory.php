@@ -3,7 +3,7 @@
 namespace Imhotep\Contracts\Validation;
 
 use Closure;
-use Imhotep\Contracts\Localization\Localizator;
+use Imhotep\Contracts\Localization\ILocalizator;
 
 interface IFactory
 {
@@ -50,7 +50,7 @@ interface IFactory
 
     public function forgetAliases(): static;
 
-    public function setLocalizator(Localizator $localizator): static;
+    public function setLocalizator(ILocalizator $localizator): static;
 
-    public function getLocalizator(): ?Localizator;
+    public function getLocalizator(): ?ILocalizator;
 }

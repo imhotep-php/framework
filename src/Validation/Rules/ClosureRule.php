@@ -2,26 +2,49 @@
 
 namespace Imhotep\Validation\Rules;
 
+use Closure;
+use Imhotep\Contracts\Validation\DataAwareRule;
+use Imhotep\Contracts\Validation\IValidationRule;
+use Imhotep\Contracts\Validation\ValidatorAwareRule;
+use Imhotep\Validation\Attribute;
+use Imhotep\Validation\Validator;
+
 class ClosureRule extends AbstractRule
 {
     protected string $key = 'closure';
 
+    protected Validator $validator;
+
+    protected Attribute $attribute;
+
+    protected bool $failed = false;
+
     public function __construct(
-        protected \Closure $callback
+        protected IValidationRule|Closure $callback
     ) {}
+
+    public function setValidator(Validator $validator): void
+    {
+        $this->validator = $validator;
+    }
+
+    public function setAttribute(Attribute $attribute): void
+    {
+        $this->attribute = $attribute;
+    }
 
     public function check(mixed $value): bool
     {
-        $this->failed = false;
-
-        // string $message, bool $implicit = false
-
-        $this->callback->__invoke($this->attribute->key(), $value, function () {
+        $fail = function (?string $message = null, bool $implicit = false) {
             $this->failed = true;
 
-            //$this->implicit = $implicit;
+            if (is_string($message)) {
+                $this->setMessage($message);
+            }
 
-            //$this->message = $message;
+            if ($implicit) {
+                return $this->implicit;
+            }
 
             return new class ($this)
             {
@@ -50,7 +73,23 @@ class ClosureRule extends AbstractRule
                     return $this;
                 }
             };
-        });
+        };
+
+        $methodName = '__invoke';
+
+        if ($this->callback instanceof IValidationRule) {
+            $methodName = 'validate';
+
+            if ($this->callback instanceof DataAwareRule) {
+                $this->callback->setData($this->data->toArray());
+            }
+
+            if ($this->callback instanceof ValidatorAwareRule) {
+                $this->callback->setValidator($this->validator);
+            }
+        }
+
+        $this->callback->{$methodName}($this->attribute?->key(), $value, $fail);
 
         return ! $this->failed;
     }

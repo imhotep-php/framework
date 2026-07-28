@@ -12,7 +12,7 @@ interface IRule
 
     public function check(mixed $value): bool;
 
-    public function message(): ?string;
+    public function message(): string;
 
     public function implicit(): bool;
 

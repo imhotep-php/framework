@@ -89,7 +89,7 @@ trait UtilsTrait
             return (float) count($value);
         }
         elseif ($file = $this->makeUploadedFile($value)) {
-            return (float) $file->getSize();
+            return (float) $file->size();
         }
 
         return null;

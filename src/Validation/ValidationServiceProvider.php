@@ -17,8 +17,8 @@ class ValidationServiceProvider extends ServiceProvider
             return new Factory(app('localizator'));
         });
 
-        Request::macro('validate', function (array $rules, array $messages = [], array $aliases = []) {
-            return validator()->validate($this->all(), $rules, $messages, $aliases);
+        Request::macro('validate', function (array $rules, array $messages = [], array $attributes = []) {
+            return validator()->validate($this->all(), $rules, $messages, $attributes);
         });
     }
 }

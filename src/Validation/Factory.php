@@ -3,20 +3,22 @@
 namespace Imhotep\Validation;
 
 use Closure;
-use Imhotep\Contracts\Localization\Localizator;
+use Imhotep\Contracts\Localization\ILocalizator;
 use Imhotep\Contracts\Validation\IData;
 use Imhotep\Contracts\Validation\IFactory;
+use Imhotep\Contracts\Validation\IValidationRule;
 use Imhotep\Validation\Rules\AbstractRule;
+use InvalidArgumentException;
 
 class Factory implements IFactory
 {
-    protected ?Localizator $lang;
+    protected ?ILocalizator $lang;
 
     protected array $messages = [];
 
     protected array $aliases = [];
 
-    public function __construct(Localizator $lang = null)
+    public function __construct(?ILocalizator $lang = null)
     {
         $this->lang = $lang;
     }
@@ -33,8 +35,25 @@ class Factory implements IFactory
 
     public function extend(string $rule, string|Closure $extension): static
     {
-        if (is_string($extension) && ! is_subclass_of($extension, AbstractRule::class)) {
-            throw new \InvalidArgumentException("Extension [{$rule}] not a valid");
+        if (is_string($extension) &&
+            !is_subclass_of($extension, AbstractRule::class) &&
+            !is_subclass_of($extension, IValidationRule::class)) {
+
+            throw new InvalidArgumentException(
+                sprintf('Rule [%s] must extend %s or implement %s',
+                    $rule,
+                    AbstractRule::class,
+                    IValidationRule::class
+                )
+            );
+        }
+
+        $rule = strtolower(trim($rule));
+
+        if (!preg_match('/^[a-z_]+$/', $rule)) {
+            throw new InvalidArgumentException(
+                sprintf('Rule name [%s] must contain only English letters and underscores (e.g., "custom_rule")', $rule)
+            );
         }
 
         RuleParser::$rules[$rule] = $extension;
@@ -89,14 +108,14 @@ class Factory implements IFactory
         return $this;
     }
 
-    public function setLocalizator(Localizator $localizator): static
+    public function setLocalizator(ILocalizator $localizator): static
     {
         $this->lang = $localizator;
 
         return $this;
     }
 
-    public function getLocalizator(): ?Localizator
+    public function getLocalizator(): ?ILocalizator
     {
         return $this->lang;
     }

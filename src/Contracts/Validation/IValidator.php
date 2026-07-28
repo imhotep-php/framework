@@ -2,8 +2,6 @@
 
 namespace Imhotep\Contracts\Validation;
 
-use Imhotep\Contracts\Localization\Localizator;
-
 interface IValidator
 {
     /**
@@ -44,7 +42,7 @@ interface IValidator
      * @param  callable  $callback
      * @return $this
      */
-    public function sometimes($attribute, $rules, callable $callback);
+    public function sometimes(string|array $attribute, string|array $rules, callable $callback): static;
 
     /**
      * Add an after validation callback.

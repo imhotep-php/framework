@@ -2,9 +2,13 @@
 
 namespace Imhotep\Facades;
 
+use Closure;
+use Imhotep\Contracts\Validation\IValidator;
+
 /**
- * @method static \Imhotep\Contracts\Validation\IValidator make(array $data, array $rules, array $messages = [], array $customAttributes = [])
- * @method static array validate(array $data, array $rules, array $messages = [], array $customAttributes = [])
+ * @method static IValidator make(array $data, array $rules, array $messages = [], array $attributes = [])
+ * @method static array validate(array $data, array $rules, array $messages = [], array $attributes = [])
+ * @method static extend(string $rule, string|Closure $extension)
  *
  * @see \Imhotep\Validation\Factory
  */

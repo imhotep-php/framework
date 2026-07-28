@@ -23,13 +23,18 @@ abstract class Validate
         return $this->validator->errors();
     }
 
-    protected function __get(string $name): mixed
+    public function __get(string $name): mixed
     {
         return $this->validator->$name;
     }
 
-    protected function __set(string $name, $value): void
+    public function __set(string $name, $value): void
     {
         $this->validator->$name = $value;
+    }
+
+    public function __isset(string $name): bool
+    {
+        return isset($this->validator->$name);
     }
 }

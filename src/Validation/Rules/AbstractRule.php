@@ -14,7 +14,7 @@ abstract class AbstractRule implements RuleContract
 
     protected bool $implicit = false;
 
-    protected ?string $message = null;
+    protected string $message = '';
 
     protected array $parameters = [];
 
@@ -22,9 +22,16 @@ abstract class AbstractRule implements RuleContract
 
     abstract public function check(mixed $value): bool;
 
-    public function message(): ?string
+    public function message(): string
     {
         return $this->message;
+    }
+
+    public function setMessage(string $message): static
+    {
+        $this->message = $message;
+
+        return $this;
     }
 
     public function implicit(): bool

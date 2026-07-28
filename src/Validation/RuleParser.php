@@ -2,7 +2,10 @@
 
 namespace Imhotep\Validation;
 
+use Closure;
+use Imhotep\Contracts\Validation\IValidationRule;
 use Imhotep\Validation\Rules\ClosureRule;
+use InvalidArgumentException;
 
 class RuleParser
 {
@@ -41,6 +44,9 @@ class RuleParser
         'before' => Rules\DateBeforeRule::class,
         'url' => Rules\UrlRule::class,
         'mimes' => Rules\MimeRule::class,
+        'json' => Rules\JsonRule::class,
+        'exists' => Rules\ExistsRule::class,
+        'fio' => Rules\FioRule::class,
     ];
     
     public static function parse(string|array $rules): array
@@ -74,9 +80,9 @@ class RuleParser
 
     protected static function parseRule(mixed $rule, ?bool $bail): mixed
     {
-        if (is_string($rule)) {
-            $parameters = [];
+        $parameters = [];
 
+        if (is_string($rule)) {
             if (str_contains($rule, ':')) {
                 list($rule, $parameters) = explode(":", $rule, 2);
                 $parameters = explode(",", $parameters);
@@ -86,18 +92,21 @@ class RuleParser
             $parameters = array_slice($rule, 1);
             $rule = $rule[0];
         }
-        elseif ($rule instanceof \Closure) {
+        elseif ($rule instanceof Closure || $rule instanceof IValidationRule) {
             return new ClosureRule($rule);
         }
 
         if (! isset(static::$rules[$rule])) {
-            throw new \InvalidArgumentException("Rule [$rule] does not exist.");
+            throw new InvalidArgumentException("Rule [$rule] does not exist.");
         }
 
         $instance = static::$rules[$rule];
 
-        if ($instance instanceof \Closure) {
+        if ($instance instanceof Closure) {
             $instance = new ClosureRule($instance);
+        }
+        elseif (is_subclass_of($instance, IValidationRule::class)) {
+            $instance = new ClosureRule(new $instance);
         }
         else {
             $instance = (new $instance())->setParameters($parameters)->setName($rule);

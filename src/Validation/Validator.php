@@ -4,14 +4,15 @@ namespace Imhotep\Validation;
 
 use Closure;
 use Generator;
+use Imhotep\Contracts\Localization\ILocalizator;
 use Imhotep\Contracts\Validation\IModifyValue;
 use Imhotep\Contracts\Validation\IValidator;
 use Imhotep\Http\UploadedFile;
-use Imhotep\Localization\Localizator;
 use Imhotep\Support\MessageBag;
 use Imhotep\Validation\Data\Data;
 use Imhotep\Validation\Data\InputData;
 use Imhotep\Validation\Rules\AbstractRule;
+use Imhotep\Validation\Rules\ClosureRule;
 
 class Validator implements IValidator
 {
@@ -116,9 +117,11 @@ class Validator implements IValidator
             $this->errors : $this->errors = new MessageBag();
     }
 
-    public function sometimes($attribute, $rules, callable $callback)
+    public function sometimes(string|array $attribute, string|array $rules, callable $callback): static
     {
         // TODO: Implement sometimes() method.
+
+        return $this;
     }
 
     public function after(array|string|Closure $validates): static
@@ -174,6 +177,11 @@ class Validator implements IValidator
             }
 
             $rule->setData($this->data);
+
+            if ($rule instanceof ClosureRule) {
+                $rule->setValidator($this);
+                $rule->setAttribute($attribute);
+            }
 
             if ($rule instanceof IModifyValue) {
                 $value = $rule->modifyValue($value);
@@ -234,8 +242,10 @@ class Validator implements IValidator
             }
         }
 
-        if ($message = $rule->message()) {
-            return $this->replaceMessageParameters($message, $attribute, $rule->parameters());
+        $ruleMessage = $rule->message();
+
+        if (! empty($ruleMessage)) {
+            return $this->replaceMessageParameters($ruleMessage, $attribute, $rule->parameters());
         }
 
         return $rule->name();
@@ -265,7 +275,7 @@ class Validator implements IValidator
         return str_replace($keys, array_values($parameters), $message);
     }
 
-    public function getLocalizator(): ?Localizator
+    public function getLocalizator(): ?ILocalizator
     {
         return $this->factory->getLocalizator();
     }
@@ -273,5 +283,15 @@ class Validator implements IValidator
     public function __get(string $key): mixed
     {
         return $this->data[$key];
+    }
+
+    public function __set(string $key, mixed $value): void
+    {
+        $this->data[$key] = $value;
+    }
+
+    public function __isset(string $key): bool
+    {
+        return isset($this->data[$key]);
     }
 }
