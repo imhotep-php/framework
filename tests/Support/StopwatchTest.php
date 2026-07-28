@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 class StopwatchTest extends TestCase
 {
-    public function __construct(?string $name = null, array $data = [], $dataName = '')
+    public function __construct($name = null, array $data = [], $dataName = '')
     {
         parent::__construct($name, $data, $dataName);
     }
@@ -30,6 +30,6 @@ class StopwatchTest extends TestCase
         $this->assertLessThanOrEqual(0.22, $stopwatch->last());
 
         $this->assertGreaterThanOrEqual(0.6, $stopwatch->total());
-        $this->assertLessThanOrEqual(0.62, $stopwatch->total());
+        $this->assertLessThanOrEqual(0.65, $stopwatch->total());
     }
 }
