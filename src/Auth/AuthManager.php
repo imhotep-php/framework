@@ -21,7 +21,7 @@ class AuthManager implements Factory
         protected Container $app
     )
     {
-        $this->userResolver = fn ($guard = null) => $this->guard($guard)->user();
+        $this->userResolver = fn (?string $guard = null) => $this->guard($guard)->user();
     }
 
     protected array $guards = [];
@@ -39,7 +39,7 @@ class AuthManager implements Factory
         return $this->guards[$name] ?? $this->resolveGuard($name);
     }
 
-    protected function resolveGuard(string $name = null): Guard
+    protected function resolveGuard(?string $name = null): Guard
     {
         $config = $this->getGuardConfig($name);
 

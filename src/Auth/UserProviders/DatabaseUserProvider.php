@@ -78,7 +78,7 @@ class DatabaseUserProvider implements UserProvider
         return false;
     }
 
-    protected function makeGenericUser(object|array $user = null): ?Authenticatable
+    protected function makeGenericUser(object|array|null $user = null): ?Authenticatable
     {
         if (is_null($user)) {
             return null;

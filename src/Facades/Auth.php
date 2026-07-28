@@ -10,9 +10,10 @@ use Imhotep\Contracts\Auth\Authenticatable;
 /**
  * @method static \Imhotep\Auth\AuthManager extend(string $driver, Closure $callback)
  * @method static \Imhotep\Auth\AuthManager provider(string $name, Closure $callback)
- * @method static \Imhotep\Contracts\Auth\Guard guard(string $name = null)
+ * @method static \Imhotep\Contracts\Auth\Guard guard(?string $name = null)
  * @method static void shouldUse(string $name);
  *
+ * @method static int|string|null id()
  * @method static bool attempt(array $credentials = [], bool $remember = false)
  * @method static bool hasUser()
  * @method static mixed user()

@@ -8,7 +8,7 @@ class AuthenticationException extends \Exception
 
     protected ?string $redirectTo;
 
-    public function __construct(string $message = "", array $gurads = [], string $redirectTo = null)
+    public function __construct(string $message = "", array $gurads = [], ?string $redirectTo = null)
     {
         parent::__construct($message);
 
