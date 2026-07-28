@@ -145,6 +145,15 @@ class Str
         return static::upper(static::substr($value, 0, 1)).static::substr($value, 1);
     }
 
+    public static function ucwords(string $string, string $separators = " \t\r\n\f\v"): string
+    {
+        $pattern = '/(^|['.preg_quote($separators, '/').'])(\p{Ll})/u';
+
+        return preg_replace_callback($pattern, function ($matches) {
+            return $matches[1].static::upper($matches[2]);
+        }, $string);
+    }
+
     public static function studly(string $value): string
     {
         $key = crc32($value);
@@ -180,11 +189,11 @@ class Str
 
     public static function isEmpty(mixed $value): bool
     {
-        if (is_null($value)) {
+        if (is_null($value) || (is_array($value) && empty($value))) {
             return true;
         }
 
-        return ! is_bool($value) && ! is_array($value) && trim((string) $value) === '';
+        return ! is_bool($value) && trim((string) $value) === '';
     }
 
     public static function contains(string $haystack, string|array $needles, bool $ignoreCase = false): bool
@@ -223,7 +232,7 @@ class Str
         return $result;
     }
 
-    public static function substr($string, int $start, int $length = null): string
+    public static function substr($string, int $start, ?int $length = null): string
     {
         return mb_substr($string, $start, $length, 'UTF-8');
     }
@@ -258,5 +267,10 @@ class Str
         }
 
         return false;
+    }
+
+    public static function lines(string $string): array
+    {
+        return explode("\n", $string);
     }
 }
