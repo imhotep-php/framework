@@ -80,7 +80,7 @@ class S3Client
         return $request->getResult();
     }
 
-    public function getObject(string $bucket, string $key, $resource = null, array $args = []): S3Result
+    public function getObject(string $bucket, string $key, mixed $resource = null, array $args = []): S3Result
     {
         $query = $this->makeQuery(__FUNCTION__, $args);
         $headers = $this->makeHeaders(__FUNCTION__, $args);
@@ -208,8 +208,8 @@ class S3Client
     protected function request(
         string $action,
         string $path,
-        array|string $params = null,
-        array $headers = null,
+        array|string|null $params = null,
+        ?array $headers = null,
         mixed $body = null
     ): S3Request
     {
