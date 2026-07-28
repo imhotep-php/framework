@@ -2,9 +2,11 @@
 
 namespace Imhotep\Localization;
 
+use Imhotep\Contracts\Localization\ILocalizationLoader;
 use Imhotep\Filesystem\Filesystem;
+use RuntimeException;
 
-class FileLoader
+class FileLoader implements ILocalizationLoader
 {
     protected Filesystem $files;
 
@@ -12,86 +14,137 @@ class FileLoader
 
     protected array $namespaces = [];
 
-    public function __construct(Filesystem $files, string|array $path)
+    protected array $loadedFiles = [];
+
+    public function __construct(
+        Filesystem $files,
+        string|array $paths,
+    )
     {
         $this->files = $files;
-        $this->paths = (array)$path;
+        $this->paths = (array)$paths;
     }
 
-    public function addNamespace(string $namespace, string|array $path): static
+    public function paths(): array
     {
-        if (isset($this->namespaces[$namespace])) {
-            $this->namespaces[$namespace] = array_merge($this->namespaces[$namespace], (array)$path);
+        return $this->paths;
+    }
+
+    public function addPath(array|string $path): void
+    {
+        $this->paths = array_unique(array_filter(array_merge($this->paths, (array)$path)));
+    }
+
+    public function namespaces(): array
+    {
+        return $this->namespaces;
+    }
+
+    public function addNamespace(string $ns, string|array $paths): static
+    {
+        if (! isset($this->namespaces[$ns])) {
+            $this->namespaces[$ns] = [];
         }
-        else {
-            $this->namespaces[$namespace] = (array)$path;
-        }
+
+        $this->namespaces[$ns] = array_unique(array_filter(array_merge(
+            $this->namespaces[$ns], (array)$paths
+        )));
 
         return $this;
     }
 
-    public function load(string $locale, string $group = '*', string $namespace = '*'): array
+    /**
+     * Загрузка основных переводов по namespace и группе.
+     *
+     * @param string $locale
+     * @param string $ns
+     * @param string $group
+     * @return array
+     */
+    public function load(string $locale, string $ns = '*', string $group = '*'): array
+    {
+        // No namespace provided
+        if ($ns === '*') {
+            return $group === '*'
+                ? $this->loadPaths($this->paths, fn($path) => "{$path}/{$locale}.json")
+                : $this->loadPaths($this->paths, fn($path) => "{$path}/{$locale}/{$group}.php");
+        }
+
+        // Namespace provided with group
+        if ($group === '*') {
+            $lines = $this->loadPaths($this->namespaces[$ns], fn($path) => "{$path}/{$locale}.json");
+            $overrides = $this->loadPaths($this->paths, fn($path) => "{$path}/vendor/{$ns}/{$locale}.json");
+
+            return array_replace_recursive($lines, $overrides);
+        }
+
+        // Namespace provided without group
+        $lines = $this->loadPaths($this->namespaces[$ns], fn($path) => "{$path}/{$locale}/{$group}.php");
+        $overrides = $this->loadPaths($this->paths, fn($path) => "{$path}/vendor/{$ns}/{$locale}/{$group}.php");
+
+        return array_replace_recursive($lines, $overrides);
+    }
+
+    protected function loadPaths(array $paths, callable $pathResolver): array
     {
         $loaded = [];
 
-        if ($namespace !== '*' && isset($this->namespaces[$namespace])) {
-            foreach ($this->namespaces[$namespace] as $path) {
-                if ($group === '*') {
-                    $this->loadFile($loaded, "{$path}/{$locale}");
-                    $this->loadFile($loaded, "{$path}/{$locale}", 'json');
-                }
-                else {
-                    $this->loadFile($loaded, "{$path}/{$locale}/{$group}");
-                }
-            }
-        }
-
-        foreach ($this->paths as $path) {
-            if ($namespace === '*' && $group === '*') {
-                $this->loadFile($loaded, "{$path}/{$locale}");
-                $this->loadFile($loaded, "{$path}/{$locale}", 'json');
-            }
-            elseif ($namespace === '*' && $group !== '*') {
-                $this->loadFile($loaded, "{$path}/{$locale}/{$group}");
-            }
-            elseif ($namespace !== '*' && $group === '*'){
-                $this->loadFile($loaded, "{$path}/vendor/{$namespace}/{$locale}");
-                $this->loadFile($loaded, "{$path}/vendor/{$namespace}/{$locale}", 'json');
-            }
-            elseif ($namespace !== '*' && $group !== '*') {
-                $this->loadFile($loaded, "{$path}/vendor/{$namespace}/{$locale}/{$group}");
-            }
+        foreach ($paths as $path) {
+            $this->loadFile($pathResolver($path), $loaded);
         }
 
         return $loaded;
     }
 
-    protected function loadFile(array &$loaded, string $path, string $ext = 'php'): void
+    protected function loadFile(string $file, array &$loaded): void
     {
-        if (! $this->files->exists($path = "{$path}.{$ext}")) {
+        if (! $this->shouldLoadFile($file)) {
             return;
         }
 
-        // Load from php file
-        if ($ext === 'php') {
-            $data = $this->files->getRequire($path);
+        if (str_ends_with($file, '.json')) {
+            $this->loadJsonFile($file, $loaded);
+        }
+        elseif (str_ends_with($file, '.php')) {
+            $this->loadPhpFile($file, $loaded);
+        }
+    }
 
-            if (! is_array($data)) {
-                throw new \RuntimeException('Localization file [$path] return an invalid PHP array.');
-            }
+    protected function loadJsonFile(string $file, array &$loaded): void
+    {
+        $json = json_decode(file_get_contents($file), true);
 
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new RuntimeException("Localization file [$file] contains invalid JSON: " . json_last_error_msg());
+        }
+
+        if (is_array($json)) {
+            $loaded = array_replace_recursive($loaded, $json);
+        }
+    }
+
+    protected function loadPhpFile(string $file, array &$loaded): void
+    {
+        $data = $this->files->require($file);
+
+        if (is_array($data)) {
             $loaded = array_replace_recursive($loaded, $data);
-
             return;
         }
 
-        // Load from json file
-        $json = json_decode($this->files->get($path), true);
+        if ($data !== false) {
+            throw new RuntimeException("Localization file [$file] must return an array.");
+        }
+    }
 
-        if (is_null($json) || json_last_error() !== JSON_ERROR_NONE) {
-            throw new \RuntimeException('Localization file [$path] contains an invalid JSON.');
+    protected function shouldLoadFile(string $file): bool
+    {
+        if (isset($this->loadedFiles[$file])) {
+            return false;
         }
 
-        $loaded = array_replace_recursive($loaded, $json);
+        $this->loadedFiles[$file] = true;
+
+        return $this->files->exists($file);
     }
 }

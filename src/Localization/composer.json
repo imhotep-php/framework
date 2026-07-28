@@ -4,7 +4,7 @@
   "description": "Provides tools to localize the application",
   "keywords": ["localization", "i18n"],
   "license" : "MIT",
-  "homepage": "https://imhotep-php.ru",
+  "homepage": "https://imhotep.dev",
   "authors": [
     {
       "name": "Imhotep",
@@ -13,15 +13,13 @@
   ],
   "autoload": {
     "psr-4": {
-      "Imhotep\\Events\\": ""
+      "Imhotep\\Localization\\": ""
     }
   },
   "require": {
     "php": ">=8.0.2",
-    "imhotep/contracts": "^1.0"
-  },
-  "require-dev": {
-    "phpunit/phpunit": "^9.5"
+    "imhotep/contracts": "^1.0",
+    "imhotep/support": "^1.0"
   },
   "minimum-stability": "dev"
 }

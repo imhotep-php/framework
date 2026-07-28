@@ -2,19 +2,15 @@
 
 namespace Imhotep\Localization;
 
-use Imhotep\Contracts\Localization\Localizator as LocalizatorContract;
+use Closure;
+use Imhotep\Contracts\Localization\ILocalizationLoader;
+use Imhotep\Contracts\Localization\ILocalizator;
 use Imhotep\Support\Arr;
-use Imhotep\Support\Str;
+use InvalidArgumentException;
 
-// Реализовать:
-// Смена locale
-// Callback, если перевод основной не найден
-// Callback, если перевод запасной не найден
-// Callback, если произошла ошибка обработки выражения
-
-class Localizator implements LocalizatorContract
+class Localizator implements ILocalizator
 {
-    protected FileLoader $loader;
+    protected ILocalizationLoader $loader;
 
     protected array $paths = [];
 
@@ -26,235 +22,21 @@ class Localizator implements LocalizatorContract
 
     protected array $parsedKeys = [];
 
-    protected array $plurals = [];
-
     protected array $callbacks = [];
 
-    public function __construct(FileLoader $loader, string $locale, string $fallback)
+    protected mixed $localesResolver = null;
+
+    protected array $modifiers = [];
+
+    public function __construct(ILocalizationLoader $loader, string $locale, string $fallback)
     {
         $this->loader = $loader;
         $this->locale = $locale;
         $this->fallback = $fallback;
     }
 
-    public function get(string $key, array $replace = [], string $locale = null, bool $fallback = true): array|string
-    {
-        [$ns, $group, $item] = $this->parseKey($key);
 
-        $locale = $locale ?: $this->locale;
-
-        $this->load($locale, $group, $ns);
-
-        $value = $this->getValue($locale, $group, $ns, $item);
-
-        if (is_null($value) && $fallback) {
-            $this->load($this->fallback, $group, $ns);
-
-            $value = $this->getValue($this->fallback, $group, $ns, $item);
-        }
-
-        if (is_null($value)) {
-            $this->callCallbacks('not_found_key', [$key, $locale, $this->fallback]);
-
-            $value = $key;
-        }
-
-        if (is_array($value)) {
-            return $value;
-        }
-
-        $value = $this->makeReplaces($value, $replace);
-
-        return $this->makeExpressions($value, $locale);
-    }
-
-    public function has(string $key, ?string $locale = null, bool $fallback = true): bool
-    {
-        [$ns, $group, $item] = $this->parseKey($key);
-
-        $locale = $locale ?: $this->locale;
-
-        $this->load($locale, $group, $ns);
-
-        $value = $this->getValue($locale, $group, $ns, $item);
-
-        if (is_null($value) && $fallback) {
-            $this->load($this->fallback, $group, $ns);
-
-            $value = $this->getValue($this->fallback, $group, $ns, $item);
-        }
-
-        return ! is_null($value);
-    }
-
-    protected function parseKey(string $key): array
-    {
-        if (isset($this->parsedKeys[$key])) {
-            return $this->parsedKeys[$key];
-        }
-
-        $namespace = null; $item = $key;
-        if (str_contains($key, '::')) {
-            list($namespace, $item) = explode('::', $key);
-        }
-
-        $group = null;
-        if (! is_null($item) && str_contains($item, '.')) {
-            list($group, $item) = explode('.', $item, 2);
-        }
-
-        return $this->parsedKeys[$key] = [$namespace ?: '*', $group ?: '*', $item];
-    }
-
-    protected function load(string $locale, string $group, string $namespace): void
-    {
-        if (! isset($this->loaded[$namespace][$group][$locale])) {
-            $this->loaded[$namespace][$group][$locale] = $this->loader->load($locale, $group, $namespace);
-        }
-    }
-
-    protected function getValue(string $locale, string $group, string $namespace, string $item): null|string|array
-    {
-        if ($item === '*') {
-            return $this->loaded[$namespace][$group][$locale];
-        }
-
-        if (str_contains($item, '.')) {
-            return Arr::get($this->loaded[$namespace][$group][$locale], $item);
-        }
-
-        if (array_key_exists($item, $this->loaded[$namespace][$group][$locale])) {
-            return $this->loaded[$namespace][$group][$locale][$item];
-        }
-
-        return null;
-    }
-
-    protected function makeReplaces(string $string, array $replace): string
-    {
-        if (empty($replace)) {
-            return $string;
-        }
-
-        $replaceRules = [];
-        foreach ($replace as $key => $val) {
-            if (is_string($val)) {
-                $replaceRules[':ucfirst:'.$key] = Str::ucfirst($val);
-                $replaceRules[':upper:'.$key] = Str::upper($val);
-                $replaceRules[':lower:'.$key] = Str::lower($val);
-            }
-
-            $replaceRules[':'.$key] = $val;
-        }
-
-        return strtr($string, $replaceRules);
-    }
-
-    protected function makeExpressions(string $string, string $locale): string
-    {
-        return preg_replace_callback("/{([^}]+)}/", function ($match) use ($locale) {
-            $original = $match[0];
-
-            $values = explode('|', $match[1]);
-
-            $number = trim(array_shift($values));
-            if (! is_numeric($number)) return $original;
-            $number = (int)$number;
-
-            $isPluralValues = true; $isChoiceValues = true;
-            foreach ($values as $key => $value) {
-                if (preg_match("/\[(?:([\d*]+),)?([\d*]+)\]/s", $value, $match)) {
-                    $isPluralValues = false;
-                    $values[$key] = ['choice' => $match, 'value' => trim(str_replace($match[0], "", $value))];
-                } else $isChoiceValues = false;
-            }
-
-            if ($isPluralValues) {
-                $plural = $this->plural($number, $locale);
-
-                if (isset($values[$plural])) {
-                    return trim($values[$plural]);
-                }
-
-                return $original;
-            }
-            elseif ($isChoiceValues) {
-                $format = function ($value) {
-                    if (is_numeric($value)) return (int)$value;
-                    if ($value === '*') return $value;
-                    return null;
-                };
-
-                foreach ($values as $value) {
-                    $min = $format($value['choice'][1]);
-                    $max = $format($value['choice'][2]);
-                    if (is_null($min)) $min = $max;
-                    if ($min === '*') $min = $number-1;
-                    if ($max === '*') $max = $number+1;
-
-                    if ($number >= $min && $number <= $max) {
-                        return $value['value'];
-                    }
-                }
-            }
-
-            return $original;
-        }, $string);
-    }
-
-    protected function plural(int $number, string $locale): int
-    {
-        if (isset($this->plurals[$locale])) {
-            $plural = $this->plurals[$locale]();
-
-            if (is_int($plural)) {
-                return $plural;
-            }
-        }
-
-        $plural = ($number == 1) ? 0 : 1;
-
-        if ($locale === 'ru') {
-            if ($number % 10 === 1 && $number % 100 !== 11) {
-                $plural = 0;
-            }
-            elseif ($number % 10 >= 2 && $number % 10 <= 4 && ($number % 100 < 10 || $number % 100 >= 20)) {
-                $plural = 1;
-            }
-            else {
-                $plural = 2;
-            }
-        }
-
-        return $plural;
-    }
-
-    public function addPlural(string $locale, \Closure $plural): static
-    {
-        $this->plurals[$locale] = $plural;
-
-        return $this;
-    }
-
-
-    public function addNotFoundKeyCallback(\Closure $callback): static
-    {
-        $this->callbacks['not_found_key'][] = $callback;
-
-        return $this;
-    }
-
-    protected function callCallbacks(string $type, array $parameters): void
-    {
-        $callbacks = $this->callbacks[$type] ?? [];
-
-        foreach ($callbacks as $callback) {
-            $callback(...$parameters);
-        }
-    }
-
-
-    public function getLocale(): string
+    public function locale(): string
     {
         return $this->locale;
     }
@@ -266,7 +48,7 @@ class Localizator implements LocalizatorContract
         return $this;
     }
 
-    public function getFallback(): string
+    public function fallback(): string
     {
         return $this->fallback;
     }
@@ -278,6 +60,23 @@ class Localizator implements LocalizatorContract
         return $this;
     }
 
+    public function paths(): array
+    {
+        return $this->loader->paths();
+    }
+
+    public function addPath(array|string $path): static
+    {
+        $this->loader->addPath($path);
+
+        return $this;
+    }
+
+    public function namespaces(): array
+    {
+        return $this->loader->namespaces();
+    }
+
     public function addNamespace(string $namespace, string|array $path): static
     {
         $this->loader->addNamespace($namespace, $path);
@@ -285,7 +84,7 @@ class Localizator implements LocalizatorContract
         return $this;
     }
 
-    public function getLoaded(): array
+    public function loaded(): array
     {
         return $this->loaded;
     }
@@ -295,5 +94,236 @@ class Localizator implements LocalizatorContract
         $this->loaded = $loaded;
 
         return $this;
+    }
+
+    public function add(string $key, string $value, ?string $locale = null, ?string $namespace = null): static
+    {
+        $locale = $locale ?? $this->locale;
+        $namespace = $namespace ?? '*';
+
+        $this->loaded[$locale][$namespace]['*'][$key] = $value;
+
+        return $this;
+    }
+
+    public function addMany(array $values, ?string $locale = null, ?string $namespace = null): static
+    {
+        foreach ($values as $key => $value) {
+            $this->add($key, $value, $locale, $namespace);
+        }
+
+        return $this;
+    }
+
+    public function get(string $key, array $replace = [], ?string $locale = null, bool $fallback = true): string
+    {
+        $locale = $locale ?: $this->locale;
+
+        $value = $this->find($key, $locale, $fallback);
+
+        if (is_null($value)) {
+            $this->callCallbacks('not_found', [$key, $locale, $this->fallback]);
+
+            return $key;
+        }
+
+        if (empty($replace)) {
+            return $value;
+        }
+
+        $value = $this->applyParameters($value, $replace);
+
+        return $this->applyExpressions($value, $locale);
+    }
+
+    public function has(string $key, ?string $locale = null, bool $fallback = true): bool
+    {
+        return ! is_null($this->find($key, $locale ?: $this->locale, $fallback, true));
+    }
+
+    public function missing(string $key, ?string $locale = null, bool $fallback = true): bool
+    {
+        return ! $this->has($key, $locale, $fallback);
+    }
+
+    protected function find(string $key, string $locale, bool $fallback, bool $silent = false): string|null
+    {
+        if ($fallback) {
+            $locales = array_unique(array_filter([$locale, $this->fallback]));
+
+            if ($this->localesResolver) {
+                $locales = call_user_func($this->localesResolver, $locales);
+
+                if (! is_array($locales)) {
+                    // @TODO: Need correct message
+                    throw new InvalidArgumentException('Callable in setLocaleResolver method needs to be return an array');
+                }
+            }
+        }
+        else {
+            $locales = [$locale];
+        }
+
+        [$ns, $group, $item] = $this->parseKey($key);
+
+        $primaryLocale = null;
+
+        foreach ($locales as $locale) {
+            // First load: global flat keys from json files
+            $this->load($locale);
+
+            $line = $this->loaded[$locale]['*']['*'][$key] ?? null;
+
+            if (is_string($line)) {
+                return $line;
+            }
+
+            // Second load: group keys from php files
+            if (! is_null($group)) {
+                $this->load($locale, $ns, $group);
+
+                $line = Arr::get($this->loaded[$locale][$ns][$group], $item);
+
+                if (is_string($line)) {
+                    return $line;
+                }
+            }
+
+            if (! $silent) {
+                $primaryLocale = is_null($primaryLocale);
+                $type = $primaryLocale ? 'primary_not_found' : 'fallback_not_found';
+                $this->callCallbacks($type, [$key, $locale]);
+            }
+        }
+
+        return null;
+    }
+
+    protected function load(string $locale, string $ns = '*', string $group = '*'): void
+    {
+        if (! isset($this->loaded[$locale][$ns][$group])) {
+            $this->loaded[$locale][$ns][$group] = $this->loader->load($locale, $ns, $group);
+        }
+    }
+
+    protected function parseKey(string $key): array
+    {
+        if (isset($this->parsedKeys[$key])) {
+            return $this->parsedKeys[$key];
+        }
+
+        $namespace = null; $item = $key;
+        if (str_contains($key, '::')) {
+            $exploded = explode('::', $key);
+
+            if (preg_match("/^[A-Za-z0-9_-]+$/", $exploded[0])) {
+            //if (ctype_alnum(str_replace(['_', '-'], '', $exploded[0]))) {
+                $namespace = $exploded[0];
+                $item = $exploded[1];
+            }
+        }
+
+        $group = null;
+        if (! is_null($item) && str_contains($item, '.')) {
+            $exploded = explode('.', $item, 2);
+
+            if (preg_match("/^[A-Za-z0-9_-]+$/", $exploded[0])) {
+            //if (ctype_alnum(str_replace(['_', '-'], '', $exploded[0]))) {
+                $group = $exploded[0];
+                $item = $exploded[1];
+            }
+        }
+
+        return $this->parsedKeys[$key] = [$namespace ?? '*', $group ?? '*', $item];
+    }
+
+
+    protected function applyParameters(string $text, array $parameters): string
+    {
+        foreach ($parameters as $key => $value) {
+            $value = (string)$value;
+
+            $text = str_replace(":{$key}", $value,
+                $this->applyModifiers($text, $key, $value)
+            );
+        }
+
+        return $text;
+    }
+
+    protected function applyModifiers(string $text, string $key, string $value): string
+    {
+        foreach ($this->modifiers as $modifier => $callback) {
+            $placeholder = ":{$modifier}:{$key}";
+
+            if (str_contains($text, $placeholder)) {
+                $modified = is_callable($callback) ? $callback($value) : $callback($value);
+                $text = str_replace($placeholder, $modified, $text);
+            }
+        }
+
+        return $text;
+    }
+
+    protected function applyExpressions(string $text, string $locale): string
+    {
+        $expressions = Expression::parse($text);
+
+        foreach ($expressions as $expression) {
+            $text = $expression->apply($text, $locale);
+        }
+
+        return $text;
+    }
+
+    public function setLocaleResolver(callable $resolver): static
+    {
+        $this->localesResolver = $resolver;
+
+        return $this;
+    }
+
+    public function addModifier(string $name, callable $callback): static
+    {
+        $this->modifiers[$name] = $callback;
+
+        return $this;
+    }
+
+    public function addPlural(string $locale, callable $plural): static
+    {
+        Expression::$plurals[$locale] = $plural;
+
+        return $this;
+    }
+
+    public function handleNotFound(callable $callback): static
+    {
+        $this->callbacks['not_found'][] = $callback;
+
+        return $this;
+    }
+
+    public function handlePrimaryNotFound(callable $callback): static
+    {
+        $this->callbacks['primary_not_found'][] = $callback;
+
+        return $this;
+    }
+
+    public function handleFallbackNotFound(callable $callback): static
+    {
+        $this->callbacks['fallback_not_found'][] = $callback;
+
+        return $this;
+    }
+
+    protected function callCallbacks(string $type, array $parameters): void
+    {
+        $callbacks = $this->callbacks[$type] ?? [];
+
+        foreach ($callbacks as $callback) {
+            $callback(...$parameters);
+        }
     }
 }
