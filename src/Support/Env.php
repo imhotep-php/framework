@@ -8,7 +8,7 @@ class Env
 {
     protected static ?Dotenv $repository = null;
 
-    public static function initRepository(string $environmentFilepath = null): void
+    public static function initRepository(?string $environmentFilepath = null): void
     {
         static::$repository = new Dotenv($environmentFilepath);
     }

@@ -61,7 +61,7 @@ class MessageBag implements MessageBagContract
         return array_keys($this->messages);
     }
 
-    public function get(string $key, string $format = null): array
+    public function get(string $key, ?string $format = null): array
     {
         if (! array_key_exists($key, $this->messages)) {
             return [];
@@ -70,7 +70,7 @@ class MessageBag implements MessageBagContract
         return $this->transform($this->messages[$key], $key, $format) ;
     }
 
-    public function all(string $format = null): array
+    public function all(?string $format = null): array
     {
         $result = [];
         foreach ($this->messages as $key => $value) {
@@ -80,12 +80,12 @@ class MessageBag implements MessageBagContract
         return $result;
     }
 
-    public function unique(string $format = null): array
+    public function unique(?string $format = null): array
     {
         return array_unique($this->all($format));
     }
 
-    public function firstOfAll(string $format = null): array
+    public function firstOfAll(?string $format = null): array
     {
         $result = [];
         foreach ($this->messages as $key => $value) {
@@ -97,7 +97,7 @@ class MessageBag implements MessageBagContract
         return $result;
     }
 
-    public function first(string $key = null, string $format = null): string
+    public function first(?string $key = null, ?string $format = null): string
     {
         if (is_null($key)) {
             $key = array_key_first($this->messages);
@@ -108,7 +108,7 @@ class MessageBag implements MessageBagContract
         return $messages[0] ?: '';
     }
 
-    protected function transform(array $messages, string $key, string $format = null): array
+    protected function transform(array $messages, string $key, ?string $format = null): array
     {
         $format = $format ?: $this->format;
 
@@ -125,7 +125,7 @@ class MessageBag implements MessageBagContract
     }
 
     // Определяем наличие сообщений для каждого переданного ключа
-    public function has(array|string $key = null): bool
+    public function has(array|string|null $key): bool
     {
         if (is_null($key) || $this->isEmpty()) {
             return false;
@@ -147,7 +147,7 @@ class MessageBag implements MessageBagContract
     }
 
     // Определяем наличие сообщений для любого из переданного ключа
-    public function hasAny(array|string $key = null): bool
+    public function hasAny(array|string|null $key): bool
     {
         if (is_null($key) || $this->isEmpty()) {
             return false;
@@ -164,7 +164,7 @@ class MessageBag implements MessageBagContract
         return false;
     }
 
-    public function add(array|string $key, array|string $value = null): static
+    public function add(array|string $key, array|string|null $value = null): static
     {
         if (is_string($key) && is_string($value)) {
             if ($this->isUnique($key, $value)) {
@@ -193,7 +193,7 @@ class MessageBag implements MessageBagContract
         return $this;
     }
 
-    public function addIf(bool $boolean, array|string $key, array|string $value = null): static
+    public function addIf(bool $boolean, array|string $key, array|string|null $value = null): static
     {
         return ($boolean) ? $this->add($key, $value) : $this;
     }
@@ -203,7 +203,7 @@ class MessageBag implements MessageBagContract
         return ! isset($this->messages[$key]) || ! in_array($message, $this->messages[$key]);
     }
 
-    public function format(string $format = null): static|string
+    public function format(?string $format = null): static|string
     {
         if (is_null($format)) {
             return $this->getFormat();

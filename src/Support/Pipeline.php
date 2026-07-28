@@ -20,7 +20,7 @@ class Pipeline implements PipelineContract
 
     protected string $method = 'handle';
 
-    public function __construct(Container $container = null)
+    public function __construct(?Container $container = null)
     {
         $this->container = $container;
     }

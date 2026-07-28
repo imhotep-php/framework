@@ -1,12 +1,11 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Support;
 
 use Imhotep\Contracts\Filesystem\FileNotFoundException;
+use SplFileInfo;
 
-class File extends \SplFileInfo
+class File extends SplFileInfo
 {
     protected ?string $hashName = null;
 
