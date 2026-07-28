@@ -9,7 +9,7 @@ class ParserTest extends TestCase
 {
     protected Parser $parser;
 
-    public function __construct(?string $name = null, array $data = [], $dataName = '')
+    public function __construct($name = null, $data = [], $dataName = '')
     {
         parent::__construct($name, $data, $dataName);
 
