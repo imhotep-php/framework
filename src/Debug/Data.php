@@ -2,7 +2,10 @@
 
 namespace Imhotep\Debug;
 
-class Data implements \ArrayAccess
+use ArrayAccess;
+use Imhotep\Debug\Dumper\AbstractDumper;
+
+class Data implements ArrayAccess
 {
     protected string $type;
 

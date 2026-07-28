@@ -14,11 +14,14 @@ class VarDumper
 
     protected ICloner $cloner;
 
+    protected static int $maxDepth = 5;
+
     public function __construct(?IDumper $dumper = null, ?ICloner $cloner = null)
     {
         if (is_null($dumper)) {
-            $dumper = in_array(PHP_SAPI, ['cli', 'phpdbg']) ?
-                new CliDumper() : new HtmlDumper();
+            $dumper = in_array(PHP_SAPI, ['cli', 'phpdbg'])
+                ? new CliDumper(null, static::$maxDepth)
+                : new HtmlDumper(null, static::$maxDepth);
         }
 
         $this->dumper = $dumper;
@@ -30,12 +33,12 @@ class VarDumper
         $this->cloner = $cloner;
     }
 
-    public function debug($var)
+    public function debug(mixed $var): void
     {
-        return $this->dumper->dump($this->cloner->cloneVar($var));
+        $this->dumper->dump($this->cloner->cloneVar($var));
     }
 
-    public static function dump($var): void
+    public static function dump(mixed $var): void
     {
         if (is_null(static::$instance)) {
             static::$instance = new static();
@@ -46,7 +49,7 @@ class VarDumper
 
 
 
-    protected static VarDumper|null $instance = null;
+    protected static ?VarDumper $instance = null;
 
     public static function getInstance(): static
     {
@@ -56,5 +59,14 @@ class VarDumper
     public static function setInstance(?VarDumper $instance = null): void
     {
         static::$instance = $instance;
+    }
+
+    public static function setMaxDepth(int $maxDepth): void
+    {
+        static::$maxDepth = $maxDepth;
+
+        if (static::$instance) {
+            static::$instance = null;
+        }
     }
 }

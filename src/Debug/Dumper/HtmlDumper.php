@@ -25,7 +25,7 @@ class HtmlDumper extends AbstractDumper
 
     protected static int $uid = 0;
 
-    public function dump(Data $data)
+    public function dump(Data $data): void
     {
         $result = $this->dumpData($data);
         $result = $this->getHtmlHeader() . sprintf('<pre class="imhotep-dump" style="%s">%s</pre>', $this->styles['default'], $result);

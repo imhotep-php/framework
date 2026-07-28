@@ -21,22 +21,14 @@ class CliDumper extends AbstractDumper
         'uninitialized' => '90',
     ];
 
-    protected int $maxDepth;
-
-    public function __construct($outputStream = null, int $maxDepth = 3)
-    {
-        parent::__construct($outputStream);
-        $this->maxDepth = $maxDepth;
-    }
-
-    public function dump(Data $data)
+    public function dump(Data $data): void
     {
         //$this->write(PHP_EOL.PHP_EOL);
         $this->write($this->dumpData($data));
         $this->write(PHP_EOL);
     }
 
-    public function dumpData(Data $data, int $indent = 0)
+    public function dumpData(Data $data, int $indent = 0): string
     {
         $indentStr = str_repeat('  ', $indent);
         $result = '';
