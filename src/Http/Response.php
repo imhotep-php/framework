@@ -2,144 +2,213 @@
 
 namespace Imhotep\Http;
 
+use ArrayObject;
+use DateTimeInterface;
+use DateTimeZone;
+use Imhotep\Contracts\Arrayable;
 use Imhotep\Contracts\Http\Request as RequestContract;
 use Imhotep\Contracts\Http\Response as ResponseContract;
-use Imhotep\Cookie\Cookie;
+use Imhotep\Contracts\Jsonable;
+use Imhotep\Contracts\Renderable;
+use Imhotep\Http\Traits\HasCacheControl;
+use Imhotep\Http\Traits\HasCookies;
+use Imhotep\Http\Traits\HasHeaders;
+use Imhotep\Http\Traits\HasHttpStatus;
+use Imhotep\Support\Str;
+use Imhotep\Support\Traits\DeprecatedGetters;
+use Imhotep\Support\Traits\Macroable;
+use InvalidArgumentException;
+use JsonSerializable;
 
 class Response implements ResponseContract
 {
-    protected string $version = '1.1';
-
-    protected string $charset = 'utf-8';
-
-    protected array $cookies = [];
-
-    protected array $headers = [];
-
-    protected int $statusCode = 200;
-
-    protected string $statusText = '';
-
-    protected mixed $content = null;
-
-    protected bool $isJson = false;
-
-    public function __construct(string $content = '', int $statusCode = 200, array $headers = [])
-    {
-        $this->setContent($content)
-            ->setStatusCode($statusCode)
-            ->setHeaders($headers);
+    use HasHttpStatus, HasHeaders, HasCacheControl, HasCookies, DeprecatedGetters, Macroable {
+        __call as macroCall;
     }
 
-    public function setStatusCode(int $statusCode): static
+    protected string $protocol = '1.1';
+
+    protected string $charset = 'UTF-8';
+
+    protected mixed $original = null;
+
+    protected ?string $content = null;
+
+    public function __construct(mixed $content = null, int $status = 200, array $headers = [])
     {
-        $this->statusCode = $statusCode;
+        $this->headers = new HeaderBag($headers);
+
+        $this->setContent($content);
+        $this->setStatus($status);
+    }
+
+    public function protocol(): string
+    {
+        return $this->protocol;
+    }
+
+    public function setProtocol(string $protocol): static
+    {
+        $this->protocol = $protocol;
 
         return $this;
     }
 
-    public function code(int $statusCode): static
+    public function charset(): string
     {
-        return $this->setStatusCode($statusCode);
+        return $this->charset;
     }
 
-    public function setHeader(string $name, string $value): static
+    public function setCharset(string $charset): static
     {
-        $this->headers[$name] = $value;
+        $this->charset = strtoupper($charset);
 
         return $this;
     }
 
-    public function header(string $name, string $value): static
+    public function originalContent(): mixed
     {
-        return $this->setHeader($name, $value);
+        return $this->original instanceof self
+            ? $this->original->{__FUNCTION__}()
+            : $this->original;
     }
 
-    public function setHeaders(array $headers = []): static
+    public function content(): ?string
     {
-        $this->headers = array_merge($this->headers, $headers);
-
-        return $this;
-    }
-
-    public function withHeaders(array $headers = []): static
-    {
-        return $this->setHeaders($headers);
-    }
-
-    public function headers(array $headers = []): static
-    {
-        return $this->setHeaders($headers);
-    }
-
-    public function clearCookies(): void
-    {
-        $this->cookies = [];
-    }
-
-    public function getCookies(): array
-    {
-        return $this->cookies;
-    }
-
-    public function setCookie(Cookie|string $cookie, string $value = '', int $minutes = 0, string $path = '', string $domain = '', bool $secure = false, bool $httpOnly = false, string $sameSite = null): static
-    {
-        if (is_string($cookie)) {
-            $expires = ($minutes === 0) ? 0 : time() + ($minutes * 60);
-
-            $cookie = new Cookie($cookie, $value, $expires, $path, $domain, $secure, $httpOnly, $sameSite);
-        }
-
-        $this->cookies[] = $cookie;
-
-        return $this;
-    }
-
-    public function cookie(Cookie|string $cookie, string $value = '', int $minutes = 0, string $path = '', string $domain = '', bool $secure = false, bool $httpOnly = false, string $sameSite = null): static
-    {
-        return $this->setCookie($cookie, $value, $minutes, $path, $domain, $secure, $httpOnly, $sameSite);
-    }
-
-    public function withoutCookie(Cookie|string $cookie, $path = null, $domain = null): static
-    {
-        if (is_string($cookie)) {
-            $cookie = new Cookie($cookie, '', -2628000, $path, $domain);
-        }
-
-        return $this->setCookie($cookie);
+        return $this->content;
     }
 
     public function setContent(mixed $content): static
     {
+        $this->original = $content;
+
+        if (is_null($content) || is_string($content)) {
+            $this->content = $content;
+
+            return $this;
+        }
+
+        if (is_scalar($content)) {
+            $this->content = (string)$content;
+
+            return $this;
+        }
+
+        if ($this->isJsonContent($content)) {
+            $this->setHeader('Content-Type', 'application/json');
+
+            $content = $this->jsonEncode($content);
+
+            if ($content === false) {
+                throw new InvalidArgumentException(json_last_error_msg());
+            }
+        }
+
+        elseif ($content instanceof Renderable) {
+            $content = $content->render();
+        }
+
+        elseif ($content instanceof static) {
+            $content = $content->content();
+        }
+
         $this->content = $content;
 
         return $this;
     }
 
-    public function getContent(): mixed
+    protected function isJsonContent(mixed $content): bool
     {
-        return $this->content;
+        return $content instanceof Arrayable ||
+            $content instanceof Jsonable ||
+            $content instanceof ArrayObject ||
+            $content instanceof JsonSerializable ||
+            is_array($content);
     }
 
-    public function content(mixed $content = null): static|string|null
+    protected function jsonEncode(mixed $content): false|string
     {
-        if (is_null($content)) {
-            return $this->getContent();
+        if ($content instanceof Jsonable) {
+            return $content->toJson();
         }
 
-        return $this->setContent($content);
+        $data = $content instanceof Arrayable ? $content->toArray() : $content;
+        $result = json_encode($data);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new InvalidArgumentException(json_last_error_msg());
+        }
+
+        return $result;
     }
 
-    public function json(mixed $data): static
+
+    public function contentType(): ?string
     {
-        $this->isJson = true;
+        if ($value = $this->headers->get('Content-Type')) {
+            if (str_contains($value, ';')) {
+                $exploded = explode(';', $value);
+                return trim($exploded[0]);
+            }
 
-        $this->content = (array)$data;
+            return $value;
+        }
 
-        $this->header('Content-Type', 'application/json');
+        return null;
+    }
+
+    public function setContentType(string $contentType, ?string $charset = null): static
+    {
+        $this->headers->set('Content-Type', $contentType);
+
+        if ($charset !== null) {
+            $this->setCharset($charset);
+        }
 
         return $this;
     }
+
+    public function expires(): ?DateTimeInterface
+    {
+        return $this->headers->getDate('Expires');
+    }
+
+    public function setExpires(DateTimeInterface $date): static
+    {
+        $date = $date->setTimezone(new DateTimeZone('UTC'));
+
+        $this->headers->set('Expires', $date->format('D, d M Y H:i:s').' GMT');
+
+        return $this;
+    }
+
+    public function lastModified(): DateTimeInterface
+    {
+        return $this->headers->getDate('Last-Modified');
+    }
+
+    public function setLastModified(DateTimeInterface $date): static
+    {
+        $date = $date->setTimezone(new DateTimeZone('UTC'));
+
+        $this->headers->set('Last-Modified', $date->format('D, d M Y H:i:s').' GMT');
+
+        return $this;
+    }
+
+    public function etag(): ?string
+    {
+        return $this->headers->get('ETag');
+    }
+
+    public function setEtag(?string $etag = null): static
+    {
+        $this->headers->set('ETag', sprintf('"%s"', $etag));
+
+        return $this;
+    }
+
+
 
     public function prepare(RequestContract $request): static
     {
@@ -156,9 +225,11 @@ class Response implements ResponseContract
 
         if (function_exists('fastcgi_finish_request')) {
             fastcgi_finish_request();
-        } elseif (function_exists('litespeed_finish_request')) {
+        }
+        elseif (function_exists('litespeed_finish_request')) {
             litespeed_finish_request();
-        } elseif (!in_array(PHP_SAPI, ['cli', 'phpdbg'], true)) {
+        }
+        elseif (!in_array(PHP_SAPI, ['cli', 'phpdbg'], true)) {
             static::closeOutputBuffers(0, true);
         }
 
@@ -167,14 +238,14 @@ class Response implements ResponseContract
 
     protected function sendHeaders(): static
     {
-        // headers have already been sent by the developer
         if (headers_sent()) {
             return $this;
         }
 
-        // headers
-        foreach($this->headers as $name => $value){
-            if (strtolower($name) == 'content-type') {
+        foreach($this->headers->all() as $name => $value){
+            $name = $this->headers->normalizeName($name);
+
+            if ($name === 'Content-Type') {
                 header($name.': '.$value.'; charset='.$this->charset, false, $this->statusCode);
             }
             else{
@@ -186,19 +257,14 @@ class Response implements ResponseContract
             header("Set-Cookie: ".(string)$cookie, false, $this->statusCode);
         }
 
-        header(sprintf('HTTP/%s %s %s', $this->version, $this->statusCode, $this->statusText), true, $this->statusCode);
+        header(sprintf('HTTP/%s %s %s', $this->protocol, $this->statusCode, $this->statusPhrase), true, $this->statusCode);
 
         return $this;
     }
 
     protected function sendContent(): static
     {
-        if ($this->isJson) {
-            echo json_encode((array)$this->content, JSON_UNESCAPED_UNICODE);
-        }
-        else {
-            echo $this->content ?? '';
-        }
+        echo $this->content ?? '';
 
         return $this;
     }
@@ -206,8 +272,8 @@ class Response implements ResponseContract
     public static function closeOutputBuffers(int $targetLevel, bool $flush): void
     {
         $status = ob_get_status(true);
-        $level = \count($status);
-        $flags = \PHP_OUTPUT_HANDLER_REMOVABLE | ($flush ? \PHP_OUTPUT_HANDLER_FLUSHABLE : \PHP_OUTPUT_HANDLER_CLEANABLE);
+        $level = count($status);
+        $flags = PHP_OUTPUT_HANDLER_REMOVABLE | ($flush ? PHP_OUTPUT_HANDLER_FLUSHABLE : PHP_OUTPUT_HANDLER_CLEANABLE);
 
         while ($level-- > $targetLevel && ($s = $status[$level]) && (!isset($s['del']) ? !isset($s['flags']) || ($s['flags'] & $flags) === $flags : $s['del'])) {
             if ($flush) {
@@ -219,9 +285,12 @@ class Response implements ResponseContract
         }
     }
 
-    public function isRedirect(string $location = null): bool
+    public function __call(string $method, array $parameters): mixed
     {
-        return in_array($this->statusCode, [201, 301, 302, 303, 307, 308])
-            && (null === $location || $location == ($this->headers['Location'] ?? null));
+        if ($result = $this->deprecatedGettersCall($method, $parameters)) {
+            return $result;
+        }
+
+        return $this->macroCall($method, $parameters);
     }
 }

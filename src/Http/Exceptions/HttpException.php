@@ -1,9 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Http\Exceptions;
 
 use Imhotep\Contracts\Http\HttpException as HttpExceptionContract;
-use Imhotep\Contracts\Http\Response;
 use Imhotep\View\Facades\View;
 use RuntimeException;
 use Throwable;

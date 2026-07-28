@@ -7,47 +7,46 @@ use Imhotep\Contracts\Http\Request as RequestContract;
 use Imhotep\Contracts\Routing\Route;
 use Imhotep\Contracts\Session\ISession;
 use Imhotep\Contracts\Validation\IValidator;
-use Imhotep\Http\Request\FileBag;
-use Imhotep\Http\Request\HeaderBag;
-use Imhotep\Http\Request\ParameterBug;
-use Imhotep\Http\Request\ServerBag;
+use Imhotep\Http\Traits\HasHeaders;
 use Imhotep\Support\Arr;
 use Imhotep\Support\Str;
+use Imhotep\Support\Traits\DeprecatedGetters;
 use Imhotep\Support\Traits\Macroable;
 
 /**
- * @method IValidator validate(array $rules, array $messages = [])
+ * @method IValidator validate(array $rules, array $messages = [], array $attributes = [])
  */
-class Request implements \ArrayAccess, RequestContract
+class Request implements RequestContract
 {
-    use Macroable;
+    use HasHeaders, DeprecatedGetters, Macroable {
+        __call as macroCall;
+    }
 
-    public ParameterBug $query;
+    public ParameterBag $query;
 
-    public ParameterBug $post;
+    public ParameterBag $post;
 
-    public ParameterBug $json;
+    public ParameterBag $json;
 
-    public ParameterBug $cookies;
+    public ParameterBag $cookies;
 
     public FileBag $files;
 
     public ServerBag $server;
 
-    public HeaderBag $headers;
-
-    protected ?Route $route = null;
+    protected ?Closure $routeResolver = null;
 
     protected ?Closure $userResolver = null;
 
-    public mixed $content;
+    protected ?string $content;
+
 
     public static function createFromGlobals(): static
     {
         return new static($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
     }
 
-    public static function create(string $uri, string $method = 'GET', array $parameters = [], array $cookies = [], array $files = [], array $server = []): static
+    public static function create(string $uri, string $method = 'GET', array $parameters = [], array $cookies = [], array $files = [], array $server = [], ?string $content = null): static
     {
         $server = array_replace([
             'SERVER_NAME' => 'localhost',
@@ -129,62 +128,61 @@ class Request implements \ArrayAccess, RequestContract
 
             if ($query) {
                 $query = array_replace($qs, $query);
-                $queryString = http_build_query($query, '', '&');
+                $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
             } else {
                 $query = $qs;
                 $queryString = $components['query'];
             }
         } elseif ($query) {
-            $queryString = http_build_query($query, '', '&');
+            $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
         }
 
         $server['REQUEST_URI'] = $components['path'].('' !== $queryString ? '?'.$queryString : '');
         $server['QUERY_STRING'] = $queryString;
 
-        $request = new static($query, $post, $cookies, $files, $server);
-
-        return $request;
+        return new static($query, $post, $cookies, $files, $server, $content);
     }
 
-    public function __construct(array $query = [], array $post = [], array $cookies = [], array $files = [], array $server = [])
+    public function __construct(array $query = [], array $post = [], array $cookies = [], array $files = [], array $server = [], ?string $content = null)
     {
-        $this->query = new ParameterBug($query);
-        $this->post = new ParameterBug($post);
-        $this->cookies = new ParameterBug($cookies);
+        $this->query = new ParameterBag($query);
+        $this->post = new ParameterBag($post);
+        $this->cookies = new ParameterBag($cookies);
         $this->server = new ServerBag($server);
         $this->headers = new HeaderBag($this->server->getHeaders());
         $this->files = new FileBag($files);
+        $this->content = $content;
 
         $this->makeJson();
     }
 
     protected function makeJson(): void
     {
-        $json = json_decode($this->getContent(), true);
+        $this->json = new ParameterBag([]);
 
-        if (is_null($json) || json_last_error() !== JSON_ERROR_NONE) {
-            $json = [];
+        if (($content = $this->content()) && !empty($content)) {
+            $json = json_decode($content, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return;
+            }
+
+            $this->json->replace($json);
         }
-
-        $this->json = new ParameterBug($json);
     }
 
-    public function getMethod(): string
+
+    public function method(): string
     {
         return $this->server->get('REQUEST_METHOD', 'GET');
     }
 
-    public function method(): string
-    {
-        return $this->getMethod();
-    }
-
     public function isMethod(string|array $methods): bool
     {
-        if (! is_array($methods)) $methods = func_get_args();
+        $methods = is_array($methods) ? $methods : func_get_args();
 
         foreach ($methods as $method) {
-            if ($this->getMethod() === strtoupper($method)) {
+            if ($this->method() === strtoupper($method)) {
                 return true;
             }
         }
@@ -192,8 +190,7 @@ class Request implements \ArrayAccess, RequestContract
         return false;
     }
 
-
-    public function isSecure(): bool
+    public function secure(): bool
     {
         $https = $this->server->get('HTTPS');
         $port = $this->server->get('SERVER_PORT');
@@ -213,24 +210,12 @@ class Request implements \ArrayAccess, RequestContract
         return false;
     }
 
-    public function secure(): bool
-    {
-        return $this->isSecure();
-    }
-
-
-    public function getScheme(): string
+    public function scheme(): string
     {
         return $this->secure() ? 'https' : 'http';
     }
 
-    public function scheme(): string
-    {
-        return $this->getScheme();
-    }
-
-
-    public function getHost(bool $withPort = false): string
+    public function host(bool $withPort = false): string
     {
         if (! $host = $this->headers->get('HOST')) {
             $host = $this->server->get('SERVER_NAME') ?? $this->server->get('SERVER_ADDR');
@@ -243,8 +228,8 @@ class Request implements \ArrayAccess, RequestContract
             return $host;
         }
 
-        $scheme = $this->getScheme();
-        $port = $this->getPort();
+        $scheme = $this->scheme();
+        $port = $this->port();
 
         if (($scheme === 'http' && $port === 80) || ($scheme === 'https' && $port === 443)) {
             return $host;
@@ -253,32 +238,26 @@ class Request implements \ArrayAccess, RequestContract
         return $host.':'.$port;
     }
 
-    public function host(bool $withPort = false): string
-    {
-        return $this->getHost($withPort);
-    }
-
-
-    public function getPort(): int
-    {
-        if (! $host = $this->headers->get('HOST')) {
-            return intval($this->server->get('SERVER_PORT'));
-        }
-
-        if (preg_match('/:(\d+)/', $host, $match)) {
-            return intval($match[1]);
-        }
-
-        return $this->getScheme() === 'https' ? 443 : 80;
-    }
-
     public function port(): int
     {
-        return $this->getPort();
+        if ($host = $this->headers->get('HOST')) {
+            if (preg_match('/:(\d+)/', $host, $match)) {
+                return intval($match[1]);
+            }
+        }
+
+        if ($port = $this->server->get('SERVER_PORT')) {
+            $port = intval($port);
+
+            if ($port > 0) {
+                return $port;
+            }
+        }
+
+        return $this->scheme() === 'https' ? 443 : 80;
     }
 
-
-    public function getPath(): string
+    public function path(): string
     {
         $path = $this->server->get('REQUEST_URI', '');
 
@@ -293,57 +272,34 @@ class Request implements \ArrayAccess, RequestContract
         return $path;
     }
 
-    public function path(): string
-    {
-        return $this->getPath();
-    }
-
-
-    public function getQueryString(): string
-    {
-        return $this->fixQueryString($this->server->get('QUERY_STRING'));
-    }
-
     public function queryString(): string
     {
-        return $this->getQueryString();
+        return $this->server->get('QUERY_STRING', '');
     }
 
-    protected function fixQueryString(?string $qs): string
+    public function content(): string
     {
-        if (($qs ?? '') === '') {
-            return '';
-        }
-
-        return $qs;
-    }
-
-
-    public function getContent(): mixed
-    {
-        if (! isset($this->content)) {
-            $this->content = file_get_contents('php://input');
+        if (is_null($this->content)) {
+            $content = file_get_contents('php://input');
+            $this->content = is_string($content) ? $content : '';
         }
 
         return $this->content;
     }
-
 
     public function root(): string
     {
         return $this->scheme().'://'.$this->host(true);
     }
 
-    public function url(bool|array $withQuery = false): string
+    public function uri(): string
     {
-        $query = '';
-        if (is_array($withQuery) && count($withQuery) > 0) {
-            $query = array_merge($this->query(), $withQuery);
-            $query = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-        }
-        elseif ($withQuery === true) {
-            $query = $this->queryString();
-        }
+        return $this->server->get('REQUEST_URI', '');
+    }
+
+    public function url(array $query = []): string
+    {
+        $query = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
 
         $path = $this->path();
         $url = rtrim($this->scheme().'://'.$this->host(true).$path, '/');
@@ -352,27 +308,13 @@ class Request implements \ArrayAccess, RequestContract
         return empty($query) ? $url : $url.$question.$query;
     }
 
-    public function fullUrl(): string
+    public function fullUrl(array $query = [], array $without = []): string
     {
-        return $this->url(true);
-    }
-
-    public function fullUrlWithQuery(array $query): string
-    {
-        return $this->url($query);
+        return $this->url(Arr::except(array_merge($this->query(), $query), $without));
     }
 
 
-    public function getUri(){
-        return $this->server->get('REQUEST_URI', '');
-    }
-
-    public function uri()
-    {
-        return $this->getUri();
-    }
-
-    public function server(string $key = null, mixed $default = null): mixed
+    public function server(?string $key = null, mixed $default = null): mixed
     {
         if (is_null($key)) {
             return $this->server->all();
@@ -381,50 +323,7 @@ class Request implements \ArrayAccess, RequestContract
         return $this->server->get($key, $default);
     }
 
-    public function headers(string $key = null, mixed $default = null): mixed
-    {
-        if (is_null($key)) {
-            return $this->headers->all();
-        }
-
-        return $this->headers->get($key, $default);
-    }
-
-    public function header(string $key, mixed $default = null): mixed
-    {
-        return $this->headers->get($key, $default);
-    }
-
-    public function hasHeader(string|array $keys): bool
-    {
-        $keys = is_array($keys) ? $keys : func_get_args();
-
-        foreach ($keys as $key) {
-            if (! $this->headers->has($key)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-
-    public function cookies(string $key = null, mixed $default = null): mixed
-    {
-        if (is_null($key)) {
-            return $this->cookies->all();
-        }
-
-        return $this->cookies->get($key, $default);
-    }
-
-    public function cookie(string $key, mixed $default = null): mixed
-    {
-        return $this->cookies->get($key, $default);
-    }
-
-
-    public function query(string $key = null, mixed $default = null): mixed
+    public function query(?string $key = null, mixed $default = null): mixed
     {
         if (is_null($key)) {
             return $this->query->all();
@@ -433,7 +332,7 @@ class Request implements \ArrayAccess, RequestContract
         return $this->query->get($key, $default);
     }
 
-    public function post(string $key = null, mixed $default = null): mixed
+    public function post(?string $key = null, mixed $default = null): mixed
     {
         if (is_null($key)) {
             return $this->post->all();
@@ -442,7 +341,7 @@ class Request implements \ArrayAccess, RequestContract
         return $this->post->get($key, $default);
     }
 
-    public function json(string $key = null, mixed $default = null): mixed
+    public function json(?string $key = null, mixed $default = null): mixed
     {
         if (is_null($key)) {
             return $this->json->all();
@@ -451,13 +350,27 @@ class Request implements \ArrayAccess, RequestContract
         return $this->json->get($key, $default);
     }
 
-    public function files(string $key = null, mixed $default = null): mixed
+    public function cookies(string|array|null $keys = null): array
     {
-        if (is_null($key)) {
+        if (is_null($keys)) {
+            return $this->cookies->all();
+        }
+
+        return $this->cookies->only(is_array($keys) ? $keys : func_get_args());
+    }
+
+    public function cookie(string $key, mixed $default = null): mixed
+    {
+        return $this->cookies->get($key, $default);
+    }
+
+    public function files(string|array|null $keys = null): array
+    {
+        if (is_null($keys)) {
             return $this->files->all();
         }
 
-        return $this->files->get($key, $default);
+        return $this->files->only(is_array($keys) ? $keys : func_get_args());
     }
 
     public function file(string $key, mixed $default = null): mixed
@@ -476,7 +389,7 @@ class Request implements \ArrayAccess, RequestContract
         return array_merge($this->query(), $this->post(), $this->json(), $this->files());
     }
 
-    public function input(string $key = null, mixed $default = null): mixed
+    public function input(?string $key = null, mixed $default = null): mixed
     {
         $input = $this->all();
 
@@ -541,7 +454,7 @@ class Request implements \ArrayAccess, RequestContract
         return Arr::hasAny($this->all(), $keys);
     }
 
-    public function whenHas(string $key, callable $callback, callable $default = null): static
+    public function whenHas(string $key, callable $callback, ?callable $default = null): static
     {
         if ($this->has($key)) {
             $callback(Arr::get($this->all(), $key));
@@ -593,7 +506,7 @@ class Request implements \ArrayAccess, RequestContract
         return false;
     }
 
-    public function whenFilled(string $key, callable $callback, callable $default = null): static
+    public function whenFilled(string $key, callable $callback, ?callable $default = null): static
     {
         $value = Arr::get($this->all(), $key);
 
@@ -612,10 +525,12 @@ class Request implements \ArrayAccess, RequestContract
     {
         $keys = is_array($keys) ? $keys : func_get_args();
 
-        return ! $this->has($keys);
+        return Arr::missing($this->all(), $keys);
+
+        //return ! $this->has($keys);
     }
 
-    public function whenMissing(string $key, callable $callback, callable $default = null): static
+    public function whenMissing(string $key, callable $callback, ?callable $default = null): static
     {
         if (Arr::missing($this->all(), $key)) {
             $callback();
@@ -629,47 +544,59 @@ class Request implements \ArrayAccess, RequestContract
     }
 
     // Input types
-    public function string(string $key, ?string $default = ''): ?string
+    public function string(string $key, string|callable|null $default = ''): ?string
     {
-        $value = $this->input($key, $default);
+        $value = $this->input($key);
 
-        if (is_array($value) || is_bool($value)) {
-            return $default;
+        if (is_null($value) || is_array($value)) {
+            return value($default);
         }
 
         return trim(strval($value));
     }
 
-    public function str(string $key, ?string $default = ''): ?string
+    public function str(string $key, string|callable|null $default = ''): ?string
     {
         return $this->string($key, $default);
     }
 
-    public function integer(string $key, ?int $default = 0): ?int
+    public function integer(string $key, int|callable|null $default = 0): ?int
     {
-        $value = filter_var($this->input($key, $default), FILTER_VALIDATE_INT);
+        $value = filter_var($this->input($key), FILTER_VALIDATE_INT);
 
-        return is_int($value) ? $value : $default;
+        return is_int($value) ? $value : value($default);
     }
 
-    public function int(string $key, ?int $default = 0): ?int
+    public function int(string $key, int|callable|null $default = 0): ?int
     {
         return $this->integer($key, $default);
     }
 
-    public function float(string $key, ?float $default = 0.0): ?float
+    public function float(string $key, float|callable|null $default = 0.0): ?float
     {
-        $value = filter_var($this->input($key, $default), FILTER_VALIDATE_FLOAT);
+        $value = filter_var($this->input($key), FILTER_VALIDATE_FLOAT);
 
-        return is_float($value) ? $value : $default;
+        return is_float($value) ? $value : value($default);
     }
 
-    public function boolean(string $key, ?bool $default = false): ?bool
+    public function boolean(string $key, bool|callable|null $default = false): ?bool
     {
-        return filter_var($this->input($key, $default), FILTER_VALIDATE_BOOLEAN);
+        $value = $this->input($key);
+
+        if (is_null($value)) {
+            return value($default);
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        return is_null($value) ? value($default) : $value;
     }
 
-    public function bool(string $key, ?bool $default = false): ?bool
+    public function bool(string $key, bool|callable|null $default = false): ?bool
     {
         return $this->boolean($key, $default);
     }
@@ -679,7 +606,9 @@ class Request implements \ArrayAccess, RequestContract
     public function ip(): string
     {
         if ($this->server->has('HTTP_X_FORWARDED_FOR')) {
-            return $this->server->get('HTTP_X_FORWARDED_FOR');
+            $value = explode(',', $this->server->get('HTTP_X_FORWARDED_FOR'));
+
+            return trim($value[0]);
         }
 
         // For Cloudflare
@@ -750,28 +679,29 @@ class Request implements \ArrayAccess, RequestContract
 
     public function getAcceptableTypes(): array
     {
-        if (is_null($this->acceptsCache)) {
-            $accepts = trim($this->headers->get('Accept', ''));
-
-            if ($accepts === '') {
-                $accepts = [];
-            }
-            else {
-                if (str_contains($accepts, ';')) {
-                    $accepts = strtok($accepts, ';');
-                }
-
-                $accepts = array_map(fn($val) => strtolower(trim($val)), explode(",", $accepts));
-            }
-
-            $this->acceptsCache = $accepts;
+        if ($this->acceptsCache !== null) {
+            return $this->acceptsCache;
         }
 
-        return $this->acceptsCache;
+        $accepts = trim($this->headers->get('Accept', ''));
+
+        if ($accepts !== '') {
+            $accepts = array_map(function($accept) {
+                if ($pos = stripos($accept, ';')) {
+                    $accept = substr($accept, 0, $pos);
+                }
+
+                return strtolower(trim($accept));
+            }, explode(',', $accepts));
+        }
+
+        return $this->acceptsCache = is_array($accepts) ? $accepts : [];
     }
 
     public function accepts(string|array $contentTypes): bool
     {
+        // TODO: Check for optimization
+
         $accepts = $this->getAcceptableTypes();
 
         if (count($accepts) === 0) {
@@ -831,14 +761,16 @@ class Request implements \ArrayAccess, RequestContract
 
     public function format(string $default = 'html'): string
     {
+        // TODO: Add custom formats
+
         $defaultFormats = [
+            'xml' => ['text/xml', 'application/xml', 'application/x-xml'],
             'html' => ['text/html', 'application/xhtml+xml'],
             'txt' => ['text/plain'],
             'js' => ['application/javascript', 'application/x-javascript', 'text/javascript'],
             'css' => ['text/css'],
             'json' => ['application/json', 'application/x-json'],
             'jsonld' => ['application/ld+json'],
-            'xml' => ['text/xml', 'application/xml', 'application/x-xml'],
             'rdf' => ['application/rdf+xml'],
             'atom' => ['application/atom+xml'],
             'rss' => ['application/rss+xml'],
@@ -866,7 +798,7 @@ class Request implements \ArrayAccess, RequestContract
         return isset($accepts[0]) && (str_contains($accepts[0], '/json') || str_contains($accepts[0], '+json'));
     }
 
-    public function getAcceptedLanguages(string|array $languages = null): array
+    public function getAcceptedLanguages(string|array|null $languages = null): array
     {
         if (is_null($this->acceptLanguages)) {
             $this->acceptLanguages = [];
@@ -909,29 +841,27 @@ class Request implements \ArrayAccess, RequestContract
         return in_array($language, $this->getAcceptedLanguages());
     }
 
+
     // Work with routes
-    public function getRoute(): ?Route
+    public function getRouteResolver(): Closure
     {
-        return $this->route ?? null;
+        return $this->routeResolver ?? function () {  return null; };
     }
 
-    public function setRoute(Route $route): static
+    public function setRouteResolver(Closure $resolver): static
     {
-        $this->route = $route;
+        $this->routeResolver = $resolver;
 
         return $this;
     }
 
-    public function route(Route $route = null): static|Route|null
+    public function route(): ?Route
     {
-        if (is_null($route)) {
-            return $this->getRoute();
-        }
-
-        return $this->setRoute($route);
+        return call_user_func($this->getRouteResolver());
     }
 
 
+    // Auth user
     public function setUserResolver(Closure $resolver): static
     {
         $this->userResolver = $resolver;
@@ -944,13 +874,13 @@ class Request implements \ArrayAccess, RequestContract
         return $this->userResolver ?: function () { };
     }
 
-    public function user(string $guard = null): mixed
+    public function user(?string $guard = null): mixed
     {
         return call_user_func($this->getUserResolver(), $guard);
     }
 
-    // Session
 
+    // Session
     protected ISession $session;
 
     public function setSession(ISession $session): void
@@ -1009,7 +939,7 @@ class Request implements \ArrayAccess, RequestContract
 
     public function offsetExists(mixed $offset): bool
     {
-        return $this->all()[$offset] ?? false;
+        return Arr::has($this->all(), $offset);
     }
 
     public function offsetGet(mixed $offset): mixed
@@ -1019,7 +949,7 @@ class Request implements \ArrayAccess, RequestContract
 
     public function offsetSet(mixed $offset, mixed $value): void
     {
-        if (in_array($this->getMethod(), ['GET', 'HEAD'])) {
+        if (in_array($this->method(), ['GET', 'HEAD'])) {
             $this->query->set($offset, $value);
         }
         else {
@@ -1029,7 +959,7 @@ class Request implements \ArrayAccess, RequestContract
 
     public function offsetUnset(mixed $offset): void
     {
-        if (in_array($this->getMethod(), ['GET', 'HEAD'])) {
+        if (in_array($this->method(), ['GET', 'HEAD'])) {
             $this->query->remove($offset);
         }
         else {
@@ -1037,18 +967,27 @@ class Request implements \ArrayAccess, RequestContract
         }
     }
 
-    public function __get(string $key)
+    public function __get(string $key): mixed
     {
         return $this->input($key);
     }
 
-    public function __set(string $key, mixed $value)
+    public function __set(string $key, mixed $value): void
     {
-        if (in_array($this->getMethod(), ['GET', 'HEAD'])) {
+        if (in_array($this->method(), ['GET', 'HEAD'])) {
             $this->query->set($key, $value);
         }
         else {
             $this->post->set($key, $value);
         }
+    }
+
+    public function __call(string $method, array $parameters): mixed
+    {
+        if ($result = $this->deprecatedGettersCall($method, $parameters)) {
+            return $result;
+        }
+
+        return $this->macroCall($method, $parameters);
     }
 }

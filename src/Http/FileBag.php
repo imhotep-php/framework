@@ -1,11 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace Imhotep\Http\Request;
+namespace Imhotep\Http;
 
-use Imhotep\Http\UploadedFile;
 use InvalidArgumentException;
 
-class FileBag extends ParameterBug
+class FileBag extends ParameterBag
 {
     protected const FILE_KEYS = ['error', 'full_path', 'name', 'size', 'tmp_name', 'type'];
 
@@ -18,7 +17,7 @@ class FileBag extends ParameterBug
         }
     }
 
-    public function set(string $key, mixed $value): void
+    public function set(string $key, mixed $value): static
     {
         if ($value instanceof UploadedFile) {
             parent::set($key, $value);
@@ -29,13 +28,17 @@ class FileBag extends ParameterBug
         else {
             throw new InvalidArgumentException('An uploaded file must be an array or an instance of UploadedFile.');
         }
+
+        return $this;
     }
 
-    public function add(array $files = []): void
+    public function add(array $files = []): static
     {
         foreach ($files as $key => $file) {
             $this->set($key, $file);
         }
+
+        return $this;
     }
 
     protected function convert(array $files): array|UploadedFile
@@ -53,9 +56,9 @@ class FileBag extends ParameterBug
     {
         $result = [];
 
-        if (is_array($files['name'])) {
+        if (isset($files['name']) && is_array($files['name'])) {
             foreach ($files['name'] as $key => $name) {
-                $result[$key] = [
+                $result[] = [
                     'error' => $files['error'][$key],
                     'name' => $name,
                     'type' => $files['type'][$key],

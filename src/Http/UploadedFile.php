@@ -2,12 +2,19 @@
 
 namespace Imhotep\Http;
 
+use BadMethodCallException;
 use Imhotep\Container\Container;
 use Imhotep\Support\MimeTypes;
 use Imhotep\Support\Str;
+use Imhotep\Support\Traits\DeprecatedGetters;
+use SplFileInfo;
 
-class UploadedFile extends \SplFileInfo
+class UploadedFile extends SplFileInfo
 {
+    use DeprecatedGetters;
+
+    protected ?string $hashName = null;
+
     public static function createFrom(array $file, bool $test = false): ?static
     {
         // Если в массиве отсутствуют обязательные поля
@@ -35,6 +42,16 @@ class UploadedFile extends \SplFileInfo
         parent::__construct($path);
     }
 
+    public function hashName(): string
+    {
+        return $this->hashName ?: $this->hashName = Str::random(24);
+    }
+
+    public function originalPath(): string
+    {
+        return $this->path;
+    }
+
     public function originalName(): string
     {
         return $this->name;
@@ -55,7 +72,7 @@ class UploadedFile extends \SplFileInfo
         return $this->size;
     }
 
-    public function path(): string
+    public function path(): false|string
     {
         return $this->getRealPath();
     }
@@ -70,7 +87,7 @@ class UploadedFile extends \SplFileInfo
         return $this->getBasename();
     }
 
-    public function getSize(): int|false
+    public function size(): int|false
     {
         if ($this->test) {
             return $this->size;
@@ -95,12 +112,12 @@ class UploadedFile extends \SplFileInfo
             return $this->error === UPLOAD_ERR_OK;
         }
 
-        return ($this->error === UPLOAD_ERR_OK && $this->isUploaded() && $this->getSize());
+        return ($this->error === UPLOAD_ERR_OK && $this->isUploaded() && $this->size());
     }
 
-    public function store(string $path, string|array $options = null): bool|string
+    public function store(string $path, array|string|null $options = null): bool|string
     {
-        $name = $this->hashName;
+        $name = $this->hashName();
 
         if ($extension = $this->extension()) {
             $name = $name.'.'.$extension;
@@ -109,7 +126,7 @@ class UploadedFile extends \SplFileInfo
         return $this->storeAs($path, $name, $options);
     }
 
-    public function storeAs(string $path, string $name, string $options = null): string|false
+    public function storeAs(string $path, string $name, array|string|null $options = null): string|false
     {
         if( is_string($options)) {
             $options = ['disk' => $options];
@@ -125,10 +142,14 @@ class UploadedFile extends \SplFileInfo
         return $fs->putFileAs($path, $this->path, $name, $options ?? []);
     }
 
-    protected ?string $hashName = null;
-
-    public function hashName(): string
+    public function __call(string $method, array $parameters): mixed
     {
-        return $this->hashName ?: $this->hashName = Str::random(24);
+        if ($result = $this->deprecatedGettersCall($method, $parameters)) {
+            return $result;
+        }
+
+        throw new BadMethodCallException(sprintf(
+            'Method %s::%s does not exist.', static::class, $method
+        ));
     }
 }

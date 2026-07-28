@@ -1,10 +1,11 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Http;
 
 use Imhotep\Contracts\Http\Request as RequestContract;
 use Imhotep\Contracts\Session\ISession;
 use Imhotep\Support\MessageBag;
+use InvalidArgumentException;
 
 class RedirectResponse extends Response
 {
@@ -12,33 +13,24 @@ class RedirectResponse extends Response
 
     protected ?RequestContract $request = null;
 
-    public string $url = '';
+    protected string $url = '';
 
-    public function __construct(string $url = '', int $statusCode = 302, array $headers = [])
+    public function __construct(string $url = '', int $status = 302, array $headers = [])
     {
-        parent::__construct('', $statusCode, $headers);
+        parent::__construct('', $status, $headers);
+
+        if (! $this->isRedirection()) {
+            throw new InvalidArgumentException(sprintf('The HTTP status code is not a redirect ("%s" given).', $status));
+        }
+
+        if ($status === 301 && $this->headers->has('Cache-Control')) {
+            $this->headers->remove('Cache-Control');
+        }
 
         $this->setUrl($url);
-
-        if (! $this->isRedirect()) {
-            throw new \InvalidArgumentException(sprintf('The HTTP status code is not a redirect ("%s" given).', $statusCode));
-        }
-
-        if (301 == $statusCode && ! array_key_exists('cache-control', array_change_key_case($headers, CASE_LOWER))) {
-            unset($this->headers['cache-control']);
-        }
     }
 
-    public function url(string $url = null): static|string
-    {
-        if (is_null($url)) {
-            return $this->getUrl();
-        }
-
-        return $this->setUrl($url);
-    }
-
-    public function getUrl(): string
+    public function url(?string $url = null): string
     {
         return $this->url;
     }
@@ -46,10 +38,12 @@ class RedirectResponse extends Response
     public function setUrl(string $url): static
     {
         if (empty($url)) {
-            throw new \InvalidArgumentException('Cannot redirect to an empty URL.');
+            throw new InvalidArgumentException('Cannot redirect to an empty URL.');
         }
 
         $this->url = $url;
+
+        $this->headers->set('Location', $this->url);
 
         $this->setContent(
             sprintf('<!DOCTYPE html>
@@ -64,8 +58,6 @@ class RedirectResponse extends Response
         Redirecting to <a href="%1$s">%1$s</a>.
     </body>
 </html>', htmlspecialchars($url, ENT_QUOTES, 'UTF-8')));
-
-        $this->headers['Location'] = $url;
 
         return $this;
     }
@@ -91,7 +83,7 @@ class RedirectResponse extends Response
         return $this;
     }
 
-    public function withInput(array $input = null): static
+    public function withInput(?array $input = null): static
     {
         $this->session->flashInput($input ?: $this->request?->input() ?: []);
 
