@@ -2,10 +2,14 @@
 
 namespace Imhotep\Cookie;
 
+use BadMethodCallException;
 use Imhotep\Contracts\Cookie\QueueingFactory;
+use Imhotep\Support\Traits\DeprecatedGetters;
 
 class CookieJar implements QueueingFactory
 {
+    use DeprecatedGetters;
+
     protected string $path = '/';
 
     protected string $domain = '';
@@ -18,7 +22,7 @@ class CookieJar implements QueueingFactory
 
     protected array $queued = [];
 
-    public function make(string $name, string $value, int $seconds = 0, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = null, string $sameSite = null): Cookie
+    public function make(string $name, string $value, int $expires = 0, ?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httpOnly = null, ?string $sameSite = null): Cookie
     {
         $path = is_null($path) ? $this->path : $path;
         $domain = is_null($domain) ? $this->domain : $domain;
@@ -26,46 +30,38 @@ class CookieJar implements QueueingFactory
         $httpOnly = is_null($httpOnly) ? $this->httpOnly : $httpOnly;
         $sameSite = is_null($sameSite) ? $this->sameSite : $sameSite;
 
-        $expires = $seconds === 0 ? 0 : time() + $seconds;
-
         return new Cookie($name, $value, $expires, $path, $domain, $secure, $httpOnly, $sameSite);
     }
 
-    public function forever(string $name, string $value, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = true, string $sameSite = null): Cookie
+    public function forever(string $name, string $value, ?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httpOnly = null, ?string $sameSite = null): Cookie
     {
         return $this->make($name, $value, 31536000, $path, $domain, $secure, $httpOnly, $sameSite); // expires in a year
     }
 
-    public function forget($name, $path = null, $domain = null): Cookie
+    public function forget(string $name, ?string $path = null, ?string $domain = null): Cookie
     {
         return $this->make($name, '', -3600, $path, $domain);
     }
 
-    public function hasQueued(string $name, string $path = null): bool
+    public function hasQueued(string $name, ?string $path = null): bool
     {
         return ! is_null($this->queued($name, null, $path));
     }
 
-    public function queue(Cookie|string $cookie, string $value = '', int $seconds = 0, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = true, string $sameSite = null): void
+    public function queue(Cookie|string $cookie, string $value = '', int $seconds = 0, ?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httpOnly = null, ?string $sameSite = null): void
     {
         if (is_string($cookie)) {
             $cookie = $this->make($cookie, $value, $seconds, $path, $domain, $secure, $httpOnly, $sameSite);
         }
 
-        if (! isset($this->queued[$cookie->getName()])) {
-            $this->queued[$cookie->getName()] = [];
+        if (! isset($this->queued[$cookie->name()])) {
+            $this->queued[$cookie->name()] = [];
         }
 
-        $this->queued[$cookie->getName()][$cookie->getPath()] = $cookie;
+        $this->queued[$cookie->name()][$cookie->path()] = $cookie;
     }
 
-    /**
-     * @param string $name
-     * @param mixed|null $default
-     * @param string|null $path
-     * @return mixed|Cookie
-     */
-    public function queued(string $name, mixed $default = null, string $path = null): mixed
+    public function queued(string $name, mixed $default = null, ?string $path = null): mixed
     {
         if (! isset($this->queued[$name])) {
             return $default;
@@ -74,13 +70,14 @@ class CookieJar implements QueueingFactory
         $queued = $this->queued[$name];
 
         if (is_null($path)) {
+            // Todo: Maybe? $queued[array_key_last($queued)] ?? $default;
             return end($queued);
         }
 
         return $queued[$path] ?? $default;
     }
 
-    public function unqueue(string $name, string $path = null): void
+    public function unqueue(string $name, ?string $path = null): void
     {
         if (is_null($path)) {
            unset($this->queued[$name]);
@@ -95,7 +92,7 @@ class CookieJar implements QueueingFactory
         }
     }
 
-    public function expire(string $name, string $path = null, string $domain = null): void
+    public function expire(string $name, ?string $path = null, ?string $domain = null): void
     {
         $this->queue($this->forget($name, $path, $domain));
     }
@@ -120,27 +117,32 @@ class CookieJar implements QueueingFactory
         return $this;
     }
 
-    public function getPath(): string
+    public function path(): string
     {
         return $this->path;
     }
 
-    public function getDomain(): string
+    public function domain(): string
     {
         return $this->domain;
     }
 
-    public function getSecure(): bool
+    public function secure(): bool
     {
         return $this->secure;
     }
 
-    public function getSameSite(): string
+    public function httpOnly(): bool
+    {
+        return $this->httpOnly;
+    }
+
+    public function sameSite(): string
     {
         return $this->sameSite;
     }
 
-    public function setDefault(string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = null, string $sameSite = null): static
+    public function setDefault(?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httpOnly = null, ?string $sameSite = null): static
     {
         if (! is_null($path)) $this->path = $path;
         if (! is_null($domain)) $this->domain = $domain;
@@ -149,5 +151,16 @@ class CookieJar implements QueueingFactory
         if (! is_null($sameSite)) $this->sameSite = $sameSite;
 
         return $this;
+    }
+
+    public function __call(string $method, array $parameters): mixed
+    {
+        if ($result = $this->deprecatedGettersCall($method, $parameters)) {
+            return $result;
+        }
+
+        throw new BadMethodCallException(sprintf(
+            'Method %s::%s does not exist.', static::class, $method
+        ));
     }
 }

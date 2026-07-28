@@ -1,9 +1,7 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Cookie;
 
-use Imhotep\Contracts\Encryption\Encrypter as EncrypterContract;
-use Imhotep\Encryption\Encrypter;
 use Imhotep\Framework\Providers\ServiceProvider;
 
 class CookieServiceProvider extends ServiceProvider
@@ -12,20 +10,18 @@ class CookieServiceProvider extends ServiceProvider
         'cookie' => CookieJar::class,
     ];
 
-    public function register()
+    public function register(): void
     {
         $this->app->singleton('cookie', function ($app) {
-            $config = $app['config']->get('session');
-            $cookies = new CookieJar();
+            $config = $app['config']->subset('session');
 
-            if (is_array($config)) {
-                $cookies->setDefault(
-                    $config['path'], $config['domain'], $config['secure'],
-                    $config['httpOnly'], $config['sameSite']
-                );
-            }
-
-            return $cookies;
+            return (new CookieJar())->setDefault(
+                path: $config->string('path'),
+                domain: $config->string('domain'),
+                secure: $config->bool('secure'),
+                httpOnly: $config->bool('httpOnly'),
+                sameSite: $config->string('sameSite')
+            );
         });
     }
 }

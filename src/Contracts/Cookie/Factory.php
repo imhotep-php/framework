@@ -6,19 +6,21 @@ use Imhotep\Cookie\Cookie;
 
 interface Factory
 {
-    public function make(string $name, string $value, int $minutes = 0, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = null, string $sameSite = null): Cookie;
+    public function make(string $name, string $value, int $expires = 0, ?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httpOnly = null, ?string $sameSite = null): Cookie;
 
-    public function forever(string $name, string $value, string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = true, string $sameSite = null): Cookie;
+    public function forever(string $name, string $value, ?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httpOnly = null, ?string $sameSite = null): Cookie;
 
-    public function forget($name, $path = null, $domain = null): Cookie;
+    public function forget(string $name, ?string $path = null, ?string $domain = null): Cookie;
 
-    public function getPath(): string;
+    public function path(): string;
 
-    public function getDomain(): string;
+    public function domain(): string;
 
-    public function getSecure(): bool;
+    public function secure(): bool;
 
-    public function getSameSite(): string;
+    public function httpOnly(): bool;
 
-    public function setDefault(string $path = null, string $domain = null, bool $secure = null, bool $httpOnly = null, string $sameSite = null): static;
+    public function sameSite(): string;
+
+    public function setDefault(?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httpOnly = null, ?string $sameSite = null): static;
 }

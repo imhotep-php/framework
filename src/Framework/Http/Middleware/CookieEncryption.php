@@ -23,15 +23,15 @@ class CookieEncryption
 
     protected function encrypt(Response $response): Response
     {
-        $cookies = $response->getCookies();
+        $cookies = $response->cookies();
 
         $response->clearCookies();
 
         foreach ($cookies as $cookie) {
-            if ($this->isDisabled($cookie->getName())) continue;
+            if ($this->isDisabled($cookie->name())) continue;
 
             try {
-                $cookie->setValue( $this->encrypter->encryptString($cookie->getValue()), false );
+                $cookie->setValue( $this->encrypter->encryptString($cookie->value()), false );
 
                 $response->setCookie($cookie);
             } catch(Throwable $e) {}

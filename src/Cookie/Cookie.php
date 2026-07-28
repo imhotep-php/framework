@@ -1,11 +1,15 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Cookie;
 
+use BadMethodCallException;
+use Imhotep\Support\Traits\DeprecatedGetters;
+use InvalidArgumentException;
+
 class Cookie
 {
+    use DeprecatedGetters;
+
     public const SAMESITE_NONE = 'none';
     public const SAMESITE_LAX = 'lax';
     public const SAMESITE_STRICT = 'strict';
@@ -20,14 +24,14 @@ class Cookie
     protected ?string $sameSite;
 
     public function __construct(
-        string $name,
-        string $value = '',
-        int $expires = 0,
-        string $path = '',
-        string $domain = '',
-        bool $secure = false,
-        bool $httpOnly = false,
-        string $sameSite = null
+        string  $name,
+        string  $value = '',
+        int     $expires = 0,
+        string  $path = '',
+        string  $domain = '',
+        bool    $secure = false,
+        bool    $httpOnly = false,
+        ?string $sameSite = null
     )
     {
         $this->domain = $domain;
@@ -52,7 +56,7 @@ class Cookie
             $str .= rawurlencode($this->value);
 
             if ($this->expires > 0) {
-                $str .= '; expires='.gmdate('D, d M Y H:i:s T', $this->expires).'; Max-Age='.$this->getMaxAge();
+                $str .= '; expires='.gmdate('D, d M Y H:i:s T', $this->expires).'; Max-Age='.$this->maxAge();
             }
         }
 
@@ -79,170 +83,131 @@ class Cookie
         return $str;
     }
 
-    /**
-     * @throws CookieException
-     */
-    public function name(string $name = null)
-    {
-        if (is_null($name)) {
-            return $this->getName();
-        }
-
-        $this->setName($name);
-    }
-
-    /**
-     * @return string
-     */
-    public function getName(): string
+    public function name(): string
     {
         return $this->name;
     }
 
-    /**
-     * @param string $name
-     * @throws CookieException
-     */
-    public function setName(string $name): void
+    public function setName(string $name): static
     {
-        if (! preg_match("/^([A-z0-9._-]+)$/i", $name)) {
-            throw new CookieException('The "name" parameter value contains illegal characters.');
+        if (! preg_match("/^[A-Za-z0-9._-]+$/i", $name)) {
+            throw new InvalidArgumentException('The "name" parameter value contains illegal characters.');
         }
 
         $this->name = $name;
+
+        return $this;
     }
 
-    public function value(string $value = null)
-    {
-        if (is_null($value)) {
-            return $this->getValue();
-        }
-
-        $this->setValue($value);
-    }
-
-    /**
-     * @return string
-     */
-    public function getValue(): string
+    public function value(): string
     {
         return $this->value;
     }
 
-    /**
-     * @param string $value
-     */
-    public function setValue(string $value): void
+    public function setValue(string $value): static
     {
         $this->value = $value;
+
+        return $this;
     }
 
-    /**
-     * @return int
-     */
-    public function getExpires(): int
+    public function expires(): int
     {
         return $this->expires;
     }
 
-    /**
-     * @param int $expires
-     */
-    public function setExpires(int $expires): void
+    public function setExpires(int $expires): static
     {
-        $this->expires = max($expires, 0);
+        if ($expires !== 0) {
+            $expires = time() + $expires;
+        }
+
+        $this->expires = $expires;
+
+        return $this;
     }
 
-    /**
-     * @return int
-     */
-    public function getMaxAge(): int
+    public function maxAge(): int
     {
         return max($this->expires - time(), 0);
     }
 
-    /**
-     * @return string
-     */
-    public function getPath(): string
+    public function path(): string
     {
         return $this->path;
     }
 
-    /**
-     * @param string $path
-     */
-    public function setPath(string $path): void
+    public function setPath(string $path): static
     {
         $this->path = empty($path) ? '/' : $path;
+
+        return $this;
     }
 
-    /**
-     * @return string
-     */
-    public function getDomain(): string
+    public function domain(): string
     {
         return $this->domain;
     }
 
-    /**
-     * @param string $domain
-     */
-    public function setDomain(string $domain): void
+    public function setDomain(string $domain): static
     {
         $this->domain = $domain;
+
+        return $this;
     }
 
-    /**
-     * @return bool
-     */
     public function isSecure(): bool
     {
         return $this->secure;
     }
 
-    /**
-     * @param bool $secure
-     */
-    public function setSecure(bool $secure): void
+    public function setSecure(bool $secure): static
     {
         $this->secure = $secure;
+
+        return $this;
     }
 
-    /**
-     * @return bool
-     */
     public function isHttpOnly(): bool
     {
         return $this->httpOnly;
     }
 
-    /**
-     * @param bool $httpOnly
-     */
-    public function setHttpOnly(bool $httpOnly): void
+    public function setHttpOnly(bool $httpOnly): static
     {
         $this->httpOnly = $httpOnly;
+
+        return $this;
     }
 
-    /**
-     * @return string
-     */
-    public function getSameSite(): string
+    public function sameSite(): ?string
     {
         return $this->sameSite;
     }
 
-    /**
-     * @param string|null $sameSite
-     * @throws CookieException
-     */
-    public function setSameSite(?string $sameSite): void
+    public function setSameSite(?string $sameSite): static
     {
+        if (is_string($sameSite)) {
+            $sameSite = strtolower($sameSite);
+        }
+
         if (! in_array($sameSite, [self::SAMESITE_NONE, self::SAMESITE_LAX, self::SAMESITE_STRICT, null])) {
-            throw new CookieException('The "sameSite" parameter value is not valid.');
+            throw new InvalidArgumentException('The "sameSite" parameter value is not valid.');
         }
 
         $this->sameSite = $sameSite;
+
+        return $this;
+    }
+
+    public function __call(string $method, array $parameters): mixed
+    {
+        if ($result = $this->deprecatedGettersCall($method, $parameters)) {
+            return $result;
+        }
+
+        throw new BadMethodCallException(sprintf(
+            'Method %s::%s does not exist.', static::class, $method
+        ));
     }
 }
