@@ -2,11 +2,13 @@
 
 namespace Imhotep\Dotenv;
 
-class Dotenv implements \ArrayAccess
+use ArrayAccess;
+
+class Dotenv implements ArrayAccess
 {
     protected Parser $parser;
 
-    public function __construct(string $filepath = null)
+    public function __construct(?string $filepath = null)
     {
         $this->parser = new Parser();
 
@@ -44,7 +46,7 @@ class Dotenv implements \ArrayAccess
         return false;
     }
 
-    public function get(string $name, \Closure|string|int|float|bool $default = null): mixed
+    public function get(string $name, \Closure|string|int|float|bool|null $default = null): mixed
     {
         if (array_key_exists($name, $_ENV) && ! is_null($_ENV[$name])) {
             return $this->fixValueType($_ENV[$name]);
