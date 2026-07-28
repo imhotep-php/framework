@@ -18,13 +18,18 @@ class Fluent implements Arrayable, ArrayAccess, Jsonable, JsonSerializable
         $this->attributes = $attributes;
     }
 
-    public function get($key, $default = null): mixed
+    public function get(string $key, mixed $default = null): mixed
     {
         if (array_key_exists($key, $this->attributes)) {
             return $this->attributes[$key];
         }
 
         return $default;
+    }
+
+    public function has(string $key): bool
+    {
+        return array_key_exists($key, $this->attributes);
     }
 
     public function getAttributes(): array
