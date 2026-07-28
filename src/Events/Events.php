@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Events;
 
@@ -14,11 +12,11 @@ class Events implements Dispatcher
 
     protected array $listens = [];
 
-    public function __construct(Container $app = null) {
+    public function __construct(?Container $app = null) {
         $this->app = $app ?? new Container();
     }
 
-    public function subscribe($subscriber): void
+    public function subscribe(object|string $subscriber): void
     {
         if (is_string($subscriber)) {
             $subscriber = $this->app->make($subscriber);
@@ -49,14 +47,14 @@ class Events implements Dispatcher
         }
     }
 
-    public function dispatch(string|object $event, array $payload = [], bool $halt = false)
+    public function dispatch(string|object $event, array $payload = [], bool $halt = false): mixed
     {
         if (is_object($event)) {
             $payload = [$event];
             $event = get_class($event);
         }
 
-        $payload = array_values((array)$payload);
+        $payload = array_values($payload);
 
         $responses = [];
 

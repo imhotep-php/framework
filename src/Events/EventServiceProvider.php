@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Events;
 
@@ -17,14 +15,14 @@ class EventServiceProvider extends ServiceProvider
         'events' => [Events::class, Dispatcher::class],
     ];
 
-    public function register()
+    public function register(): void
     {
         $this->app->singleton('events', function ($app) {
             return new Events($app);
         });
     }
 
-    public function boot()
+    public function boot(): void
     {
         foreach ($this->listen as $event => $listener) {
             $this->app['events']->listen($event, $listener);

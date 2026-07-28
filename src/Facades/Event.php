@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Imhotep\Facades;
 
 /**
- * @method static void subscribe($subscriber)
+ * @method static void subscribe(object|string $subscriber)
  * @method static void listen(string|array $events, mixed $listener = null)
- * @method static void dispatch(string|object $event, mixed $payload = [])
+ * @method static mixed dispatch(string|object $event, array $payload = [], bool $halt = false)
+ * @method static mixed until(string|object $event, array $payload = [])
  *
  * @see \Imhotep\Events\Events
  */
