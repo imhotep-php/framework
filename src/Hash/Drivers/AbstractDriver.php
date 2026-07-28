@@ -2,7 +2,9 @@
 
 namespace Imhotep\Hash\Drivers;
 
+use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 
 abstract class AbstractDriver
 {
@@ -26,18 +28,17 @@ abstract class AbstractDriver
 
     public function make(string $value, array $options = []): string
     {
-        $hash = @password_hash($value, $this->algo(), $this->options($options));
-
-        if (! is_string($hash)) {
+        try {
+            return password_hash($value, $this->algo(), $this->options($options));
+        }
+        catch (Throwable) {
             throw new RuntimeException('Hash driver '.$this->name().' not supported.');
         }
-
-        return $hash;
     }
 
     public function check(string $value, string $hash, array $options = []): bool
     {
-        if ($this->verifyAlgo && $this->info($hash)['algoName'] !== $this->algo()) {
+        if ($this->verifyAlgo && $this->info($hash)['algoName'] !== $this->name()) {
             throw new RuntimeException('This password does not use the '.$this->name().' algorithm.');
         }
 

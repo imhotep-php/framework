@@ -12,17 +12,17 @@ class HashManager extends DriverManager
 {
     protected function createBcryptDriver(): AbstractDriver
     {
-        return new BcryptDriver(config('hash.bcrypt', []));
+        return new BcryptDriver($this->config->get('hash.bcrypt', []));
     }
 
     protected function createArgonDriver(): AbstractDriver
     {
-        return new ArgonDriver(config('hash.argon', []));
+        return new ArgonDriver($this->config->get('hash.argon', []));
     }
 
     protected function createArgon2idDriver(): AbstractDriver
     {
-        return new Argon2idDriver(config('hash.argon', []));
+        return new Argon2idDriver($this->config->get('hash.argon', []));
     }
 
     public function getDefaultDriver(): string
