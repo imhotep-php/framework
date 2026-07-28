@@ -17,7 +17,7 @@ class QueuedNotification implements ShouldQueue
 
     public ?int $timeout;
 
-    public function __construct(mixed $recipient, INotification $notification, array $channels = null)
+    public function __construct(mixed $recipient, INotification $notification, ?array $channels = null)
     {
         $this->channels = $channels;
         $this->recipient = $recipient;

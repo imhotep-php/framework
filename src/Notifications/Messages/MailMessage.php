@@ -8,7 +8,7 @@ class MailMessage implements INotificationMessage
 {
     protected array $headers = [];
 
-    protected string $view;
+    protected ?string $view = null;
 
     protected array $viewData;
 
@@ -85,7 +85,7 @@ class MailMessage implements INotificationMessage
      * @param string|null $name
      * @return $this
      */
-    public function replyTo(string|array $address, string $name = null): static
+    public function replyTo(string|array $address, ?string $name = null): static
     {
         if (is_array($address)) {
             $this->replyTo += $this->parseAddresses($address);
@@ -104,7 +104,7 @@ class MailMessage implements INotificationMessage
      * @param string|null $name
      * @return $this
      */
-    public function cc(string|array $address, string $name = null): static
+    public function cc(string|array $address, ?string $name = null): static
     {
         if (is_array($address)) {
             $this->cc += $this->parseAddresses($address);
@@ -123,7 +123,7 @@ class MailMessage implements INotificationMessage
      * @param string|null $name
      * @return $this
      */
-    public function bcc(string|array $address, string $name = null): static
+    public function bcc(string|array $address, ?string $name = null): static
     {
         if (is_array($address)) {
             $this->bcc += $this->parseAddresses($address);
@@ -179,7 +179,7 @@ class MailMessage implements INotificationMessage
     }
 
 
-    public function subject(string $subject = null): static|string
+    public function subject(?string $subject = null): static|string
     {
         if (is_null($subject)) {
             return $this->subject ?? '';
@@ -255,11 +255,15 @@ class MailMessage implements INotificationMessage
 
     public function render(): string
     {
-        return '';
+        return $this->toHtml();
     }
 
     public function toHtml(): string
     {
+        if ($this->view) {
+            return app('view')->make($this->view, $this->viewData)->render();
+        }
+
         array_walk($this->lines, function (&$value) {
             $value = "<p>{$value}</p>";
         });

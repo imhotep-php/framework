@@ -40,7 +40,7 @@ class NotificationRepository extends Repository
         $query->whereNull('read_at');
     }
 
-    public function markAsRead(string|array $ids = null): bool
+    public function markAsRead(string|array|null $ids = null): bool
     {
         $query = $this->query();
 

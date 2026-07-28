@@ -72,7 +72,7 @@ class MailDriver implements INotificationDriver
         }
 
         if ($this->_code() !== 220) {
-            return $this->_error("CONNECT: ".$this->_data());
+            return $this->_error("CONNECT (".$this->_code()."): ".$this->_data());
         }
 
         $data = "EHLO {$this->server}";
@@ -95,7 +95,7 @@ class MailDriver implements INotificationDriver
             }
         }
 
-        if($this->login !== '' && $this->password !== ''){
+        if($this->login !== '' && $this->password !== '' && str_contains($this->_data(), '250-AUTH')){
             $data = "AUTH LOGIN";
             if ($this->_send($data) !== 334) {
                 return $this->_error("AUTH LOGIN: " . $this->_data());
@@ -144,7 +144,7 @@ class MailDriver implements INotificationDriver
         $hostname = $this->server;
 
         if ($this->port === 465) {
-            $hostname = 'ssl://'.$hostname;
+            $hostname = "ssl://{$this->server}";
         }
 
         $this->socket = fsockopen(
@@ -157,6 +157,7 @@ class MailDriver implements INotificationDriver
             throw new RuntimeException("Failed to connect to SMTP server: {$errstr} ({$errno})");
         }
 
+        //stream_set_blocking($this->socket, true);
         stream_set_timeout($this->socket, $this->timeout);
 
         return true;
@@ -187,15 +188,27 @@ class MailDriver implements INotificationDriver
             return $this->socketData;
         }
 
-        while($str = fgets($this->socket,515)){
-            $this->socketData.= $str;
-            if(substr($str, 3, 1) == " ") break;
+        while (true) {
+            $read = [$this->socket];
+            $write = null;
+            $except = null;
+
+            $result = stream_select($read, $write, $except, $this->timeout);
+
+            if ($result === false || $result === 0) {
+                break;
+            }
+
+            while($str = fgets($this->socket,515)){
+                $this->socketData.= $str;
+                if(substr($str, 3, 1) == " ") break 2;
+            }
         }
 
         return $this->socketData;
     }
 
-    protected function _error(string $message = null): bool
+    protected function _error(?string $message = null): bool
     {
         if (! is_null($message)) {
             $this->error = $message;
@@ -268,7 +281,7 @@ class MailDriver implements INotificationDriver
         return implode(",", $result);
     }
 
-    protected function formatAddress(string $address, string $name = null): string
+    protected function formatAddress(string $address, ?string $name = null): string
     {
         $result = "<{$address}>";
 

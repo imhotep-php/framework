@@ -4,7 +4,7 @@ namespace Imhotep\Contracts\Notifications;
 
 interface INotification
 {
-    public function locale(string $locale = null): static;
+    public function locale(?string $locale = null): static;
 
     public function via(string $recipient): array;
 

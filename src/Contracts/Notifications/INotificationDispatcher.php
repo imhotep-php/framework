@@ -8,5 +8,5 @@ interface INotificationDispatcher
 
     public function send(mixed $recipients, INotification $notification): void;
 
-    public function sendNow(mixed $recipients, INotification $notification, array $channels = null): void;
+    public function sendNow(mixed $recipients, INotification $notification, ?array $channels = null): void;
 }

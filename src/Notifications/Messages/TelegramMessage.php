@@ -29,7 +29,7 @@ class TelegramMessage implements INotificationMessage
     }
     */
 
-    public function parseMode(string $mode = null): static|string|null
+    public function parseMode(?string $mode = null): static|string|null
     {
         if (is_null($mode)) {
             return $this->parseMode;
@@ -42,7 +42,7 @@ class TelegramMessage implements INotificationMessage
         return $this;
     }
 
-    public function disableWebPagePreview(bool $state = null): static|bool|null
+    public function disableWebPagePreview(?bool $state = null): static|bool|null
     {
         if (is_null($state)) {
             return $this->disableWebPagePreview;

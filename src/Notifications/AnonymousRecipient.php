@@ -32,7 +32,7 @@ class AnonymousRecipient
 
     public function notifyNow(INotification $notification): void
     {
-        $this->dispatcher->send($this, $notification);
+        $this->dispatcher->sendNow($this, $notification);
     }
 
     public function routeNotificationFor(string $driver): mixed

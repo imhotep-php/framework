@@ -17,7 +17,7 @@ abstract class Notification implements INotification
      * @param string|null $locale
      * @return $this
      */
-    public function locale(string $locale = null): static
+    public function locale(?string $locale = null): static
     {
         $this->locale = $locale;
 
@@ -27,12 +27,12 @@ abstract class Notification implements INotification
     /**
      * Получаем каналы отправки для указанного получателя
      *
-     * @param string $recipient
+     * @param mixed $recipient
      * @return array
      *
      * @noinspection PhpUnusedParameterInspection
      */
-    public function via(string $recipient): array
+    public function via(mixed $recipient): array
     {
         return [];
     }

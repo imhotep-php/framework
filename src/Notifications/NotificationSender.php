@@ -32,7 +32,7 @@ class NotificationSender
         }
     }
 
-    public function sendNow(mixed $recipients, INotification $notification, array $channels = null): void
+    public function sendNow(mixed $recipients, INotification $notification, ?array $channels = null): void
     {
         $recipients = $this->formatRecipients($recipients);
 

@@ -31,7 +31,7 @@ class ChannelManager extends DriverManager implements INotificationDispatcher
             ->send($recipients, $notification);
     }
 
-    public function sendNow(mixed $recipients, INotification $notification, array $channels = null): void
+    public function sendNow(mixed $recipients, INotification $notification, ?array $channels = null): void
     {
         (new NotificationSender($this, $this->container['events'], $this->container['queue'], $this->locale))
             ->sendNow($recipients, $notification, $channels);
