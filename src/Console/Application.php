@@ -131,7 +131,7 @@ class Application
         return $this->version;
     }
 
-    public function call(string $command, array $parameters = [], Output $output = null): int
+    public function call(string $command, array $parameters = [], ?Output $output = null): int
     {
         if (empty($parameters)) {
             $input = new StringInput($command);
@@ -269,7 +269,7 @@ class Application
      * @param string|null $name
      * @return void
      */
-    public function addCommand(string|Command $command, string $name = null): void
+    public function addCommand(string|Command $command, ?string $name = null): void
     {
         if (is_null($name)) {
             if (! is_subclass_of($command, Command::class)) {

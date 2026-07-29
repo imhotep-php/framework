@@ -138,7 +138,7 @@ class InputOption implements Stringable
         return (bool)($this->mode & static::VALUE_NEGATABLE);
     }
 
-    public static function builder(string $name, string $shortcut = null): InputOptionBuilder
+    public static function builder(string $name, ?string $shortcut = null): InputOptionBuilder
     {
         return new InputOptionBuilder($name, $shortcut);
     }

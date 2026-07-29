@@ -10,7 +10,7 @@ class ArgvInput extends Input
 
     protected array $parsed = [];
 
-    public function __construct(array $argv = null, ?InputDefinition $definition = null)
+    public function __construct(?array $argv = null, ?InputDefinition $definition = null)
     {
         parent::__construct($definition);
 

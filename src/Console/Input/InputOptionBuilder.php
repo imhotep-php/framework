@@ -10,7 +10,7 @@ class InputOptionBuilder
     protected string $description = '';
     protected string|int|bool|float|array|null $default = null;
 
-    public function __construct(string $name, string $shortcut = null)
+    public function __construct(string $name, ?string $shortcut = null)
     {
         $this->name = $name;
 

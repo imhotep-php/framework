@@ -9,7 +9,7 @@ class ClosureCommand extends Command
 {
     protected Closure $callback;
 
-    public function __construct(string $signature, Closure $callback, string $name = null)
+    public function __construct(string $signature, Closure $callback, ?string $name = null)
     {
         parent::__construct($name);
 

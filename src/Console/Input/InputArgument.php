@@ -26,7 +26,7 @@ class InputArgument implements Stringable
         $this->setDefault($this->default);
     }
 
-    protected function setDefault(string|int|bool|float|array $default = null): void
+    protected function setDefault(string|int|bool|float|array|null $default = null): void
     {
         if ($this->isRequired() && ! is_null($default)) {
             throw new ConsoleException('Cannot set default value for required argument.');

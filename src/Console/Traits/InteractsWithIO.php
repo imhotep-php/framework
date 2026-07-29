@@ -76,7 +76,7 @@ trait InteractsWithIO
         return $this->line($line, 'error');
     }
 
-    public function line(string $line = '', string $style = null): static
+    public function line(string $line = '', ?string $style = null): static
     {
         if (empty($line)) {
             $this->output->newLine();

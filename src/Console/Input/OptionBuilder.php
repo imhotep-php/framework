@@ -14,7 +14,7 @@ class OptionBuilder
     private bool $hasValues = false;
     private string|int|float|bool|array|null $default = null;
 
-    public function __construct(string $name, string $shortcut = null){
+    public function __construct(string $name, ?string $shortcut = null){
         $this->longName = $name;
         $this->shortName = $shortcut;
     }

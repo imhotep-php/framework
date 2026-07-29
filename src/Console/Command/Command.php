@@ -42,7 +42,7 @@ abstract class Command implements CommandContract
 
     protected array $arguments = [];
 
-    public function __construct(string $name = null)
+    public function __construct(?string $name = null)
     {
         $this->name = $name ?: static::getDefaultName();
 
@@ -143,7 +143,7 @@ abstract class Command implements CommandContract
         return ! empty($options);
     }
 
-    public function fail(Throwable|string $exception = null): void
+    public function fail(Throwable|string|null $exception = null): void
     {
         if (is_null($exception)) {
             $exception = 'Command failed.';

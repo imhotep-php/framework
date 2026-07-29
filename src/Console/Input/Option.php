@@ -15,12 +15,12 @@ class Option
     protected bool $hasArgs = false;
 
 
-    public function __construct(string $shortName = null)
+    public function __construct(?string $shortName = null)
     {
 
     }
 
-    public static function builder(string $name, string $shortcut = null): OptionBuilder
+    public static function builder(string $name, ?string $shortcut = null): OptionBuilder
     {
         return new OptionBuilder($name, $shortcut);
     }

@@ -22,7 +22,7 @@ enum Color
     case gray;
     case white;
 
-    public static function getByName($name, Color $default = null): ?Color
+    public static function getByName($name, ?Color $default = null): ?Color
     {
         return match($name) {
             'black' => self::black,

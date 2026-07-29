@@ -7,7 +7,7 @@ use Imhotep\Support\Stopwatch;
 
 class Task extends Component
 {
-    public function render(string $string, callable $task = null): void
+    public function render(string $string, ?callable $task = null): void
     {
         $this->output->write($string);
 
