@@ -1,18 +1,15 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Filesystem\Drivers;
 
 use Exception;
-use Imhotep\Contracts\Filesystem\Driver;
+use Generator;
+use Imhotep\Contracts\Filesystem\IFilesystemDriver;
 use Imhotep\Contracts\Filesystem\FileNotFoundException;
 use Imhotep\SimpleS3\S3Client;
+use Throwable;
 
-/**
- * @throws Exception
- */
-class SimpleS3Driver implements Driver
+class SimpleS3Driver extends BaseDriver
 {
     protected S3Client $client;
 
@@ -22,7 +19,7 @@ class SimpleS3Driver implements Driver
 
     public function __construct(array $config)
     {
-        $this->config = $config;
+        parent::__construct($config['throw'] ?? true);
 
         $this->bucket = $config['bucket'];
 
@@ -34,7 +31,6 @@ class SimpleS3Driver implements Driver
     }
 
 
-
     public function exists(string $path): bool
     {
         $info = $this->client->headObject($this->bucket, $path);
@@ -42,22 +38,13 @@ class SimpleS3Driver implements Driver
         return ($info->statusCode < 300);
     }
 
-    public function missing(string $path): bool
-    {
-        return !$this->exists($path);
-    }
 
-
-
-    /**
-     * @throws Exception
-     */
-    public function files(string $directory, bool $hidden = false): array
+    public function files(string $path, bool $recursive = false, bool $hidden = false): array
     {
         $files = [];
 
         try {
-            $result = $this->client->listObjectsV2($this->bucket, [$directory]);
+            $result = $this->client->listObjectsV2($this->bucket, [$path]);
 
             array_map(function ($object) use (&$files) {
                 $files[] = $object['Key'];
@@ -80,7 +67,7 @@ class SimpleS3Driver implements Driver
     public function copy(string $from, string $to, array $options = []): bool
     {
         if ($this->missing($from)) {
-            throw new FileNotFoundException();
+            throw new FileNotFoundException($from);
         }
 
         $result = $this->client->copyObject($this->bucket, $from, $to, $options);
@@ -91,7 +78,7 @@ class SimpleS3Driver implements Driver
     public function move(string $from, string $to, array $options = []): bool
     {
         if ($this->missing($from)) {
-            throw new FileNotFoundException();
+            throw new FileNotFoundException($from);
         }
 
         if (! $this->copy($from, $to)) {
@@ -103,7 +90,7 @@ class SimpleS3Driver implements Driver
         return ($result->statusCode < 300);
     }
 
-    public function get(string $path, array $options = []): string|bool
+    public function get(string $path, array $options = []): string|false
     {
         $result = $this->client->getObject($this->bucket, $path, $options);
 
@@ -114,13 +101,14 @@ class SimpleS3Driver implements Driver
         return false;
     }
 
-    public function put(string $path, string $content, array $options = []): bool
+    public function put(string $path, mixed $content, array|bool $options = []): bool
     {
         $result = $this->client->putObject($this->bucket, $path, $content, $options);
 
         return ($result->statusCode < 300);
     }
 
+    /*
     public function putFile(string $path, string $source, array $options = []): bool
     {
         if (is_file($source)) {
@@ -134,12 +122,15 @@ class SimpleS3Driver implements Driver
     {
         return $this->putFile(rtrim($path, '/').$name, $source, $options);
     }
+    */
 
     public function size(string $path): int|false
     {
         $result = $this->client->headObject($this->bucket, $path);
         if ($result->statusCode < 300) {
-            return $result->getMeta('content-length');
+            if ($contentLength = $result->getMeta('content-length')) {
+                return (int)$contentLength;
+            }
         }
 
         return false;
@@ -149,7 +140,9 @@ class SimpleS3Driver implements Driver
     {
         $result = $this->client->headObject($this->bucket, $path);
         if ($result->statusCode < 300) {
-            return $result->getMeta('content-type');
+            if ($contentType = $result->getMeta('content-type')) {
+                return $contentType;
+            }
         }
 
         return false;
@@ -159,42 +152,25 @@ class SimpleS3Driver implements Driver
     {
         $result = $this->client->headObject($this->bucket, $path);
         if ($result->statusCode < 300) {
-            return $result->getMeta('cache-control');
+            if ($cacheControl = $result->getMeta('cache-control')) {
+                return $cacheControl;
+            }
         }
 
         return false;
     }
 
-    public function name(string $path): string|array
+    public function lastModified(string $path): int|false
     {
-        return pathinfo($path, PATHINFO_FILENAME);
-    }
+        $result = $this->client->headObject($this->bucket, $path);
+        if ($result->statusCode < 300) {
+            $lastModified = $result->getMeta('last-modified');
+            if ($lastModified) {
+                return strtotime($lastModified);
+            }
+        }
 
-    /**
-     * Extract the trailing name component from a file path.
-     *
-     * @param  string  $path
-     * @return string
-     */
-    public function basename(string $path): string|array
-    {
-        return pathinfo($path, PATHINFO_BASENAME);
-    }
-
-    /**
-     * Extract the parent directory from a file path.
-     *
-     * @param  string  $path
-     * @return string
-     */
-    public function dirname(string $path): string|array
-    {
-        return pathinfo($path, PATHINFO_DIRNAME);
-    }
-
-    public function extension(string $path): string|array
-    {
-        return pathinfo($path, PATHINFO_EXTENSION);
+        return false;
     }
 
     public function hash(string $path, string $algo = 'md5'): string|false
@@ -205,7 +181,9 @@ class SimpleS3Driver implements Driver
 
         $result = $this->client->headObject($this->bucket, $path);
         if ($result->statusCode < 300) {
-            return $result->getMeta('etag');
+            if ($etag = $result->getMeta('etag')) {
+                return $etag;
+            }
         }
 
         return false;
@@ -223,32 +201,52 @@ class SimpleS3Driver implements Driver
         return ($result->statusCode < 300);
     }
 
-
-
-    /**
-     * @param Exception $e
-     * @throws Exception
-     */
-    protected function handleException(Exception $e): void
-    {
-        if ($this->config['throw']) {
-            throw $e;
-        }
-    }
-
-    protected function methodNotSupported($method): void
-    {
-        throw new Exception("Method [{$method}] not supported in cloud disk.");
-    }
-
-    public function __call(string $method, array $properties)
+    public function __call(string $method, array $parameters): mixed
     {
         if (method_exists($this->client, $method)) {
-            return $this->client->$method(...$properties);
+            return $this->client->$method(...$parameters);
         }
 
-        $this->methodNotSupported($method);
+        return parent::__call($method, $parameters);
     }
 
+    public function append(string $path, mixed $content, bool $lock = false): int|bool
+    {
+        $this->methodNotSupported(__FUNCTION__);
+    }
 
+    public function lines(string $path, bool $skipEmpty = false): Generator
+    {
+        $this->methodNotSupported(__FUNCTION__);
+    }
+
+    public function mimeType(string $path): string|false
+    {
+        $this->methodNotSupported(__FUNCTION__);
+    }
+
+    public function isDirectory(string $path): bool
+    {
+        $this->methodNotSupported(__FUNCTION__);
+    }
+
+    public function type(string $path): string|false
+    {
+        $this->methodNotSupported(__FUNCTION__);
+    }
+
+    public function directories(string $path, bool $recursive = false): array
+    {
+        $this->methodNotSupported(__FUNCTION__);
+    }
+
+    public function makeDirectory(string $path, int $mode = 0755, bool $recursive = false, bool $force = false): bool
+    {
+        $this->methodNotSupported(__FUNCTION__);
+    }
+
+    public function deleteDirectory(string $directory, bool $preserve = false): bool
+    {
+        $this->methodNotSupported(__FUNCTION__);
+    }
 }

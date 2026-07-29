@@ -2,7 +2,7 @@
   "name": "imhotep/filesystem",
   "type": "library",
   "license" : "MIT",
-  "homepage": "https://imhotep-php.ru",
+  "homepage": "https://imhotep.dev",
   "authors": [
     {
       "name": "Imhotep",
@@ -16,7 +16,8 @@
   },
   "require": {
     "php": ">=8.0.2",
-    "imhotep/contracts": "^1.0"
+    "imhotep/contracts": "^1.0",
+    "imhotep/support": "^1.0"
   },
   "minimum-stability": "dev"
 }

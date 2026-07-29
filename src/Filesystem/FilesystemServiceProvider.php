@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Filesystem;
 
@@ -9,10 +7,11 @@ use Imhotep\Framework\Providers\ServiceProvider;
 class FilesystemServiceProvider extends ServiceProvider
 {
     public array $aliases = [
-        'filesystem' => FilesystemManager::class
+        'filesystem' => FilesystemManager::class,
+        'files' => Filesystem::class,
     ];
 
-    public function register()
+    public function register(): void
     {
         $this->app->singleton('filesystem', function ($app) {
             return new FilesystemManager($app);
@@ -29,10 +28,5 @@ class FilesystemServiceProvider extends ServiceProvider
         $this->app->singleton('files', function () {
             return new Filesystem();
         });
-    }
-
-    public function boot()
-    {
-
     }
 }

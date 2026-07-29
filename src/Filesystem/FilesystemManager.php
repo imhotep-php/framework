@@ -1,99 +1,87 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Filesystem;
 
-use Imhotep\Container\Container;
-use Imhotep\Contracts\Filesystem\FilesystemException;
+use Imhotep\Contracts\Config\IConfigRepository;
+use Imhotep\Contracts\DriverManager;
+use Imhotep\Contracts\Filesystem\IFilesystem;
 use Imhotep\Filesystem\Adapters\CloudAdapter;
 use Imhotep\Filesystem\Adapters\LocalAdapter;
+use Imhotep\Filesystem\Drivers\FtpDriver;
 use Imhotep\Filesystem\Drivers\LocalDriver;
 use Imhotep\Filesystem\Drivers\SimpleS3Driver;
 
-class FilesystemManager
+class FilesystemManager extends DriverManager
 {
-    protected array $disks = [];
-
-    protected array $drivers = [
-        'local' => [
-            'adapter' => LocalAdapter::class,
-            'driver' => LocalDriver::class
-        ],
-        'simple_s3' => [
-            'adapter' => CloudAdapter::class,
-            'driver' => SimpleS3Driver::class
-        ]
-    ];
-
-    public function __construct(protected Container $app) {}
-
-    public function disk(string $name = null)
+    public function disk(?string $name = null): IFilesystem
     {
         $name = $name ?: $this->getDefaultDriver();
 
-        return $this->disks[$name] ?? $this->disks[$name] = $this->resolve($name);
+        return $this->drivers[$name] ?? $this->drivers[$name] = $this->resolve($name);
     }
 
-    public function cloud(string $name = null)
+    public function cloud(?string $name = null): IFilesystem
     {
         $name = $name ?: $this->getDefaultCloudDriver();
 
-        return $this->disks[$name] ?? $this->disks[$name] = $this->resolve($name);
+        return $this->drivers[$name] ?? $this->drivers[$name] = $this->resolve($name);
     }
 
-    protected function resolve(string $name)
+    protected function resolve(string $name): IFilesystem
     {
-        $config = $this->getConfig($name);
+        $diskConfig = $this->config->subsetOrFail("filesystem.disks.{$name}",
+            "Disk [$name] not configured."
+        );
 
-        if (empty($config['driver'])) {
-            throw new FilesystemException("Driver for disk [$name] not configured.");
-        }
+        $driverName = $diskConfig->stringOrFail('driver',
+            "Driver for disk [$name] not configured."
+        );
 
-        if (empty($this->drivers[$config['driver']])) {
-            throw new FilesystemException(sprintf("Driver [%s] not supported.", $config['driver']));
-        }
-
-        $adapterClass = $this->drivers[$config['driver']]['adapter'];
-        $driverClass = $this->drivers[$config['driver']]['driver'];
-
-        return $this->disks[ $name ] = $this->app->make($adapterClass, [
-            'driver' => $this->app->make($driverClass, ['config' => $config]),
-            'config' => $config
-        ]);
+        return $this->driver($driverName, [$diskConfig]);
     }
 
-    protected function getDefaultDriver(): string
+    protected function createLocalDriver(IConfigRepository $config): IFilesystem
     {
-        return (string)$this->app['config']['filesystem.default'] ?? 'local';
+        return new LocalAdapter(
+            new LocalDriver($config->bool('throw', true)),
+            $config
+        );
     }
 
-    protected function getDefaultCloudDriver(): string
+    protected function createFtpDriver(IConfigRepository $config): IFilesystem
     {
-        return (string)$this->app['config']['filesystem.cloud'] ?? 's3';
+        return new LocalAdapter(new FtpDriver($config), $config);
     }
 
-    protected function getConfig(string $name): array
+    protected function createSimpleS3Driver(IConfigRepository $config): IFilesystem
     {
-        return (array)$this->app['config']['filesystem.disks.'.$name] ?? [];
+        return new CloudAdapter(
+            new SimpleS3Driver($config->all()),
+            $config->all()
+        );
     }
 
-    /*
-    public function extend(string $driverName, \Closure|string $driver)
+    public function getDefaultDriver(): string
     {
+        return $this->config->stringOrFail('filesystem.default');
+    }
 
-
-    */
-
-
-    public function __call(string $method, array $parameters): mixed
+    public function setDefaultDriver(string $driver): static
     {
-        $disk = $this->disk();
+        $this->config['filesystem.default'] = $driver;
 
-        if (method_exists($disk, $method)) {
-            return $this->disk()->$method(...$parameters);
-        }
+        return $this;
+    }
 
-        throw new FilesystemException("Method [$method] not found.");
+    public function getDefaultCloudDriver(): string
+    {
+        return $this->config->stringOrFail('filesystem.cloud');
+    }
+
+    public function setDefaultCloudDriver(string $driver): static
+    {
+        $this->config['filesystem.cloud'] = $driver;
+
+        return $this;
     }
 }
