@@ -16,14 +16,6 @@ class AuthorizationExceptionDecorator implements ExceptionDecorator
             return $e;
         }
 
-        if ($e->hasStatus()) {
-            return new HttpException(
-                $e->getStatus(),
-                $e->getMessage()
-            );
-        }
-
-        // Access Denied
-        return new HttpException(403, $e->getMessage(), previous: $e);
+        return new HttpException($e->getStatusCode(), $e->getMessage(), previous: $e);
     }
 }

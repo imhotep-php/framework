@@ -62,7 +62,7 @@ class Application extends Container
     protected function registerBaseAliases(): void
     {
         $this->alias('app', [self::class, Container::class, \Psr\Container\ContainerInterface::class]);
-        $this->alias('request', [\Imhotep\Contracts\Http\Request::class, \Imhotep\Http\Request::class]);
+        $this->alias('request', [\Imhotep\Contracts\Http\Request::class, \Imhotep\Http\Request::class, \Psr\Http\Message\ServerRequestInterface::class]);
     }
 
     protected function registerBaseServiceProviders(): void
@@ -108,12 +108,12 @@ class Application extends Container
         return $this;
     }
 
-    public function basePath(string $path = null): string
+    public function basePath(?string $path = null): string
     {
         return $this->basePath . (empty($path) ? '' : '/'.ltrim($path, '/') );
     }
 
-    public function configPath(string $path = null): string
+    public function configPath(?string $path = null): string
     {
         return $this->basePath . '/config' . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }
@@ -157,17 +157,17 @@ class Application extends Container
         return $this->environmentPath().DIRECTORY_SEPARATOR.$this->environmentFile();
     }
 
-    public function databasePath(string $path = null): string
+    public function databasePath(?string $path = null): string
     {
         return $this->basePath . '/database' . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }
 
-    public function resourcePath(string $path = null): string
+    public function resourcePath(?string $path = null): string
     {
         return $this->basePath . '/resources' . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }
 
-    public function storagePath(string $path = null): string
+    public function storagePath(?string $path = null): string
     {
         return $this->basePath .  '/storage' . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }
@@ -177,12 +177,12 @@ class Application extends Container
         $this->publicDir = $publicDir;
     }
 
-    public function publicPath(string $path = null): string
+    public function publicPath(?string $path = null): string
     {
         return $this->basePath . '/'. $this->publicDir . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }
 
-    public function path(string $path = null): string
+    public function path(?string $path = null): string
     {
         return $this->basePath . '/app' . (empty($path) ? '' : '/'.ltrim($path, '/'));
     }

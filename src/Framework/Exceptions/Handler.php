@@ -14,8 +14,10 @@ use Imhotep\Contracts\Http\HttpException as HttpExceptionContract;
 use Imhotep\Contracts\Http\Request;
 use Imhotep\Contracts\Http\Responsable;
 use Imhotep\Contracts\Http\Response as ResponseContract;
+use Imhotep\Facades\Auth;
 use Imhotep\Framework\Exceptions\Decorators\AuthorizationExceptionDecorator;
 use Imhotep\Http\Exceptions\HttpException;
+use Imhotep\Http\Exceptions\HttpResponseException;
 use Imhotep\Http\JsonResponse;
 use Imhotep\Http\Response;
 use Imhotep\Routing\Router;
@@ -25,6 +27,8 @@ use Imhotep\Validation\ValidationException;
 use Imhotep\View\View;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use ReflectionFunction;
+use RuntimeException;
 use Throwable;
 
 class Handler implements ExceptionHandler
@@ -38,6 +42,7 @@ class Handler implements ExceptionHandler
 
     protected array $internalDontReport = [
         HttpException::class,
+        HttpResponseException::class,
         ValidationException::class,
         AuthenticationException::class,
         AuthorizationException::class,
@@ -68,20 +73,50 @@ class Handler implements ExceptionHandler
 
     public function context(): array
     {
-        return [];
+        try {
+            return array_filter([
+                'userId' => Auth::id(),
+            ]);
+        } catch (Throwable) {
+            return [];
+        }
     }
 
-    public function reportable(string $class, callable $callback): ReportableHandler
+    public function reportable(string|callable $class, ?callable $callback = null): ReportableHandler
     {
+        if (is_callable($class)) {
+            $callback = $class;
+            $class = $this->getClassFromClosure($callback);
+        }
+
         if (! $callback instanceof Closure) {
             $callback = $callback(...);
         }
 
-        $callback = new ReportableHandler($callback);
+        return $this->reportCallbacks[$class][] = new ReportableHandler($callback);
+    }
 
-        $this->reportCallbacks[$class] = $callback;
+    protected function getClassFromClosure(callable $callback): string
+    {
+        try {
+            $reflection = new ReflectionFunction($callback);
+            $parameters = $reflection->getParameters();
 
-        return $callback;
+            if (empty($parameters)) {
+                throw new RuntimeException('Closure must have at least one parameter with type hint');
+            }
+
+            $type = $parameters[0]->getType();
+
+            if (! $type || $type->isBuiltin()) {
+                throw new RuntimeException('First parameter must have a class type hint');
+            }
+
+            return $type->getName();
+        }
+        catch (\ReflectionException $e) {
+            throw new RuntimeException('Unable to determine exception class from closure', 0, $e);
+        }
     }
 
     public function report(Throwable $e): void
@@ -96,9 +131,13 @@ class Handler implements ExceptionHandler
             }
         }
 
-        if (isset($this->reportCallbacks[get_class($e)])) {
-            if ($this->reportCallbacks[get_class($e)]($e) === false) {
-                return;
+        foreach ($this->reportCallbacks as $class => $handlers) {
+            if ($e instanceof $class || get_class($e) === $class) {
+                foreach ($handlers as $handler) {
+                    if ($handler($e) === false) {
+                        return;
+                    }
+                }
             }
         }
 
@@ -139,8 +178,13 @@ class Handler implements ExceptionHandler
         return true;
     }
 
-    public function renderable(string $class, callable $callback): void
+    public function renderable(string|callable $class, ?callable $callback = null): void
     {
+        if (is_callable($class)) {
+            $callback = $class;
+            $class = $this->getClassFromClosure($callback);
+        }
+
         $this->renderCallbacks[$class] = $callback;
     }
 
@@ -163,7 +207,17 @@ class Handler implements ExceptionHandler
 
     public function render(Throwable $e, Request $request): ResponseContract
     {
+        if ($e instanceof HttpResponseException) {
+            return $e->getResponse();
+        }
+
         $e = $this->applyDecorator($e, $request);
+
+        foreach ($this->renderCallbacks as $class => $handler) {
+            if ($e instanceof $class && $response = $handler($e, $request)) {
+                return Router::toResponse($response, $request);
+            }
+        }
 
         if (method_exists($e, 'render') && $response = $e->render($request)) {
             return Router::toResponse($response, $request);
@@ -182,20 +236,6 @@ class Handler implements ExceptionHandler
         }
 
         return $this->renderExceptionResponse($e, $request);
-
-        /*
-        echo "<pre>";var_dump($e);
-        die();
-
-        // Render for debug
-        $response = $this->container['view']->make('errors::exception', $this->getExceptionDataForRender($e));
-
-        if ($response instanceof View) {
-            $response = new Response($response->render(), 200, ['Content-Type' => 'text/html']);
-        }
-
-        return $response;
-        */
     }
 
     protected function renderExceptionResponse(Throwable $e, Request $request): ResponseContract
@@ -212,17 +252,16 @@ class Handler implements ExceptionHandler
         $jsonOptions = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE;
 
         if ($this->isHttpException($e)) {
-            return new JsonResponse([
+            return (new JsonResponse([
                 'message' => $e->getMessage()
-            ], $e->getStatusCode(), $e->getHeaders(), $jsonOptions);
+            ], $e->getStatusCode(), $e->getHeaders()))->setOptions($jsonOptions);
         }
 
-        return new JsonResponse(
+        return (new JsonResponse(
             $this->convertExceptionToArray($e),
             $this->isHttpException($e) ? $e->getStatusCode() : 500,
             $this->isHttpException($e) ? $e->getHeaders() : [],
-            $jsonOptions
-        );
+        ))->setOptions($jsonOptions);
     }
 
     protected function convertExceptionToArray(Throwable $e): array
@@ -416,7 +455,7 @@ class Handler implements ExceptionHandler
     }
 
 
-    public function renderForConsole(Throwable $e, Output $output = null): void
+    public function renderForConsole(Throwable $e, ?Output $output = null): void
     {
         if (is_null($output)) {
             $output = new ConsoleOutput();
@@ -433,7 +472,7 @@ class Handler implements ExceptionHandler
         $output->newLine();
     }
 
-    protected function jTraceEx($e, $seen = null): string
+    protected function jTraceEx(Throwable $e, mixed $seen = null): string
     {
         $starter = $seen ? 'Caused by: ' : '';
         $result = array();

@@ -4,6 +4,7 @@ use Imhotep\Container\Container;
 use Imhotep\Contracts\Http\Responsable;
 use Imhotep\Contracts\Http\Response;
 use Imhotep\Http\Exceptions\HttpResponseException;
+use Imhotep\Routing\ResponseFactory;
 
 if (!function_exists('now')) {
     function now(): int
@@ -20,7 +21,7 @@ if (! function_exists('tap')) {
      * @param  callable|null  $callback
      * @return mixed
      */
-    function tap(mixed $value, callable $callback = null): mixed
+    function tap(mixed $value, ?callable $callback = null): mixed
     {
         if (is_null($callback)) {
             return new \Imhotep\Support\TapProxy($value);
@@ -70,7 +71,7 @@ if (!function_exists('app')) {
      * @param array $parameters
      * @return mixed|\Imhotep\Framework\Application
      */
-    function app(string $abstract = null, array $parameters = [])
+    function app(?string $abstract = null, array $parameters = [])
     {
         if (is_null($abstract)) {
             return Container::getInstance();
@@ -86,28 +87,13 @@ if (!function_exists('config')) {
      *
      * @return mixed|Imhotep\Config\Repository
      */
-    function config(string $key = null, mixed $default = null)
+    function config(?string $key = null, mixed $default = null)
     {
         if (is_null($key)) {
             return app('config');
         }
 
         return app('config')->get($key, $default);
-    }
-}
-
-if (!function_exists('route')) {
-    /**
-     * Generate the URL to a named route.
-     *
-     * @param string $name
-     * @param array $parameters
-     * @param bool $absolute
-     * @return string
-     */
-    function route(string $name, array $parameters = [], bool $absolute = true): string
-    {
-        return app('url')->route($name, $parameters, $absolute);
     }
 }
 
@@ -136,45 +122,15 @@ if (!function_exists('request')) {
 }
 
 if (!function_exists('response')) {
-    /**
-     * Get the available config instance.
-     *
-     * @return Imhotep\Http\Response
-     */
-    function response()
+    function response(mixed $content = null, int $status = 200, array $headers = []): ResponseFactory|Response
     {
-        return app(\Imhotep\Http\Response::class);
-    }
-}
+        $response = app(ResponseFactory::class);
 
-if (!function_exists('redirect')) {
-    /**
-     * Get the available config instance.
-     *
-     * @return Imhotep\Http\RedirectResponse|\Imhotep\Routing\Redirector
-     */
-    function redirect($to = null, $status = 302, $headers = [], $secure = null)
-    {
-        if (is_null($to)) {
-            return app('redirect');
+        if (func_num_args() === 0) {
+            return $response;
         }
 
-        return app('redirect')->to($to, $status, $headers, $secure);
-    }
-}
-
-if (! function_exists('back')) {
-    /**
-     * Create a new redirect response to the previous location.
-     *
-     * @param  int  $status
-     * @param  array  $headers
-     * @param  mixed  $fallback
-     * @return Imhotep\Http\RedirectResponse
-     */
-    function back($status = 302, $headers = [], $fallback = false)
-    {
-        return app('redirect')->back($status, $headers, $fallback);
+        return $response->make($content, $status, $headers);
     }
 }
 
@@ -183,9 +139,9 @@ if (!function_exists('cache')) {
      * Get the available config instance.
      *
      * @param string|null $store
-     * @return Imhotep\Cache\CacheInterface
+     * @return Imhotep\Cache\Repository
      */
-    function cache(string|null $store = null): Imhotep\Cache\CacheInterface
+    function cache(?string $store = null): Imhotep\Cache\Repository
     {
         return app('cache')->store($store);
     }
@@ -197,7 +153,7 @@ if (!function_exists('db')) {
      *
      * @return mixed|Imhotep\Database\Connection
      */
-    function db(string $connection = null)
+    function db(?string $connection = null)
     {
         return app('db')->connection($connection);
     }
@@ -222,7 +178,7 @@ if (!function_exists('disk')) {
      * @param string|null $name
      * @return Imhotep\Filesystem\Drivers\LocalDriver|Imhotep\SimpleS3\S3Client
      */
-    function disk(string $name = null)
+    function disk(?string $name = null)
     {
         return app('filesystem')->disk($name);
     }
@@ -235,56 +191,56 @@ if (!function_exists('cloud')) {
      * @param string|null $name
      * @return Imhotep\Filesystem\Drivers\LocalDriver|Imhotep\SimpleS3\S3Client
      */
-    function cloud(string $name = null)
+    function cloud(?string $name = null)
     {
         return app('filesystem')->cloud($name);
     }
 }
 
 if (!function_exists('base_path')) {
-    function base_path(string $path = null): string
+    function base_path(?string $path = null): string
     {
         return app()->basePath($path);
     }
 }
 
 if (!function_exists('app_path')) {
-    function app_path(string $path = null): string
+    function app_path(?string $path = null): string
     {
         return app()->path($path);
     }
 }
 
 if (!function_exists('storage_path')) {
-    function storage_path(string $path = null): string
+    function storage_path(?string $path = null): string
     {
         return app()->storagePath($path);
     }
 }
 
 if (!function_exists('resource_path')) {
-    function resource_path(string $path = null): string
+    function resource_path(?string $path = null): string
     {
         return app()->resourcePath($path);
     }
 }
 
 if (!function_exists('config_path')) {
-    function config_path(string $path = null): string
+    function config_path(?string $path = null): string
     {
         return app()->configPath($path);
     }
 }
 
 if (!function_exists('database_path')) {
-    function database_path(string $path = null): string
+    function database_path(?string $path = null): string
     {
         return app()->databasePath($path);
     }
 }
 
 if (!function_exists('public_path')) {
-    function public_path(string $path = null): string
+    function public_path(?string $path = null): string
     {
         return app()->publicPath($path);
     }
@@ -355,7 +311,7 @@ if (!function_exists('session')) {
     /**
      * @return void|mixed|\Imhotep\Contracts\Session\ISession
      */
-    function session(string|array $key = null, mixed $default = null): mixed
+    function session(string|array|null $key = null, mixed $default = null): mixed
     {
         if (is_string($key)) {
             return app('session')->get($key, $default);
@@ -385,45 +341,70 @@ if (!function_exists('csrf')) {
 
 
 if (!function_exists('basePath')) {
-    function basePath(string $path = null): string
+    function basePath(?string $path = null): string
     {
         return app()->basePath($path);
     }
 }
 
 if (!function_exists('storagePath')) {
-    function storagePath(string $path = null): string
+    function storagePath(?string $path = null): string
     {
         return app()->storagePath($path);
     }
 }
 
 if (!function_exists('publicPath')) {
-    function publicPath(string $path = null): string
+    function publicPath(?string $path = null): string
     {
         return app()->publicPath($path);
     }
 }
 
+
 if (!function_exists('url')) {
-    function url(string $path = null): \Imhotep\Routing\UrlGenerator|string
+    function url(?string $path = null): \Imhotep\Routing\UrlGenerator|string
     {
         if (is_null($path)) {
             return app('url');
         }
 
         return app('url')->to($path);
-
-        /*
-        $url = app('config')->get('app.url', '');
-
-        $url = rtrim($url, '/');
-        $path = ltrim($path, '/');
-
-        return $url.'/'.$path;
-        */
     }
 }
+
+if (!function_exists('route')) {
+    function route(string $name, array $parameters = [], bool $absolute = false): string
+    {
+        return url()->route($name, $parameters, $absolute);
+    }
+}
+
+if (!function_exists('to_route')) {
+    function to_route(string $route, array $parameters = [], int $status = 302, array $headers = [])
+    {
+        return redirect()->route($route, $parameters, $status, $headers);
+    }
+}
+
+if (!function_exists('redirect')) {
+    function redirect($to = null, int $status = 302, array $headers = [], $secure = null): Imhotep\Http\RedirectResponse|\Imhotep\Routing\Redirector
+    {
+        if (is_null($to)) {
+            return app('redirect');
+        }
+
+        return app('redirect')->to($to, $status, $headers, $secure);
+    }
+}
+
+if (!function_exists('back')) {
+    function back(int $status = 302, array $headers = [], $fallback = false): Imhotep\Http\RedirectResponse
+    {
+        return app('redirect')->back($status, $headers, $fallback);
+    }
+}
+
 
 if (!function_exists('scss')) {
     function scss(string $from, bool $returnResult = false): string
@@ -431,28 +412,55 @@ if (!function_exists('scss')) {
         $fromPath = $from;
 
         if (! file_exists($fromPath)) {
-            $fromPath = resource_path("css/{$from}");
+            $fromPath = resource_path("scss/{$from}");
+        }
+
+        if (! file_exists($fromPath)) {
+            $fromPath = resource_path("scss/{$from}.scss");
         }
 
         if (! file_exists($fromPath)) {
             return '';
         }
 
-        $scss = new ScssPhp\ScssPhp\Compiler();
-        $scss->addImportPath(dirname($fromPath));
-        $css = $scss->compileString(file_get_contents($fromPath))->getCss();
-
         if ($returnResult) {
-            return $css;
+            $scss = new ScssPhp\ScssPhp\Compiler();
+            $scss->addImportPath(dirname($fromPath));
+            return $scss->compileString(file_get_contents($fromPath))->getCss();
         }
+
+
+        $fs = new Imhotep\Filesystem\Filesystem();
+
+        $files = $fs->allFiles(dirname($fromPath));
+
+        $hash = '';
+        foreach ($files as $file) {
+            $hash .= filemtime($file) . '_' . filesize($file);
+        }
+        $hash = substr(md5($hash), 0, 6);
 
         $toDir = pathinfo("css/".$from, PATHINFO_DIRNAME);
         $toPath = public_path($toDir);
         $toName = pathinfo($from, PATHINFO_FILENAME);
-        $to = $toDir.'/'.$toName.'.css';
+        $to = $toDir.'/'.$toName.'-'.$hash.'.css';
+
+        if (file_exists($to)) {
+            return "/$to";
+        }
+
+        $scss = new ScssPhp\ScssPhp\Compiler();
+        $scss->addImportPath(dirname($fromPath));
+        $css = $scss->compileString(file_get_contents($fromPath))->getCss();
 
         if (! is_dir($toPath)) {
             @mkdir($toPath, 0775, true);
+        }
+
+        if ($files = glob($toDir.'/'.$toName.'-*.css')) {
+            foreach ($files as $file) {
+                if (is_file($file)) unlink($file);
+            }
         }
 
         file_put_contents($to, $css);
@@ -521,7 +529,7 @@ if (!function_exists('report')) {
 */
 
 if (!function_exists('lang')) {
-    function lang(string $name = null, array $replace = [], string $locale = null, bool $fallback = true): \Imhotep\Contracts\Localization\Localizator|string|array
+    function lang(?string $name = null, array $replace = [], ?string $locale = null, bool $fallback = true): \Imhotep\Contracts\Localization\ILocalizator|string|array
     {
         if (is_null($name)) {
             return app('localizator');
@@ -532,7 +540,7 @@ if (!function_exists('lang')) {
 }
 
 if (!function_exists('__')) {
-    function __(string $name = null, array $replace = [], string $locale = null, bool $fallback = true): \Imhotep\Contracts\Localization\Localizator|string|array
+    function __(?string $name = null, array $replace = [], ?string $locale = null, bool $fallback = true): \Imhotep\Contracts\Localization\ILocalizator|string|array
     {
         return lang($name, $replace, $locale, $fallback);
     }
@@ -551,7 +559,7 @@ if (!function_exists('auth')) {
      *
      * @return mixed|Imhotep\Contracts\Auth\Guard
      */
-    function auth(string $guard = null)
+    function auth(?string $guard = null): Imhotep\Contracts\Auth\Guard
     {
         return app('auth')->guard($guard);
     }
@@ -566,5 +574,22 @@ if (!function_exists('validator')) {
     function validator(): ?\Imhotep\Validation\Factory
     {
         return app('validator');
+    }
+}
+
+if (!function_exists('view')) {
+    /**
+     * Get the available view instance.
+     *
+     * @param string|null $name
+     * @return \Imhotep\View\Factory|\Imhotep\View\View
+     */
+    function view(?string $name = null, array $data = []): \Imhotep\View\Factory|\Imhotep\View\View
+    {
+        if (empty($name)) {
+            return app('view');
+        }
+
+        return app('view')->make($name, $data);
     }
 }

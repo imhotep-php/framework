@@ -2,8 +2,8 @@
 
 namespace Imhotep\Framework\Http\Middleware;
 
+use Imhotep\Http\ParameterBag;
 use Imhotep\Http\Request;
-use Imhotep\Http\Request\ParameterBug;
 
 class EmptyStringsToNull
 {
@@ -18,7 +18,7 @@ class EmptyStringsToNull
         return $next($request);
     }
 
-    protected function cleanParameters(ParameterBug $bag): void
+    protected function cleanParameters(ParameterBag $bag): void
     {
         $data = $bag->all();
 

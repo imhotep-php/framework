@@ -55,7 +55,7 @@ class Kernel
         }
     }
 
-    public function handle(Input $input, Output $output = null): int
+    public function handle(Input $input, ?Output $output = null): int
     {
         $this->commandStartedAt = now();
 
@@ -73,7 +73,7 @@ class Kernel
         return 1;
     }
 
-    public function call(string $command, array $parameters = [], Output $output = null): int
+    public function call(string $command, array $parameters = [], ?Output $output = null): int
     {
         $this->bootstrap();
 

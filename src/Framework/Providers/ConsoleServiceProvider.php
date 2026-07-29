@@ -9,6 +9,7 @@ use Imhotep\Framework\Console\Commands\ConfigClearCommand;
 use Imhotep\Framework\Console\Commands\ControllerMakeCommand;
 use Imhotep\Framework\Console\Commands\KeyGenCommand;
 use Imhotep\Framework\Console\Commands\ProviderMakeCommand;
+use Imhotep\Framework\Console\Commands\ViewClearCommand;
 
 class ConsoleServiceProvider extends ServiceProvider
 {
@@ -20,6 +21,7 @@ class ConsoleServiceProvider extends ServiceProvider
         'make:command'    => CommandMakeCommand::class,
         'config:cache'    => ConfigCacheCommand::class,
         'config:clear'    => ConfigClearCommand::class,
+        'view:clear'      => ViewClearCommand::class,
     ];
 
     public function register(): void

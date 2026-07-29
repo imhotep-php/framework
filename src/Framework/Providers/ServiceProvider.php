@@ -100,6 +100,15 @@ abstract class ServiceProvider
         });
     }
 
+    public function loadMigrationFrom(string|array $paths): static
+    {
+        return $this->callAfterResolving('migrator', function ($migrator) use ($paths) {
+            foreach ((array) $paths as $path) {
+                $migrator->addPath($path);
+            }
+        });
+    }
+
     protected function callAfterResolving(string $abstract, Closure $callback): static
     {
         $this->app->afterResolving($abstract, $callback);
