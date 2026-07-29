@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Encryption;
 
@@ -8,35 +6,49 @@ use Imhotep\Contracts\Encryption\DecryptException;
 use Imhotep\Contracts\Encryption\Encrypter as EncrypterContract;
 use Imhotep\Contracts\Encryption\EncryptException;
 use Imhotep\Contracts\Encryption\EncryptionException;
+use Imhotep\Support\Traits\DeprecatedGetters;
+use Imhotep\Support\Traits\Macroable;
 use Throwable;
 
 class Encrypter implements EncrypterContract
 {
+    use DeprecatedGetters, Macroable {
+        __call as macroCall;
+    }
+
+    protected string $key = '';
+
+    protected array $previousKeys = [];
+
+    protected string $cipher = '';
+
     /**
      * @throws EncryptionException
      */
-    public function __construct(
-        protected string $key,
-        protected string $cipher = 'aes-128-gcm'
-    )
+    public function __construct(string $key, string $cipher = 'aes-128-gcm', string|array $previousKeys = '')
     {
-        if (str_starts_with($this->key, 'base64:')) {
-            $this->key = base64_decode(substr($this->key, 7));
-        }
-        elseif (str_starts_with($this->key, 'hex:')) {
-            $this->key = hex2bin(substr($this->key, 4));
+        $this->key = $this->parseKey($key);
+
+        if (! empty($previousKeys)) {
+            if (is_string($previousKeys)) {
+                $previousKeys = explode(',', $previousKeys);
+            }
+
+            foreach ($previousKeys as $previousKey) {
+                $this->previousKeys[] = $this->parseKey($previousKey);
+            }
         }
 
-        $keySize = mb_strlen($this->key, '8bit');
-        if (empty($this->key) || ! in_array($keySize, [8,16,32])) {
-            throw new EncryptionException("Incorrect key length. Available length: 8, 16, 32 bits.");
-        }
-
-        $this->cipher = strtolower($this->cipher);
+        $this->cipher = strtolower($cipher);
 
         if (! in_array($this->cipher, openssl_get_cipher_methods())) {
             throw new EncryptionException("Cipher [".$this->cipher."] not supported. Use for example: aes-128-cbc, aes-256-cbc, aes-128-gcm, aes-256-gcm or any cipher from the method openssl_get_cipher_methods().");
         }
+    }
+
+    public function key(): string
+    {
+        return $this->key;
     }
 
     /**
@@ -88,20 +100,41 @@ class Encrypter implements EncrypterContract
         $payload = json_decode(base64_decode($payload), true);
 
         if (! $this->isValidPayload($payload)) {
-            throw new DecryptException("Decrypt: the payload is invalid.");
+            throw new DecryptException("Decrypt: the payload is invalid");
         }
 
         $iv = base64_decode($payload['iv']);
-
         $tag = empty($payload['tag']) ? '' : base64_decode($payload['tag']);
 
-        $value = openssl_decrypt($payload['value'], $this->cipher, $this->key, 0, $iv, $tag);
+        $keys = [$this->key, ...$this->previousKeys]; $value = false;
 
-        if ($value === false) {
-            throw new DecryptException('Decrypt: could not decrypt the data.');
+        $shouldValidateMac = $this->shouldValidateMac();
+        $foundValidMac = false;
+
+        foreach ($keys as $key) {
+            if ($shouldValidateMac) {
+                if (!$this->validateMac($payload, $key)) {
+                    continue; // MAC не совпал - пропускаем этот ключ
+                }
+                $foundValidMac = true;
+            }
+
+            $value = openssl_decrypt($payload['value'], $this->cipher, $key, 0, $iv, $tag);
+
+            if ($value !== false) {
+                break;
+            }
         }
 
-        return $unserialize ? unserialize($value) : $value;
+        if ($value !== false) {
+            return $unserialize ? unserialize($value) : $value;
+        }
+
+        if ($shouldValidateMac && ! $foundValidMac) {
+            throw new DecryptException('Decrypt: The MAC is invalid');
+        }
+
+        throw new DecryptException('Decrypt: could not decrypt the data');
     }
 
     /**
@@ -114,22 +147,39 @@ class Encrypter implements EncrypterContract
 
     protected function isValidPayload($payload): bool
     {
-        if (! (is_array($payload) && isset($payload['iv'], $payload['value'], $payload['tag'], $payload['mac'])) ) {
+        if (!is_array($payload)) {
             return false;
         }
 
-        if ($payload['tag'] === '') {
-            if (! hash_equals($this->hash($payload['iv'], $payload['value']), $payload['mac'])) {
-                return false;
-            }
+        if (!isset($payload['iv'], $payload['value'], $payload['mac'])) {
+            return false;
         }
 
-        return true;
+        if (!is_string($payload['iv']) || !is_string($payload['value']) || !is_string($payload['mac'])) {
+            return false;
+        }
+
+        if (isset($payload['tag']) && !is_string($payload['tag'])) {
+            return false;
+        }
+
+        return strlen(base64_decode($payload['iv'], true)) === openssl_cipher_iv_length(strtolower($this->cipher));
     }
 
-    protected function hash(string $iv, string $value): string
+    protected function shouldValidateMac(): bool
     {
-        return hash_hmac('sha256', $iv.$value, $this->key);
+        return in_array($this->cipher, ['aes-128-cbc','aes-256-cbc']);
+    }
+
+    protected function validateMac(array $payload, string $key): bool
+    {
+        return hash_equals($this->hash($payload['iv'], $payload['value'], $key), $payload['mac']);
+    }
+
+
+    protected function hash(string $iv, string $value, ?string $key = null): string
+    {
+        return hash_hmac('sha256', $iv.$value, $key ?? $this->key);
     }
 
     /**
@@ -160,8 +210,29 @@ class Encrypter implements EncrypterContract
         return "hex:".bin2hex(static::generateKey());
     }
 
-    public function getKey(): string
+    protected function parseKey(string $key): string
     {
-        return $this->key;
+        if (str_starts_with($key, 'base64:')) {
+            $key = base64_decode(substr($key, 7));
+        }
+        elseif (str_starts_with($key, 'hex:')) {
+            $key = hex2bin(substr($key, 4));
+        }
+
+        $keySize = mb_strlen($key, '8bit');
+        if (empty($key) || ! in_array($keySize, [8, 16, 24, 32], true)) {
+            throw new EncryptionException("Incorrect key length. Available length: 8, 16, 24, 32 bytes.");
+        }
+
+        return $key;
+    }
+
+    public function __call(string $method, array $parameters): mixed
+    {
+        if ($result = $this->deprecatedGettersCall($method, $parameters)) {
+            return $result;
+        }
+
+        return $this->macroCall($method, $parameters);
     }
 }

@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Encryption;
 
@@ -25,7 +23,7 @@ class EncryptionServiceProvider extends ServiceProvider
                 throw new MissingAppKeyException;
             }
 
-            return new Encrypter($config['key'], $config['cipher']);
+            return new Encrypter($config['key'], $config['cipher'], $config['previous_keys'] ?? '');
         });
     }
 }
