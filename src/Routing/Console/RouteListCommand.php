@@ -3,6 +3,7 @@
 namespace Imhotep\Routing\Console;
 
 use Imhotep\Console\Command\Command;
+use Imhotep\Console\Input\InputOption;
 use Imhotep\Facades\Route;
 
 class RouteListCommand extends Command
@@ -14,6 +15,13 @@ class RouteListCommand extends Command
     public function handle(): int
     {
         $routes = Route::getRoutes()->all();
+
+        $filter = $this->option('filter');
+        if (! empty($filter)) {
+            $routes = array_filter($routes, function ($route) use ($filter) {
+                return str_contains($route->uri(), $filter);
+            });
+        }
 
         if (empty($routes)) {
             $this->components()->info('No routes found');
@@ -94,7 +102,7 @@ class RouteListCommand extends Command
         return 0;
     }
 
-    protected function writeCaption($lengths)
+    protected function writeCaption($lengths): void
     {
         $this->output->write("<fg=default;options=bold>".str_pad('Method', $lengths['method'])."</>");
         $this->output->write("<fg=default;options=bold>".str_pad('Path', $lengths['uri'])."</>");
@@ -119,7 +127,7 @@ class RouteListCommand extends Command
         $this->output->write("<fg=".$color.">{$method}</>");
     }
 
-    protected function writeUri($uri, $length)
+    protected function writeUri($uri, $length): void
     {
         $uri = str_pad($uri, $length);
 
@@ -128,24 +136,31 @@ class RouteListCommand extends Command
         $this->output->write("<fg=default>{$uri}</>");
     }
 
-    protected function writeAction($action, $length)
+    protected function writeAction($action, $length): void
     {
         $action = str_pad($action, $length);
 
         $this->output->write("<fg=cyan>{$action}</>");
     }
 
-    protected function writeName($name, $length)
+    protected function writeName($name, $length): void
     {
         $name = str_pad($name, $length);
 
         $this->output->write("<fg=gray>{$name}</>");
     }
 
-    protected function writeMiddleware($middleware, $length)
+    protected function writeMiddleware($middleware, $length): void
     {
         $middleware = str_pad($middleware, $length);
 
         $this->output->write("<fg=gray>{$middleware}</>");
+    }
+
+    public function getOptions(): array
+    {
+        return [
+            InputOption::builder('filter', 'f')->valueOptional()->build(),
+        ];
     }
 }
