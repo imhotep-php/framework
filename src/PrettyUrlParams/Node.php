@@ -10,7 +10,7 @@ class Node
 
     protected ?array $leafs = null;
 
-    public function __construct(array|string $chars, int $weight = 1, array $leafs = null)
+    public function __construct(array|string $chars, int $weight = 1, ?array $leafs = null)
     {
         $this->chars = is_array($chars) ? $chars : [$chars];
         $this->weight = $weight;
@@ -31,7 +31,7 @@ class Node
         );
     }
 
-    public function chars(int $index = null): null|array|string
+    public function chars(?int $index = null): null|array|string
     {
         if (! is_null($index)) {
             return $this->chars[$index] ?? null;
@@ -50,7 +50,7 @@ class Node
         return $this->weight;
     }
 
-    public function leafs(int $direction = null): Node|array|null
+    public function leafs(?int $direction = null): Node|array|null
     {
         if (! is_null($direction)) {
             return $this->leafs[$direction] ?? null;
