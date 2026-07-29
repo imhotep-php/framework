@@ -22,7 +22,7 @@ interface Connection
 
     public function query(): QueryBuilder;
 
-    public function table(string $table, string $as = null): QueryBuilder;
+    public function table(string $table, ?string $as = null): QueryBuilder;
 
     public function selectFromWriteConnection(string $query, array $bindings = []): array;
 
@@ -34,7 +34,7 @@ interface Connection
 
     public function insert(string $query, array $bindings = []): int;
 
-    public function lastInsertId(string $name = null): string|false;
+    public function lastInsertId(?string $name = null): string|false;
 
     public function update(string $query, array $bindings = []): int;
 

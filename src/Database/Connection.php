@@ -25,9 +25,9 @@ abstract class Connection implements ConnectionContract
 {
     use ConnectionLogger, ConnectionTransactions, DetectsErrors;
 
-    protected $pdo = null;
+    protected mixed $pdo = null;
 
-    protected $readPdo = null;
+    protected mixed $readPdo = null;
 
     protected Closure $reconnector;
 
@@ -71,7 +71,7 @@ abstract class Connection implements ConnectionContract
         return $this->tablePrefix;
     }
 
-    public function getConfig(string $key = null, mixed $default = null): mixed
+    public function getConfig(?string $key = null, mixed $default = null): mixed
     {
         return Arr::get($this->config, $key, $default);
     }
@@ -92,7 +92,7 @@ abstract class Connection implements ConnectionContract
         return $this->getQueryBuilder();
     }
 
-    public function table(string $table, string $as = null): QueryBuilder
+    public function table(string $table, ?string $as = null): QueryBuilder
     {
         return $this->query()->from($table, $as);
     }
@@ -131,7 +131,7 @@ abstract class Connection implements ConnectionContract
     }
 
 
-    public function lastInsertId(string $name = null): string|false
+    public function lastInsertId(?string $name = null): string|false
     {
         return $this->pdo->lastInsertId($name);
     }
@@ -439,7 +439,7 @@ abstract class Connection implements ConnectionContract
     |--------------------------------------------------------------------------
     */
 
-    protected SchemaGrammar|null $schemaGrammar = null;
+    protected ?SchemaGrammar $schemaGrammar = null;
 
     public function useSchemaGrammar(): static
     {
@@ -464,7 +464,7 @@ abstract class Connection implements ConnectionContract
         throw new DatabaseException("Schema builder is not supported.");
     }
 
-    protected QueryGrammar|null $queryGrammar = null;
+    protected ?QueryGrammar $queryGrammar = null;
 
     public function useQueryGrammar(): static
     {

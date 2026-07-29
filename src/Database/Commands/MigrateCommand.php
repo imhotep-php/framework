@@ -2,35 +2,22 @@
 
 namespace Imhotep\Database\Commands;
 
-use Imhotep\Console\Command\Command;
 use Imhotep\Console\Input\InputOption;
-use Imhotep\Database\Migrations\Migrator;
+use Imhotep\Database\Commands\Migrations\BaseCommand;
 
-class MigrateCommand extends Command
+class MigrateCommand extends BaseCommand
 {
     public static string $defaultName = 'migrate';
 
     public static string $defaultDescription = 'Run the database migrations';
 
-    public function __construct(
-        protected Migrator $migrator
-    )
-    {
-        parent::__construct();
-    }
-
     public function handle(): int
     {
-        $this->migrator->setOutput($this->output);
-        $this->migrator->setConnection($this->input->getOption('database'));
+        parent::handle();
 
         $this->prepareDatabase();
 
-        $paths = [
-            realpath( $this->container->basePath('/database/migrations'))
-        ];
-
-        $this->migrator->dispatch('migrate', $paths);
+        $this->migrate->dispatch('migrate', $this->getPaths());
 
         $this->output->newLine();
 
@@ -39,14 +26,14 @@ class MigrateCommand extends Command
 
     protected function prepareDatabase(): void
     {
-        if ($this->migrator->getRepository()->repositoryExists()) {
+        if ($this->migrate->getRepository()->repositoryExists()) {
             return;
         }
 
         $this->components()->info('Preparing database');
 
         $this->components()->task('Creating migration table', function () {
-            $this->migrator->getRepository()->createRepository();
+            $this->migrate->getRepository()->createRepository();
         });
 
         $this->output->newLine();
@@ -54,10 +41,10 @@ class MigrateCommand extends Command
 
     public function getOptions(): array
     {
-        return [
-            new InputOption('database', null, InputOption::VALUE_OPTIONAL, 'The database connection to use'),
-            new InputOption('path', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_ARRAY, 'The path(s) to the migrations files to use'),
-            new InputOption('realpath', null, InputOption::VALUE_OPTIONAL, 'Indicate any provided migration file paths are pre-resolved absolute paths'),
-        ];
+        return array_merge(parent::getOptions(), [
+            new InputOption('name', 'n', InputOption::VALUE_OPTIONAL, 'The migration name'),
+            //new InputOption('step', null, InputOption::VALUE_OPTIONAL, 'Force the migrations to be run so they can be rolled back individually'),
+            //new InputOption('pretend', null, InputOption::VALUE_OPTIONAL, 'Dump the SQL queries that would be run'),
+        ]);
     }
 }

@@ -90,7 +90,7 @@ trait ConnectionLogger
         return $this;
     }
 
-    public function logQuery(string $query, array $bindings, float $time = null): void
+    public function logQuery(string $query, array $bindings, ?float $time = null): void
     {
         $this->totalQueryDuration += $time ?? 0.0;
 

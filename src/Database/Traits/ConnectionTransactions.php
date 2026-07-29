@@ -131,7 +131,7 @@ trait ConnectionTransactions
         $this->transactions = max(0, $this->transactions - 1);
     }
 
-    public function rollBack(int $toLevel = null): bool
+    public function rollBack(?int $toLevel = null): bool
     {
         $toLevel = $toLevel ?: $this->transactions-1;
 

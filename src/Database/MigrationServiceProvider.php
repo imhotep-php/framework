@@ -36,7 +36,9 @@ class MigrationServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton('migrator', function ($app) {
-            return new Migrator($app['db'], $app['migration.repository']);
+            $paths = [base_path('/database/migrations')];
+
+            return new Migrator($app['db'], $app['migration.repository'], $paths);
         });
 
         $this->commands($this->commands);

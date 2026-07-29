@@ -23,7 +23,7 @@ class Table
 
     protected string $columnClassDefault = Column::class;
 
-    public function __construct(string $name, Closure $callback = null, $prefix = '')
+    public function __construct(string $name, ?Closure $callback = null, string $prefix = '')
     {
         $this->name = $name;
         $this->prefix = $prefix;
@@ -75,7 +75,7 @@ class Table
         return $this->addColumn('bigInteger', $column);
     }
 
-    public function decimal(string $column, int $precision = null, int $scale = null): Column
+    public function decimal(string $column, ?int $precision = null, ?int $scale = null): Column
     {
         return $this->addColumn('decimal', $column, compact('precision', 'scale'));
     }
@@ -100,17 +100,17 @@ class Table
         return $this->addColumn('blob', $column);
     }
 
-    public function string(string $column, int $length = null): Column
+    public function string(string $column, ?int $length = null): Column
     {
         return $this->addColumn('string', $column, compact('length'));
     }
 
-    public function char(string $column, int $length = null): Column
+    public function char(string $column, ?int $length = null): Column
     {
         return $this->addColumn('char', $column, compact('length'));
     }
 
-    public function varchar(string $column, int $length = null): Column
+    public function varchar(string $column, ?int $length = null): Column
     {
         return $this->addColumn('varchar', $column, compact('length'));
     }
@@ -230,7 +230,7 @@ class Table
      * @param string|null $type Column data type (MySQL)
      * @return $this
      */
-    public function renameColumn(string $from, string $to, string $type = null): static
+    public function renameColumn(string $from, string $to, ?string $type = null): static
     {
         $this->addCommand('renameColumn', compact('from', 'to', 'type'));
 
@@ -247,7 +247,7 @@ class Table
     }
 
 
-    public function primary(string|array $columns, string $index = null): static
+    public function primary(string|array $columns, ?string $index = null): static
     {
         $index = $index ?: $this->createIndexName('primary', (array)$columns);
 
@@ -256,7 +256,7 @@ class Table
         return $this;
     }
 
-    public function index(string|array $columns, string $index = null): static
+    public function index(string|array $columns, ?string $index = null): static
     {
         $index = $index ?: $this->createIndexName('index', (array)$columns);
 
@@ -265,7 +265,7 @@ class Table
         return $this;
     }
 
-    public function unique(string|array $columns, string $index = null): static
+    public function unique(string|array $columns, ?string $index = null): static
     {
         $index = $index ?: $this->createIndexName('unique', (array)$columns);
 

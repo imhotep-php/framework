@@ -10,7 +10,7 @@ interface ConnectionResolver
      * @param  string|null  $name
      * @return Connection
      */
-    public function connection(string $name = null): Connection;
+    public function connection(?string $name = null): Connection;
 
     /**
      * Get the default connection name.

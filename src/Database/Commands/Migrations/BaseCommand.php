@@ -17,6 +17,7 @@ class BaseCommand extends Command
 
     public function handle(): int
     {
+        $this->migrate->setInput($this->input);
         $this->migrate->setOutput($this->output);
         $this->migrate->setConnection($this->input->getOption('database'));
 
@@ -37,9 +38,9 @@ class BaseCommand extends Command
             }
         }
 
-        $paths[] = $this->container->basePath('/database/migrations');
+        $paths = array_merge($paths, $this->migrate->paths());
 
-        return $paths;
+        return array_unique($paths);
     }
 
     public function getOptions(): array

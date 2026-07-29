@@ -48,7 +48,7 @@ class Builder extends BuilderAbstract
         $this->connection->select($this->grammar->compileRebuild());
     }
 
-    protected function createTable(string $table, \Closure $callback = null): Table
+    protected function createTable(string $table, ?\Closure $callback = null): Table
     {
         return new Table($table, $callback, $this->connection->getTablePrefix());
     }

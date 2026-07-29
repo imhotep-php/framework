@@ -12,13 +12,13 @@ class Attribute
 
     public bool $withObjectCaching = true;
 
-    public function __construct(callable $get = null, callable $set = null)
+    public function __construct(?callable $get = null, ?callable $set = null)
     {
         $this->get = $get;
         $this->set = $set;
     }
 
-    public static function make(callable $get = null, callable $set = null): static
+    public static function make(?callable $get = null, ?callable $set = null): static
     {
         return new static($get, $set);
     }

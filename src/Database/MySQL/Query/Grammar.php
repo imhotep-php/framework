@@ -8,7 +8,7 @@ use Imhotep\Database\Query\Grammar as GrammarBase;
 
 class Grammar extends GrammarBase
 {
-    public function compileUpsert(Builder $query, string $uniqueColumn, array $insertValues, array $updateValues, $returning = null): string
+    public function compileUpsert(Builder $query, string $uniqueColumn, array $insertValues, array $updateValues, mixed $returning = null): string
     {
         $table = $this->wrapTable($query->from);
         $sqlInsertColumns = $this->prepareColumns(array_keys($insertValues));
@@ -28,12 +28,10 @@ class Grammar extends GrammarBase
         );
     }
 
-    public function wrap(string|Expression $value): string
+    protected function wrapValue(mixed $value): string
     {
-        if ($value instanceof Expression) {
-            return $value->getValue();
-        }
+        if ($value === '*') return $value;
 
-        return sprintf('`%s`', $value);
+        return '`'.((string)$value).'`';
     }
 }

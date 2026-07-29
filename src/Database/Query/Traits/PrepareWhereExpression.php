@@ -7,7 +7,7 @@ use InvalidArgumentException;
 trait PrepareWhereExpression
 {
     protected array $whereOperators = [
-        '=', '>', '<', '>=', '<=', '<>', '!=', 'like', 'not like'
+        '=', '>', '<', '>=', '<=', '<>', '!=', 'like', 'not like', 'between', 'not between'
     ];
 
     protected function parseWhereExpression(string $expression): array

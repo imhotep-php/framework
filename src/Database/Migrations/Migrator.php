@@ -16,8 +16,6 @@ class Migrator
 
     protected ?string $connection = null;
 
-    protected array $paths = [];
-
     /**
      * @var SplFileInfo[]
      */
@@ -27,12 +25,27 @@ class Migrator
 
     public function __construct(
         protected ConnectionResolver $db,
-        protected Repository      $repository
+        protected Repository $repository,
+        protected array $paths = []
     )
     {
     }
 
-    public function setConnection(string $name = null): static
+    public function addPath(string $path): static
+    {
+        if (is_dir($path)) {
+            $this->paths[] = $path;
+        }
+
+        return $this;
+    }
+
+    public function paths(): array
+    {
+        return $this->paths;
+    }
+
+    public function setConnection(?string $name = null): static
     {
         if (! is_null($name)) {
             $this->db->setDefaultConnection($name);
@@ -90,9 +103,15 @@ class Migrator
 
         $step = $options['step'] ?? false;
 
+        $name = $this->option('name');
+
         $batch = $this->repository->getNextBatchNumber();
 
         foreach ($migrations as $migration) {
+            if ($name && $name !== $migration->getBasename('.php')) {
+                continue;
+            }
+
             $migration = $this->resolveMigration($migration);
 
             $this->components()->task($migration->name, fn() => $this->runMigration($migration, 'up', $batch));
@@ -111,7 +130,7 @@ class Migrator
     protected function commandReset($options): int
     {
         if (! $this->repository->repositoryExists()) {
-            $this->components()->error('Migration table not found.');
+            $this->components()->error('Migration table not found. Run command <fg=green>migrate:install</>');
 
             return 0;
         }
@@ -160,7 +179,7 @@ class Migrator
     protected function commandStatus($options): int
     {
         if (! $this->repository->repositoryExists()) {
-            $this->components()->error('Migration table not found');
+            $this->components()->error('Migration table not found. Run command <fg=green>migrate:install</>');
 
             return 0;
         }
@@ -192,7 +211,7 @@ class Migrator
         return 0;
     }
 
-    protected function runMigration(Migration $migration, string $method, int $batch = null): void
+    protected function runMigration(Migration $migration, string $method, ?int $batch = null): void
     {
         if (! method_exists($migration, $method)) return;
 
@@ -314,7 +333,7 @@ class Migrator
         return $resolved;
     }
 
-    protected function resolveConnection(string $connection = null): Connection
+    protected function resolveConnection(?string $connection = null): Connection
     {
         return $this->db->connection($connection);
     }

@@ -10,6 +10,8 @@ abstract class Model implements IModel
 {
     use HasAttributes, HasGuardAttributes, HasPrimaryKey, HasTimestamps, HasSoftDeletes;
 
+    protected string $repositoryClass = '';
+
     // Поля, которые можно наполнять
     protected array $fillable = [];
 
@@ -71,15 +73,14 @@ abstract class Model implements IModel
 
     public function forceFill(array $attributes): static
     {
-        // unguard
+        static::$unguarded = true;
+
         $this->fill($attributes);
-        // guarded
+
+        static::$unguarded = false;
 
         return $this;
     }
-
-
-
 
     public function toArray(): array
     {
@@ -97,6 +98,11 @@ abstract class Model implements IModel
         return json_encode($this->toArray(), $options);
     }
 
+    public function __toArray(): array
+    {
+        return $this->toArray();
+    }
+
     public function __toString(): string
     {
         return $this->toJson();
@@ -110,5 +116,30 @@ abstract class Model implements IModel
     public function __set(string $name, mixed $value): void
     {
         $this->setAttribute($name, $value);
+    }
+
+    public function __isset(string $name): bool
+    {
+        return $this->getAttribute($name) !== null;
+    }
+
+    public function __call(string $name, array $arguments): mixed
+    {
+        if (method_exists($this, $name)) {
+            return $this->{$name}(...$arguments);
+        }
+
+        if ($this->repositoryClass !== '' && class_exists($this->repositoryClass)) {
+            $repository = new $this->repositoryClass;
+
+            return $repository->{$name}(...$arguments);
+        }
+
+        throw new \BadMethodCallException("Call to undefined method {$name}()");
+    }
+
+    public static function __callStatic(string $name, array $arguments): mixed
+    {
+        return (new static())->{$name}(...$arguments);
     }
 }

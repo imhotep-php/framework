@@ -24,7 +24,7 @@ abstract class Grammar extends BaseGrammar implements SchemaGrammarContract
      */
     protected array $serials = ['Integer'];
 
-    public function getColumns($table): array
+    public function getColumns(Table $table): array
     {
         $columns = [];
 
@@ -32,6 +32,19 @@ abstract class Grammar extends BaseGrammar implements SchemaGrammarContract
             $sql = $this->wrap($column->name).' '.$this->getType($column);
 
             $columns[] = $this->addModifiers($sql, $table, $column);
+        }
+
+        return $columns;
+    }
+
+    public function getChangedColumns(Table $table): array
+    {
+        $columns = [];
+
+        foreach ($table->getColumns() as $column) {
+            if ($column->change !== true) continue;
+
+            $columns[] = $column;
         }
 
         return $columns;

@@ -18,10 +18,12 @@ use stdClass;
 class Builder implements QueryBuilderContract
 {
     use PrepareWhereExpression;
+    use Traits\HasWhereConditions;
+    use Traits\HasLockConditions;
 
     protected bool $useWritePDO = false;
 
-    protected $bindings = [
+    protected array $bindings = [
         'columns' => [],
         //'select' => [],
         //'from' => [],
@@ -46,7 +48,7 @@ class Builder implements QueryBuilderContract
 
     public bool|array $distinct = false;
 
-    public ?array $columns = null;
+    public ?array $columns = ['*'];
 
     public ?array $aggregate = [];
 
@@ -104,11 +106,35 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function select(array $columns = ['*']): static
+    public function select(array|string|Expression $columns = ['*']): static
     {
         $this->command = 'select';
 
-        $this->columns = $columns;
+        $this->columns = is_array($columns) ? $columns : [$columns];
+
+        return $this;
+    }
+
+    public function addSelect(array $columns): static
+    {
+        /*
+        foreach ($columns as $key => $column) {
+            if ($column instanceof Closure) {
+                $subQuery = $this->newQuery();
+                $column($subQuery);
+
+                // Добавляем привязки из подзапроса
+                $this->addBinding($subQuery->getRawBindings()['where'], 'where');
+
+                $this->columns[$key] = $column;
+            } else {
+                $this->columns[] = $column;
+            }
+        }
+        */
+
+
+        $this->columns = array_merge($this->columns, $columns);
 
         return $this;
     }
@@ -151,7 +177,7 @@ class Builder implements QueryBuilderContract
     {
         $bindings = array_values($values);
 
-        $sql = $this->grammar->compileInsert($this, $values, $keyName);
+        $sql = $this->grammar->compileInsertGetId($this, $values, $keyName);
 
         if ($this->withDump) {
             dump($sql, $bindings);
@@ -161,9 +187,11 @@ class Builder implements QueryBuilderContract
             return [$sql, $bindings];
         }
 
-        $result = $this->connection->selectOne($sql, $bindings, false);
+        $result = $this->connection->insert($sql, $bindings);
 
-        return is_numeric($result->$keyName) ? (int)$result->$keyName : $result->$keyName;
+        $id = $this->connection->lastInsertId();
+
+        return is_numeric($id) ? (int)$id : $id;
     }
 
     public function upsert(string $uniqueColumn, array $insertValues, array $updateValues): int|array
@@ -232,6 +260,13 @@ class Builder implements QueryBuilderContract
         return $this->connection->delete($sql, $bindings);
     }
 
+    public function truncate(bool $restartIdentity = false, bool $cascade = false): bool
+    {
+        return $this->connection->statement(
+            $this->grammar->compileTruncate($this, $restartIdentity, $cascade)
+        ) !== false;
+    }
+
     public function softDelete(): static
     {
         $this->command = 'update';
@@ -278,7 +313,7 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function join(string $table, $first, $operator = null, $second = null, string $type = 'inner', bool $where = false): static
+    public function join(string $table, mixed $first, mixed $operator = null, mixed $second = null, string $type = 'inner', bool $where = false): static
     {
         $join = new JoinClause($this, $type, $table);
 
@@ -296,231 +331,6 @@ class Builder implements QueryBuilderContract
         $this->addBinding($join->getBindings(), 'join');
 
         return $this;
-    }
-
-    public function whereRaw(string $expression, array $bindings = null, string $boolean = 'and'): static
-    {
-        $this->conditions[] = [
-            'type' => 'raw',
-            'expression' => $expression,
-            'bindings' => $bindings,
-            'boolean' => $boolean
-        ];
-
-        $this->addBinding($bindings, 'where');
-
-        return $this;
-    }
-
-    /**
-     * Добавляет условие WHERE к запросу
-     *
-     * @param mixed $column Столбец, замыкание для вложенного условия или строка с полным условием
-     * @param mixed $operator Оператор или значение (если оператор не указан)
-     * @param mixed $value Значение для сравнения
-     * @param string $boolean Логический оператор 'and' или 'or'
-     * @return static
-     * @throws InvalidArgumentException
-     */
-    public function where(mixed $column, mixed $operator = null, mixed $value = null, string $boolean = 'and'): static
-    {
-        // Валидация boolean оператора
-        if (!in_array(strtolower($boolean), ['and', 'or'])) {
-            throw new InvalidArgumentException("Boolean operator must be 'and' or 'or'");
-        }
-
-        // Обработка вложенных условий
-        if ($column instanceof Closure) {
-            return $this->whereNested($column, $boolean);
-        }
-
-        // Обработка строки с полным условием "column operator value"
-        if (is_string($column) && $operator === null && $value === null) {
-            [$column, $operator, $value] = $this->parseWhereExpression($column);
-        }
-
-        // Нормализация параметров: where('column', 'value')
-        if ($value === null && $operator !== null) {
-            $value = $operator;
-            $operator = '=';
-        }
-
-        // Валидация операции
-        if (! $this->isValidWhereOperator($operator)) {
-            throw new InvalidArgumentException("Where operator '{$operator}' invalid.");
-        }
-
-        if (! $value instanceof Expression) {
-            $this->addBinding($value, 'where');
-        }
-
-        $this->conditions[] = [
-            'type'     => 'basic',
-            'column'   => $column,
-            'operator' => $operator,
-            'value'    => $value,
-            'boolean'  => $boolean,
-        ];
-
-
-
-
-        /*
-        Old version:
-
-        if ($condition[0] instanceof Closure) {
-            return $this->whereNested($condition[0]);
-        }
-
-        $this->conditions[] = [
-            'type' => 'basic',
-            ...$this->prepareWhere($condition),
-            'boolean' => 'and'
-        ];
-        */
-
-        return $this;
-    }
-
-    public function orWhere(mixed $column, mixed $operator = null, mixed $value = null): static
-    {
-        return $this->where($column, $operator, $value, 'or');
-
-        /*
-        if ($condition[0] instanceof Closure) {
-            return $this->whereNested($condition[0], 'or');
-        }
-
-        $this->conditions[] = [
-            'type' => 'basic',
-            ...$this->prepareWhere($condition),
-            'boolean' => 'or'
-        ];
-
-        return $this;
-        */
-    }
-
-    public function whereNested(Closure $callback, string $boolean = 'and'): static
-    {
-        $callback($query = $this->newQuery()->from($this->from[0], $this->from[1] ?? null));
-
-        if (count($query->conditions)) {
-            $type = 'nested';
-
-            $this->conditions[] = compact('type', 'query', 'boolean');
-
-            $this->addBinding($query->getRawBindings()['where'], 'where');
-        }
-
-        return $this;
-    }
-
-    public function whereColumn(string $first, string $operator = null, string $second = null, string $boolean = 'and'): static
-    {
-        // Валидация boolean оператора
-        if (!in_array(strtolower($boolean), ['and', 'or'])) {
-            throw new InvalidArgumentException("Boolean operator must be 'and' or 'or'");
-        }
-
-        // Обработка строки с полным условием "column operator value"
-        if ($operator === null && $second === null) {
-            [$first, $operator, $second] = $this->parseWhereExpression($first);
-        }
-
-        // Нормализация параметров: whereColumn('first', 'second')
-        if ($second === null && $operator !== null) {
-            $second = $operator;
-            $operator = '=';
-        }
-
-        // Валидация операции
-        if (! $this->isValidWhereOperator($operator)) {
-            throw new InvalidArgumentException("Where operator '{$operator}' invalid.");
-        }
-
-        $this->conditions[] = [
-            'type'     => 'column',
-            'first'    => $first,
-            'operator' => $operator,
-            'second'   => $second,
-            'boolean'  => $boolean,
-        ];
-
-        return $this;
-    }
-
-    public function whereNull(string|array $columns, string $boolean = 'and', bool $not = false): static
-    {
-        $type = $not ? 'NotNull' : 'Null';
-
-        foreach ((array)$columns as $column) {
-            $this->conditions[] = compact('type', 'column', 'boolean');
-        }
-
-        return $this;
-    }
-
-    public function orWhereNull(string|array $columns): static
-    {
-        return $this->whereNull($columns, 'or');
-    }
-
-    public function whereNotNull(string|array $columns, string $boolean = 'and'): static
-    {
-        return $this->whereNull($columns, $boolean, true);
-    }
-
-    public function orWhereNotNull(string|array $columns): static
-    {
-        return $this->whereNull($columns, 'or', true);
-    }
-
-    public function whereIn(string $column, array $values, string $boolean = 'and', bool $not = false): static
-    {
-        $this->conditions[] = [
-            'type' => $not ? 'NotIn' : 'In',
-            'column' => $column,
-            'values' => $values,
-            'boolean' => $boolean
-        ];
-
-        $this->addBinding($values, 'where');
-
-        return $this;
-    }
-
-    public function whereNotIn(string $column, array $values, string $boolean = 'and', bool $not = false): static
-    {
-        return $this->whereIn($column, $values, $boolean, true);
-    }
-
-    public function whereMorph(string $column, mixed $value, string $boolean = 'and'): static
-    {
-        $morph = MorphHelper::extract($value);
-
-        return $this->whereNested(function (Builder $query) use ($column, $morph) {
-            $query->where($column."_type", $morph->type);
-            $query->where($column."_id", $morph->id);
-        }, $boolean);
-    }
-
-    protected function getMorphType(mixed $recipient): string
-    {
-        if (is_object($recipient)) {
-            return get_class($recipient);
-        }
-
-        return '';
-    }
-
-    protected function getMorphId(mixed $recipient): string
-    {
-        if (is_object($recipient) && method_exists($recipient, 'getKey')) {
-            return (string)$recipient->getKey();
-        }
-
-        return (string)$recipient;
     }
 
 
@@ -578,7 +388,7 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function pluck(string $column, string $key = null): array
+    public function pluck(string $column, ?string $key = null): array
     {
         $originalColumns = $this->columns;
 
@@ -624,7 +434,6 @@ class Builder implements QueryBuilderContract
         $sql = $this->grammar->compileSelect($this);
 
         $result = $this->connection->select($sql, $this->bindings['where']);
-
         if ($this->modelClass) {
             return array_map(function($item) {
                 return $this->modelClass::newFrom((array)$item);
@@ -666,6 +475,10 @@ class Builder implements QueryBuilderContract
 
     public function addBinding(mixed $values, string $type): void
     {
+        if (is_null($values)) {
+            return;
+        }
+
         $this->bindings[$type] = array_merge(
             $this->bindings[$type],
             is_array($values) ? $values : [$values]
@@ -699,34 +512,6 @@ class Builder implements QueryBuilderContract
     }
 
 
-
-
-    protected mixed $lock = null;
-
-    public function lock(string|bool $value = true): static
-    {
-        $this->lock = $value;
-
-        $this->useWritePDO();
-
-        return $this;
-    }
-
-    public function lockForUpdate(): static
-    {
-        return $this->lock(true);
-    }
-
-    public function sharedLock(): static
-    {
-        return $this->lock(false);
-    }
-
-    public function getLock(): mixed
-    {
-        return $this->lock;
-    }
-
     public function setModel(string $model): static
     {
         if (! (class_exists($model) && is_subclass_of($model, Model::class)) ) {
@@ -738,5 +523,19 @@ class Builder implements QueryBuilderContract
         $this->modelClass = $model;
 
         return $this;
+    }
+
+
+    protected function resolveColumnName(Expression|string $column): string
+    {
+        if (str_contains($column, '.') || $column instanceof Expression || empty($this->joins)) {
+            return $column;
+        }
+
+        if (count($this->from) === 2) {
+            return $this->from[1].'.'.$column;
+        }
+
+        return $this->from[0].'.'.$column;
     }
 }

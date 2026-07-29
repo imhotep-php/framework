@@ -41,9 +41,6 @@ abstract class Repository
     //public function findOrFail(id);
     //public function findBy(column, value);
 
-    /**
-     * @return IModel[]
-     */
     public function all(): array
     {
         return $this->applyWiths($this->query()->get());
@@ -53,6 +50,28 @@ abstract class Repository
     {
         return $this->applyWiths($this->query()->find($id));
     }
+
+    public function findMany(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        return $this->applyWiths(
+            $this->query()->whereIn('id', $ids)->get()
+        );
+    }
+
+    public function findBySlug(string $slug): ?IModel
+    {
+        return $this->applyWiths($this->query()->where('slug', $slug)->first());
+    }
+
+    public function findBy(string $column, string $value): array
+    {
+        return $this->applyWiths($this->query()->where($column, $value)->all());
+    }
+
 
     /*
     public function findOrFail($id): Model
@@ -65,9 +84,15 @@ abstract class Repository
     }
     */
 
+
     public function first(): ?IModel
     {
         return $this->applyWiths($this->query()->first());
+    }
+
+    public function pluck(string $column): array
+    {
+        return $this->query()->pluck($column);
     }
 
     public function count(): int
@@ -92,7 +117,7 @@ abstract class Repository
         $model->fill($attributes);
         $model->updateTimestamps();
 
-        if ($id = $this->query()->insertGetId($model->getAttributes())) {
+        if ($id = $this->query()->insertGetId($model->getRawAttributes())) {
             return $model->forceFill(['id' => $id])->syncOriginals();
         }
 
@@ -144,9 +169,24 @@ abstract class Repository
         return false;
     }
 
+    public function truncate(bool $restartIdentity = false, bool $cascade = false): bool
+    {
+        return $this->query()->truncate($restartIdentity, $cascade);
+    }
+
     protected function scopeColumns(Builder $query, array $columns): void
     {
         $query->select($columns);
+    }
+
+    protected function scopeWithoutTrashed(Builder $query): void
+    {
+        $query->whereNull('deleted_at');
+    }
+
+    protected function scopeTrashed(Builder $query): void
+    {
+        $query->whereNotNull('deleted_at');
     }
 
     protected function scopeLatest(Builder $query, string $column = 'created_at'): void
@@ -154,14 +194,42 @@ abstract class Repository
         $query->orderBy($column, 'desc');
     }
 
-    protected function scopeOffset(Builder $query, int $offset): void
+    protected function scopeOffset(Builder $query, ?int $offset): void
     {
         $query->offset($offset);
     }
 
-    protected function scopeLimit(Builder $query, int $limit): void
+    protected function scopeLimit(Builder $query, ?int $limit): void
     {
         $query->limit($limit);
+    }
+
+    protected function scopeOrderBy(Builder $query, string $column, string $direction = 'asc'): void
+    {
+        $query->orderBy($column, $direction);
+    }
+
+    protected function scopeOrderByDesc(Builder $query, string $column): void
+    {
+        $query->orderBy($column, 'desc');
+    }
+
+    protected function scopeLock(Builder $query, string|bool $value = true): void
+    {
+        $query->lock($value);
+    }
+    protected function scopeLockForUpdate(Builder $query): void
+    {
+        $query->lockForUpdate();
+    }
+
+    protected function scopeDump(Builder $query): void
+    {
+        $query->dump();
+    }
+    protected function scopeDd(Builder $query): void
+    {
+        $query->dd();
     }
 
 
@@ -189,9 +257,11 @@ abstract class Repository
     }
 
 
-    public function with(string|array $relations): static
+    public function with(string|array $relations, array $arguments = []): static
     {
-        $this->withs = array_merge($this->withs, (array)$relations);
+        foreach ((array)$relations as $relation) {
+            $this->withs[$relation] = $arguments;
+        }
 
         return $this;
     }
@@ -205,19 +275,31 @@ abstract class Repository
         $oneItem = !is_array($items);
 
         if ($oneItem) {
-            $items = [$items->key() => $items];
+            if ($items->key() !== null) {
+                $items = [$items->key() => $items];
+            }
+            else {
+                $items = [$items];
+            }
         } else {
+            $withKey = count($items) > 0 && $items[0]->key() !== null;
+
             $normalized = [];
             foreach ($items as $item) {
-                $normalized[$item->key()] = $item;
+                if ($withKey) {
+                    $normalized[$item->key()] = $item;
+                }
+                else {
+                    $normalized[] = $item;
+                }
             }
             $items = $normalized;
         }
 
-        foreach ($this->withs as $with) {
+        foreach ($this->withs as $with => $arguments) {
             $withMethod = "load" . ucfirst($with);
             if (method_exists($this, $withMethod)) {
-                $items = $this->$withMethod($items);
+                $this->$withMethod($items, ...$arguments);
             }
         }
 
@@ -239,7 +321,7 @@ abstract class Repository
         }
 
         if (str_starts_with($name, 'with')) {
-            $this->with(lcfirst(substr($name, 4)));
+            $this->with(lcfirst(substr($name, 4)), $arguments);
 
             return $this;
         }

@@ -86,7 +86,7 @@ class Repository
      * @param int $steps
      * @return array
      */
-    public function getMigrations(int $steps = null): array
+    public function getMigrations(?int $steps = null): array
     {
         return $this->table()
             ->where('batch', '>=', 1)
@@ -211,7 +211,7 @@ class Repository
      * @param string|null $name
      * @return void
      */
-    public function setConnection(string $name = null): void
+    public function setConnection(?string $name = null): void
     {
         $this->connection = $name;
     }

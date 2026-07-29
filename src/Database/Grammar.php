@@ -19,7 +19,7 @@ abstract class Grammar
         return $this->tablePrefix;
     }
 
-    public function setTablePrefix(string $prefix = null): static
+    public function setTablePrefix(?string $prefix = null): static
     {
         $this->tablePrefix = $prefix;
 

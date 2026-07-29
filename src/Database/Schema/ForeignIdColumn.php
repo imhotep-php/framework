@@ -25,7 +25,7 @@ class ForeignIdColumn extends Column
      * @param string $column
      * @return ForeignKey
      */
-    public function constrained(string $table = null, string $column = 'id'): ForeignKey
+    public function constrained(?string $table = null, string $column = 'id'): ForeignKey
     {
         if (is_null($table)) {
             if (! str_contains($this->name, '_')) {

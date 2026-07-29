@@ -6,9 +6,9 @@ use Imhotep\Database\Query\Builder as BuilderBase;
 
 class Builder extends BuilderBase
 {
-    protected $operators = [
+    protected array $whereOperators = [
         '=', '<', '>', '<=', '>=', '<>', '!=',
-        'like', 'not like', 'between', 'ilike', 'not ilike',
+        'like', 'not like', 'between', 'not between', 'ilike', 'not ilike',
         '~', '&', '|', '#', '<<', '>>', '<<=', '>>=',
         '&&', '@>', '<@', '?', '?|', '?&', '||', '-', '@?', '@@', '#-',
         'is distinct from', 'is not distinct from',

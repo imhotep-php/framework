@@ -18,12 +18,12 @@ use Imhotep\Support\Fluent;
  * @method $this from(int $startingValue) Set the starting value of an auto-incrementing field
  *
  * @method $this primary() Add a primary index
- * @method $this index(string $indexName = null) Add an index
- * @method $this unique(string $indexName = null) Add a unique indexes to be inserted into the column
+ * @method $this index(?string $indexName = null) Add an index
+ * @method $this unique(?string $indexName = null) Add a unique indexes to be inserted into the column
  * method $this fulltext(string $indexName = null) Add a fulltext index
  * method $this spatialIndex(string $indexName = null) Add a spatial index
  *
- * @method $this generatedAs(string $expression = null) Create a SQL compliant identity column
+ * @method $this generatedAs(?string $expression = null) Create a SQL compliant identity column
  * @method $this always(bool $value = true) Used as a modifier for generatedAs()
  * @method $this storedAs(string $expression) Create a stored generated column
  * @method $this storedAsJson(string $expression) Create a stored generated column

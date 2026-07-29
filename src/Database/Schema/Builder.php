@@ -27,7 +27,7 @@ abstract class Builder implements SchemaBuilderContract
      * @param ConnectionContract|null $connection
      * @return ConnectionContract|static
      */
-    public function connection(ConnectionContract $connection = null): static|ConnectionContract
+    public function connection(?ConnectionContract $connection = null): static|ConnectionContract
     {
         if (is_null($connection)) {
             return $this->connection;
@@ -188,7 +188,7 @@ abstract class Builder implements SchemaBuilderContract
     }
 
 
-    abstract protected function createTable(string $table, Closure $callback = null): Table;
+    abstract protected function createTable(string $table, ?Closure $callback = null): Table;
 
     protected function build($table)
     {

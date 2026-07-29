@@ -130,6 +130,53 @@ class Grammar extends GrammarBase
         return 'SELECT column_name FROM information_schema.columns WHERE table_catalog = ? AND table_schema = ? AND table_name = ?';
     }
 
+    public function compileChange(TableContract $table, Fluent $command): array
+    {
+        $sql = [];
+
+        foreach ($this->getChangedColumns($table) as $column) {
+            // Change column type
+            $sql[] = sprintf('ALTER TABLE %s ALTER COLUMN %s TYPE %s',
+                $this->wrapTable($table),
+                $this->wrap($column->name),
+                $this->getType($column)
+            );
+
+            // Change NULL / NOT NULL
+            if ($column->nullable === true) {
+                $sql[] = sprintf('ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL',
+                    $this->wrapTable($table),
+                    $this->wrap($column->name)
+                );
+            }
+            elseif ($column->nullable === false) {
+                $sql[] = sprintf('ALTER TABLE %s ALTER COLUMN %s SET NOT NULL',
+                    $this->wrapTable($table),
+                    $this->wrap($column->name)
+                );
+            }
+
+            // Change default value
+            if ($column->has('default')) {
+                if (is_null($column->default)) {
+                    $sql[] = sprintf('ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT',
+                        $this->wrapTable($table),
+                        $this->wrap($column->name)
+                    );
+                }
+                else {
+                    $sql[] = sprintf('ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s',
+                        $this->wrapTable($table),
+                        $this->wrap($column->name),
+                        $this->getDefaultValue($column->default)
+                    );
+                }
+            }
+        }
+
+        return $sql;
+    }
+
     public function compileRenameColumn(TableContract $table, Fluent $command): string
     {
         return sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s",
@@ -474,6 +521,14 @@ class Grammar extends GrammarBase
     {
         if (is_bool($value)) {
             return $value ? 'true' : 'false';
+        }
+
+        if (is_int($value)) {
+            return (string)$value;
+        }
+
+        if (is_string($value)) {
+            return "'{$value}'";
         }
 
         return parent::getDefaultValue($value);

@@ -43,7 +43,7 @@ class DatabaseManager implements ConnectionResolver
         };
     }
 
-    public function connection(string $name = null): ConnectionContract
+    public function connection(?string $name = null): ConnectionContract
     {
         if (is_null($name)) {
             $name = $this->getDefaultConnection();
@@ -58,7 +58,7 @@ class DatabaseManager implements ConnectionResolver
         return $this->connections[$name];
     }
 
-    public function reconnect(string $name = null): ConnectionContract
+    public function reconnect(?string $name = null): ConnectionContract
     {
         if (is_null($name)) $name = $this->getDefaultConnection();
 
@@ -75,7 +75,7 @@ class DatabaseManager implements ConnectionResolver
             ->setReadPdo($newConn->getReadPdo());
     }
 
-    public function disconnect(string $name = null): void
+    public function disconnect(?string $name = null): void
     {
         if (is_null($name)) $name = $this->getDefaultConnection();
 
@@ -84,7 +84,7 @@ class DatabaseManager implements ConnectionResolver
         }
     }
 
-    public function purge(string $name = null): void
+    public function purge(?string $name = null): void
     {
         $name = $name ?: $this->getDefaultConnection();
 
@@ -104,7 +104,7 @@ class DatabaseManager implements ConnectionResolver
         return $this->factory->make($this->drivers[$config['driver']], $config);
     }
 
-    protected function configureConnection(ConnectionContract $connection, string $type = null): ConnectionContract
+    protected function configureConnection(ConnectionContract $connection, ?string $type = null): ConnectionContract
     {
         if ($this->app->bound('events')) {
             $connection->setEventDispatcher($this->app['events']);

@@ -41,7 +41,7 @@ class Builder extends BuilderAbstract
         return $results;
     }
 
-    public function createTable(string $table, \Closure $callback = null): Table
+    public function createTable(string $table, ?\Closure $callback = null): Table
     {
         return new Table($table, $callback);
     }

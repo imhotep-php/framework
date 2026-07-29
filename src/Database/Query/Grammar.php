@@ -2,13 +2,14 @@
 
 namespace Imhotep\Database\Query;
 
+use _PHPStan_72b31c081\React\Dns\Query\Query;
 use Imhotep\Contracts\Database\QueryGrammar as QueryGrammarContract;
 use Imhotep\Database\Expression;
 use Imhotep\Database\Grammar as BaseGrammar;
 
 class Grammar extends BaseGrammar implements QueryGrammarContract
 {
-    public function compileInsert(Builder $query, $values, $returning = null): string
+    public function compileInsert(Builder $query, array $values): string
     {
         $table = $this->wrapTable($query->from);
 
@@ -27,22 +28,12 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
         }
         $sqlValues = implode(", ", $sqlValues);
 
-        $sql = sprintf('INSERT INTO %s (%s) VALUES %s', $table, $sqlColumns, $sqlValues);
+        return sprintf('INSERT INTO %s (%s) VALUES %s', $table, $sqlColumns, $sqlValues);
+    }
 
-        if (! empty($returning)) {
-            if (! is_array($returning)) {
-                $returning = [$returning];
-            }
-
-            $returning = array_map(function ($value) {
-                return $this->wrap($value);
-            }, $returning);
-
-
-            $sql.= ' RETURNING '.implode(", ", $returning);
-        }
-
-        return $sql;
+    public function compileInsertGetId(Builder $query, array $values, ?string $sequence = null): string
+    {
+        return $this->compileInsert($query, $values);
     }
 
     public function compileUpsert(Builder $query, string $uniqueColumn, array $insertValues, array $updateValues): string
@@ -89,6 +80,15 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
         );
     }
 
+    public function compileTruncate(Builder $query, bool $restartIdentity = false, bool $cascade = false): string
+    {
+        return sprintf('TRUNCATE TABLE %s%s%s',
+            $this->wrapTable($query->from),
+            $restartIdentity ? ' RESTART IDENTITY' : '',
+            $cascade ? ' CASCADE' : ''
+        );
+    }
+
     public function compileSelect(Builder $query): string
     {
         if ($query->aggregate) {
@@ -110,12 +110,31 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
 
     public function compileColumns(Builder $query): string
     {
-        $columns = $query->columns ?: ['*'];
+        //$columns = $query->columns ?: ['*'];
 
         $sql = [];
 
-        foreach ($columns as $column) {
-            $sql[] = ($column === '*') ? $column : $this->wrap($column);
+        foreach ($query->columns as $key => $column) {
+            if ($column === '*') {
+                $sql[] = $column;
+            }
+            elseif ($column instanceof \Closure) {
+                $columnQuery = $query->newQuery();
+
+                $column($columnQuery);
+
+                $query->addBinding($columnQuery->getRawBindings()['where'], 'where');
+
+                $sql[] = "({$this->compileSelect($columnQuery)}) as ".$this->wrap($key);
+            }
+            elseif ($column instanceof Expression) {
+                $sql[] = $column->getValue();
+            }
+            else {
+                $sql[] = $this->wrap($column);
+            }
+
+            //$sql[] = ($column === '*') ? $column : $this->wrap($column);
         }
 
         return implode(', ', $sql);
@@ -247,6 +266,43 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
         $wheres = substr($this->compileWheres($where['query']), 6);
 
         return sprintf('(%s)', $wheres);
+    }
+
+    protected function whereDate(Builder $query, array $where): string
+    {
+        return sprintf('DATE(%s) %s %s',
+            $this->wrap($where['column']),
+            $where['operator'],
+            $this->prepareValue($where['value'])
+        );
+    }
+
+    protected function whereBetween(Builder $query, array $where): string
+    {
+        return sprintf('%s BETWEEN %s AND %s',
+            $this->wrap($where['column']),
+            $this->prepareValue($where['values'][0]),
+            $this->prepareValue($where['values'][1])
+        );
+    }
+
+    protected function whereNotBetween(Builder $query, array $where): string
+    {
+        return sprintf('%s NOT BETWEEN %s AND %s',
+            $this->wrap($where['column']),
+            $this->prepareValue($where['values'][0]),
+            $this->prepareValue($where['values'][1])
+        );
+    }
+
+    protected function whereExists(Builder $query, array $where): string
+    {
+        return sprintf('EXISTS (%s)', $this->compileSelect($where['query']));
+    }
+
+    protected function whereNotExists(Builder $query, array $where): string
+    {
+        return sprintf('NOT EXISTS (%s)', $this->compileSelect($where['query']));
     }
 
     protected function compileGroups(Builder $query): string

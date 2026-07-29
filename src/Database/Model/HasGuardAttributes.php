@@ -6,7 +6,7 @@ trait HasGuardAttributes
 {
     protected static bool $unguarded = false;
 
-    protected array $guarded = ['*'];
+    protected array $guarded = [];
 
     protected array $fillable = [];
 
@@ -21,11 +21,11 @@ trait HasGuardAttributes
             return true;
         }
 
-        if (in_array($key, $this->guarded)) {
+        if (! empty($this->fillable) && ! in_array($key, $this->fillable)) {
             return false;
         }
 
-        if (! empty($this->fillable) && ! in_array($key, $this->fillable)) {
+        if ($this->isGuarded($key)) {
             return false;
         }
 

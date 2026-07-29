@@ -2,6 +2,7 @@
 
 namespace Imhotep\Database\Model;
 
+use DateTimeInterface;
 use Imhotep\Support\Str;
 use ReflectionMethod;
 use ReflectionNamedType;
@@ -19,9 +20,18 @@ trait HasAttributes
 
     protected array $cachedAttributes = [];
 
+    protected array $relations = [];
+
+
     public function getAttributes(): array
     {
-        return $this->attributes;
+        $attributes = [];
+
+        foreach (array_keys($this->attributes) as $key) {
+            $attributes[$key] = $this->getAttribute($key);
+        }
+
+        return $attributes;
     }
 
     public function setAttributes(array $attributes): static
@@ -62,7 +72,9 @@ trait HasAttributes
             return $this->castValueForGet($key, $value);
         }
 
-        // related attributes
+        if (array_key_exists($key, $this->relations)) {
+            return $this->relations[$key];
+        }
 
         return $value;
     }
@@ -81,6 +93,9 @@ trait HasAttributes
         }
         elseif ($this->hasCast($key)) {
             $value = $this->castValueForSet($key, $value);
+        }
+        elseif ($value instanceof DateTimeInterface) {
+            $value = $value->format('Y-m-d H:i:s');
         }
 
         $this->attributes[$key] = $value;
@@ -225,7 +240,17 @@ trait HasAttributes
 
     protected function castValueForGet(string $key, mixed $value): mixed
     {
+        //if (is_null($value)) {
+        //    return $value;
+        //}
+
+
         $type = $this->casts[$key];
+        $options = '';
+
+        if (str_contains($type, ':')) {
+            list($type, $options) = explode(':', $type);
+        }
 
         switch ($type) {
             case 'string':
@@ -246,14 +271,13 @@ trait HasAttributes
 
             case 'array':
             case 'json':
-                return json_decode($value, true);
-
             case 'object':
-                return json_decode($value);
+                return json_decode($value ?? "[]", true);
 
             case 'pg_array_int':
             case 'pg_array_float':
             case 'pg_array_string':
+            case 'pg_array_str':
                 return $this->decodePgArray($value, substr($type, 9));
 
             case 'date':
@@ -281,7 +305,13 @@ trait HasAttributes
 
     protected function castValueForSet(string $key, mixed $value): ?string
     {
-        $type = $this->casts[$key];
+        if (str_contains($this->casts[$key], ':')) {
+            list($type, $options) = explode(':', $this->casts[$key]);
+        }
+        else {
+            $type = $this->casts[$key];
+            $options = '';
+        }
 
         if (is_null($value)) {
             return null;
@@ -315,7 +345,8 @@ trait HasAttributes
 
         if (in_array($type, ['array', 'json', 'object'])) {
             if (is_array($value) || is_object($value)) {
-                return json_encode($value);
+                $flags = ($options === 'unicode') ? JSON_UNESCAPED_UNICODE : 0;
+                return json_encode($value, $flags);
             }
 
             throw new \InvalidArgumentException(sprintf(
@@ -337,10 +368,18 @@ trait HasAttributes
             ));
         }
 
+        if ($type === 'datetime') {
+            //...
+        }
+
+        if (str_starts_with($type, 'pg_array')) {
+            $value = $this->encodePgArray($value, substr($type, 9));
+        }
+
         return (string)$value;
     }
 
-    protected function decodePgArray(mixed $value, string|null $type = null): array
+    protected function decodePgArray(mixed $value, ?string $type = null): array
     {
         if (is_null($value) || $value === '{}') return [];
 
@@ -352,7 +391,7 @@ trait HasAttributes
         elseif ($type === 'float') {
             array_walk($value, fn (&$item) => $item = (float)$item);
         }
-        elseif ($type === 'string') {
+        elseif ($type === 'string' || $type === 'str') {
             array_walk($value, fn (&$item) => $item = trim($item, "'"));
         }
 
@@ -363,7 +402,7 @@ trait HasAttributes
     {
         if (is_array($value) && count($value) > 0) {
             $value = array_map(function ($val) {
-                return is_string($val) ? "'$val'" : $val;
+                return is_string($val) ? '"'.$val.'"' : $val;
             }, $value);
 
             return "{".implode(",", $value)."}";
@@ -416,6 +455,19 @@ trait HasAttributes
         return $this->decodeDatetime($value)->getTimestamp();
     }
 
+
+    // Related
+    public function addRelation(string $key, mixed $value): static
+    {
+        $this->relations[$key] = $value;
+
+        return $this;
+    }
+
+    public function getRelation(string $key): mixed
+    {
+        return $this->relations[$key] ?? null;
+    }
 
 
 
