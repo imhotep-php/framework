@@ -2,6 +2,7 @@
 
 namespace Imhotep\Contracts;
 
+use BadMethodCallException;
 use Closure;
 use Imhotep\Contracts\Config\IConfigRepository;
 use InvalidArgumentException;
@@ -159,6 +160,6 @@ abstract class DriverManager
             return $driver->$method(...$parameters);
         }
 
-        throw new InvalidArgumentException("Method [$method] not supported in [".static::class."].");
+        throw new BadMethodCallException("Method [$method] not supported in [".static::class."].");
     }
 }
