@@ -4,5 +4,5 @@ namespace Imhotep\Contracts\Queue;
 
 interface Queue
 {
-    public function connectionName(string $name = null): string|static;
+    public function connectionName(?string $name = null): string|static;
 }

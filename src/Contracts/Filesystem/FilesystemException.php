@@ -1,8 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Contracts\Filesystem;
 
-class FilesystemException extends \Exception
+use Exception;
+
+class FilesystemException extends Exception
 {
 
 }

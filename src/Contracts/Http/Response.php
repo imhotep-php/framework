@@ -4,5 +4,5 @@ namespace Imhotep\Contracts\Http;
 
 interface Response
 {
-    public function getContent(): mixed;
+    public function content(): mixed;
 }

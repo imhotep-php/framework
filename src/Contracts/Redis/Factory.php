@@ -10,5 +10,5 @@ interface Factory
      * @param  string|null  $name
      * @return \Imhotep\Redis\Connections\Connection
      */
-    public function connection(string $name = null);
+    public function connection(?string $name = null);
 }

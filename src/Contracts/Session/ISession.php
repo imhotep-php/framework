@@ -61,9 +61,9 @@ interface ISession
 
     public function keep(string|array $keys): static;
 
-    public function getOldInput(string $key = null, mixed $default = null): mixed;
+    public function getOldInput(?string $key = null, mixed $default = null): mixed;
 
-    public function hasOldInput(string $key = null): bool;
+    public function hasOldInput(?string $key = null): bool;
 
     public function flashInput(array $value): static;
 
