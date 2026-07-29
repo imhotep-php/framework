@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Config;
 
@@ -11,7 +11,7 @@ class Repository implements IConfigRepository
 {
     public function __construct(
         protected array $items = [],
-        protected string $path = '',
+        protected string $path = ''
     ) {}
 
     public function has(string $key): bool
@@ -64,7 +64,7 @@ class Repository implements IConfigRepository
         return $result;
     }
 
-    public function string(string $key, Closure|string $default = null): ?string
+    public function string(string $key, Closure|string|null $default = null): ?string
     {
         $value = $this->get($key, $default);
 
@@ -80,7 +80,7 @@ class Repository implements IConfigRepository
         return $this->required($key, 'string', $message);
     }
 
-    public function int(string $key, Closure|int $default = null): ?int
+    public function int(string $key, Closure|int|null $default = null): ?int
     {
         $value = $this->get($key, $default);
 
@@ -96,7 +96,7 @@ class Repository implements IConfigRepository
         return $this->required($key, 'int', $message);
     }
 
-    public function float(string $key, Closure|float $default = null): ?float
+    public function float(string $key, Closure|float|null $default = null): ?float
     {
         $value = $this->get($key, $default);
 
@@ -112,7 +112,7 @@ class Repository implements IConfigRepository
         return $this->required($key, 'float', $message);
     }
 
-    public function bool(string $key, Closure|bool $default = null): ?bool
+    public function bool(string $key, Closure|bool|null $default = null): ?bool
     {
         $value = $this->get($key, $default);
 
@@ -128,7 +128,7 @@ class Repository implements IConfigRepository
         return $this->required($key, 'bool', $message);
     }
 
-    public function array(string $key, Closure|array $default = null): ?array
+    public function array(string $key, Closure|array|null $default = null): ?array
     {
         $value = $this->get($key, $default);
 
@@ -201,6 +201,11 @@ class Repository implements IConfigRepository
     public function offsetUnset(mixed $offset): void
     {
         Arr::forget($this->items, $offset);
+    }
+
+    public function toArray(): array
+    {
+        return $this->items;
     }
 
     protected function buildPath(string $key): string
