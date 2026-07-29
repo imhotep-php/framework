@@ -22,7 +22,7 @@ class RedisManager implements Factory
 
     protected bool $events = true;
 
-    public function __construct(Container $app, string $driver = null, array $config = null)
+    public function __construct(Container $app, ?string $driver = null, ?array $config = null)
     {
         $this->app = $app;
 
@@ -31,7 +31,7 @@ class RedisManager implements Factory
         $this->driver = $driver;
     }
 
-    public function connection(string $name = null): Connection
+    public function connection(?string $name = null): Connection
     {
         $name = $name ?: 'default';
 

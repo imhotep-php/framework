@@ -37,7 +37,7 @@ class PhpRedisConnection extends Connection
         return $result;
     }
 
-    public function set(string $key, mixed $value, string $expireResolution = null, int $expireTTL = null, string $flag = null)
+    public function set(string $key, mixed $value, ?string $expireResolution = null, ?int $expireTTL = null, ?string $flag = null)
     {
         return $this->command('set', [
             $key,
