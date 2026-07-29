@@ -1,14 +1,14 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\View\Compilers;
 
 use Imhotep\View\Compilers\Traits\CompileCommon;
 use Imhotep\View\Compilers\Traits\CompileConditions;
+use Imhotep\View\Compilers\Traits\CompileHelpers;
 use Imhotep\View\Compilers\Traits\CompileHtml;
 use Imhotep\View\Compilers\Traits\CompileIncludes;
 use Imhotep\View\Compilers\Traits\CompileLayout;
+use Imhotep\View\Compilers\Traits\CompileVue;
 use Imhotep\View\Factory;
 
 class MoonCompiler
@@ -17,7 +17,9 @@ class MoonCompiler
         CompileConditions,
         CompileIncludes,
         CompileLayout,
-        CompileHtml;
+        CompileHtml,
+        CompileHelpers,
+        CompileVue;
 
     //protected Finder $finder;
 
@@ -33,7 +35,7 @@ class MoonCompiler
 
     //protected Factory $factory;
 
-    public function __construct(bool $shouldCache = true, string $cachePath = null)
+    public function __construct(bool $shouldCache = true, ?string $cachePath = null)
     {
         $this->cacheDir = $cachePath;
 
@@ -70,7 +72,7 @@ class MoonCompiler
         return true;
     }
 
-    public function compile(string $path = null): void
+    public function compile(?string $path = null): void
     {
         if (! is_null($path)) $this->setPath($path);
 
@@ -88,6 +90,7 @@ class MoonCompiler
         $content = $this->storeRawBlocks($content);
         $content = $this->compileStatements($content);
         $content = $this->compileRawBlocks($content);
+        $content = $this->compileVueTags($content);
 
         if (! empty($this->layouts)) {
             $content.= "\n\n".implode("\n", array_reverse($this->layouts));
@@ -148,6 +151,10 @@ class MoonCompiler
             $pattern = sprintf('/(@)?%s\s*(.+?)\s*%s/s', $tags[0], $tags[1]);
 
             $content = preg_replace_callback($pattern, function ($match) use ($type) {
+                if (str_starts_with($match[2], '--') && str_ends_with($match[2], '--')) {
+                    return '';
+                }
+
                 if ($match[1] == '@') {
                     return substr($match[0], 1);
                 }
@@ -178,12 +185,14 @@ class MoonCompiler
     protected function compileStatements($content): string
     {
         $pattern = "/
-            @(?<name>@?[a-z]+)
+            @(?<name>@?[A-z]+)
             (?:[ \t]*)
             (?<expression> \( ( (?>[^()]+) | (?-2) )* \) )?
         /x";
 
         return preg_replace_callback($pattern, function ($match) {
+            $match['name'] = strtolower($match['name']);
+
             if (str_starts_with($match['name'], '@')) {
                 return isset($match['expression']) ? $match['name'].$match['expression'] : $match['name'];
             }
@@ -208,6 +217,10 @@ class MoonCompiler
     protected function saveCompiledToCache(string $content): void
     {
         $path = $this->getCompiledPath($this->path);
+
+        if (! is_dir($this->cacheDir)) {
+            mkdir($this->cacheDir, 0755, true);
+        }
 
         file_put_contents($path, $content, LOCK_EX);
     }

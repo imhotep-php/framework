@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\View;
 
@@ -35,7 +33,7 @@ class Factory
 
         $this->cache = is_bool($config['cache']) ? $config['cache'] : false;
 
-        if (isset($config['cache_path']) && is_dir($config['cache_path'])) {
+        if (isset($config['cache_path'])) {
             $this->cachePath = $config['cache_path'];
         }
 
@@ -71,7 +69,7 @@ class Factory
         return $this->finder;
     }
 
-    public function share(string|array $key, mixed $value = null): void
+    public function share(string|array $key, mixed $value = null): static
     {
         if (is_array($key)) {
             $this->shared = array_merge($this->shared, $key);
@@ -79,6 +77,8 @@ class Factory
         else {
             $this->shared[$key] = $value;
         }
+
+        return $this;
     }
 
     public function getShare(string $key, mixed $default = null): mixed
@@ -94,20 +94,19 @@ class Factory
     public function exists(string $view): bool
     {
 
-        return $this->finder->exists($view);;
+        return $this->finder->exists($view);
     }
 
 
     protected static array $sectionContents = [];
+
     protected static array $sectionStack = [];
 
-    public function startSection(string $name, string $content = null): void
+    public function startSection(string $name, ?string $content = null): void
     {
         if (is_null($content)) {
             ob_start();
             static::$sectionStack[] = $name;
-
-            //dump(static::$sectionStack);
         }
         else {
             $this->extendSection($name, $content);
@@ -116,8 +115,6 @@ class Factory
 
     public function extendSection(string $name, string $content): void
     {
-        //var_dump($name, $content, static::$sectionContents[$name] ?? null);
-
         if (isset(static::$sectionContents[$name])) {
             $content = str_replace('@parent', $content, static::$sectionContents[$name]);
 
@@ -125,8 +122,6 @@ class Factory
         }
 
         static::$sectionContents[$name] = $content;
-
-        //dump(static::$sectionContents);
     }
 
     public function stopSection($overwrite = false): string
@@ -149,8 +144,6 @@ class Factory
 
     public function yieldSection()
     {
-        //dump(static::$sectionStack);
-
         if (empty(static::$sectionStack)) {
             return '';
         }
@@ -162,10 +155,6 @@ class Factory
 
     public function yieldContent($name)
     {
-        //dump(static::$sectionStack);
-        //dump($name, static::$sectionContents);
-        //dump($name, static::$sectionContents[$name] );
-
         return static::$sectionContents[$name] ?? '';
     }
 

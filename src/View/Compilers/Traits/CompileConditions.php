@@ -4,14 +4,14 @@ namespace Imhotep\View\Compilers\Traits;
 
 trait CompileConditions
 {
-    protected function compileGuest($guard = null): string
+    protected function compileGuest(?string $guard = null): string
     {
         $guard = is_null($guard) ? '()' : $guard;
 
         return "<?php if(auth{$guard}->guest()): ?>";
     }
 
-    protected function compileElseGuest($guard = null): string
+    protected function compileElseGuest(?string $guard = null): string
     {
         $guard = is_null($guard) ? '()' : $guard;
 
@@ -23,14 +23,14 @@ trait CompileConditions
         return '<?php endif; ?>';
     }
 
-    protected function compileAuth($guard = null): string
+    protected function compileAuth(?string $guard = null): string
     {
         $guard = is_null($guard) ? '()' : $guard;
 
         return "<?php if(auth{$guard}->check()): ?>";
     }
 
-    protected function compileElseAuth($guard = null): string
+    protected function compileElseAuth(?string $guard = null): string
     {
         $guard = is_null($guard) ? '()' : $guard;
 

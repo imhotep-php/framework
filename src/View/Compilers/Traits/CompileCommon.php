@@ -4,7 +4,7 @@ namespace Imhotep\View\Compilers\Traits;
 
 trait CompileCommon
 {
-    protected function compilePhp(string $expression = null): string
+    protected function compilePhp(?string $expression = null): string
     {
         if (! is_null($expression)) {
             return "<?php {$expression}; ?>";
@@ -78,19 +78,49 @@ trait CompileCommon
         return '<?php endforeach; ?>';
     }
 
+    protected function compileContinue($expression): string
+    {
+        if (empty($expression)) {
+            return '<?php continue; ?>';
+        }
+
+        return "<?php  if{$expression} continue; ?>";
+    }
+
+    protected bool $switchStarted = false;
+
     protected function compileSwitch($expression): string
     {
-        return "<?php switch {$expression}: ?>";
+        $this->switchStarted = true;
+
+        return "<?php switch {$expression}:";
     }
 
     protected function compileCase($expression): string
     {
+        $expression = $this->stripBrackets($expression);
+
+        if ($this->switchStarted) {
+            $this->switchStarted = false;
+
+            return "case {$expression}: ?>";
+        }
+
         return "<?php case {$expression}: ?>";
     }
 
-    protected function compileDefault()
+    protected function compileDefault(): string
     {
         return '<?php default: ?>';
+    }
+
+    protected function compileBreak($expression): string
+    {
+        if (empty($expression)) {
+            return '<?php break; ?>';
+        }
+
+        return "<?php  if{$expression} break; ?>";
     }
 
     protected function compileEndswitch(): string

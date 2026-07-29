@@ -1,10 +1,10 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\View;
 
+use FilesystemIterator;
 use Imhotep\Filesystem\Filesystem;
+use Imhotep\Support\Str;
 
 class Finder
 {
@@ -219,5 +219,129 @@ class Finder
         }
 
         return null;
+    }
+
+
+    // Work with Vue
+    public function findVueComponent(string $view): ?array
+    {
+        if (str_contains($view, '::')) {
+            list($ns, $name) = explode("::", $view);
+
+            $ns = strtolower($ns);
+
+            if (! isset($this->namespaces[$ns])) {
+                return null;
+            }
+
+            $name = $this->normalizeVueName($name);
+            $view = "$ns::$name";
+            $paths = $this->namespaces[$ns];
+        }
+        else {
+            $view = $name = $this->normalizeVueName($view);
+            $paths = $this->paths;
+        }
+
+        if (isset($this->views['vue::'.$view])) {
+            return $this->views['vue::'.$view];
+        }
+
+        return $this->views['vue::'.$view] = $this->findVueComponentInPaths($name, $paths, $view);
+    }
+
+    protected function findVueComponentInPaths(string $name, array $paths, string $view): ?array
+    {
+        foreach ($paths as $path) {
+            if ($result = $this->findVueComponentInPath($name, $path.'/vue/components', $view) ) {
+                return $result;
+            }
+        }
+
+        return null;
+    }
+
+    protected function findVueComponentInPath(string $name, string $path, string $view, ?string $canonicalName = null): ?array
+    {
+        if (is_null($canonicalName)) {
+            $canonicalName = Str::studly(str_replace('.', ' ', $name));
+        }
+
+        $path = $this->resolvePath($path);
+
+        if (! is_dir($path)) {
+            return null;
+        }
+
+        $files = new FilesystemIterator($path);
+
+        foreach ($files as $file) {
+            if ($file->isFile()) {
+                // Проверяем расширение: *.vue, *.js
+                if (! in_array($file->getExtension(), ['vue', 'js'])) {
+                    continue;
+                }
+
+                $filename = $file->getBasename('.' . $file->getExtension());
+                $filename = $this->normalizeVueName($filename);
+
+                if ($filename === $name) {
+                    return [
+                        'view' => $view,
+                        'path' => $file->getRealPath(),
+                        'name' => $canonicalName,
+                        'extension' => $file->getExtension(),
+                    ];
+                }
+            }
+
+            if ($file->isDir()) {
+                $filename = $file->getBasename('.' . $file->getExtension());
+                $filename = $this->normalizeVueName($filename);
+
+                // Если у нас файл дублирует имя папки: Header/Header.vue
+                if ($name === $filename) {
+                    $spaceName = str_replace('.', ' ', $name);
+                    $snakeName = Str::snake($spaceName, '-');
+                    $studlyName = Str::studly($spaceName);
+
+                    $variants = [
+                        $file->getPathname().'/'.$snakeName.'.vue',
+                        $file->getPathname().'/'.$snakeName.'.js',
+                        $file->getPathname().'/'.$studlyName.'.vue',
+                        $file->getPathname().'/'.$studlyName.'.js',
+                    ];
+
+                    foreach ($variants as $variant) {
+                        if (file_exists($variant)) {
+                            return [
+                                'view' => $view,
+                                'path' => $variant,
+                                'name' => $canonicalName,
+                                'extension' => pathinfo($variant, PATHINFO_EXTENSION),
+                            ];
+                        }
+                    }
+                }
+
+                // Имя файла содержит название директории, углубляем поиск
+                if (str_starts_with($name, $filename)) {
+                    $newName = trim(substr($name, strlen($filename)), '.');
+
+                    if ($found = $this->findVueComponentInPath($newName, $file->getPathname(), $view, $canonicalName)) {
+                        return $found;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    protected function normalizeVueName(string $name): string
+    {
+        $name = preg_replace('/([A-Z])/', '-$1', $name);
+        $name = preg_replace('/\-+/', '.', strtolower($name));
+        return trim($name, '.');
     }
 }

@@ -12,8 +12,10 @@ class ViewServiceProvider extends ServiceProvider
         'view' => Factory::class,
     ];
 
-    public function register()
+    public function register(): void
     {
+        $this->app->singleton(VueRegistry::class);
+
         $this->app->singleton('view.finder', function () {
             return new Finder(new Filesystem(), $this->app['config']['view.paths']);
         });
@@ -27,7 +29,7 @@ class ViewServiceProvider extends ServiceProvider
         });
     }
 
-    protected function createFactory()
+    protected function createFactory(): Factory
     {
         $factory = new Factory(
             $this->app,
