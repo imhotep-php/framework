@@ -56,7 +56,7 @@ class FileHandler implements SessionHandlerInterface
         $path = $this->getPath($id);
 
         if ($this->files->isFile($path) && $this->files->lastModified($path) >= (time() - $this->lifetime)) {
-            return $this->files->sharedGet($path);
+            return $this->files->getWithLock($path);
         }
 
         return false;
@@ -66,7 +66,7 @@ class FileHandler implements SessionHandlerInterface
     {
         $path = $this->getPath($id);
 
-        $this->files->put($path, $data, true);
+        $this->files->putWithLock($path, $data);
 
         return true;
     }

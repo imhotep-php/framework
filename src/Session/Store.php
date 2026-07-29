@@ -41,6 +41,11 @@ class Store implements ISession
         return $this->started;
     }
 
+    public function name(): string
+    {
+        return $this->name;
+    }
+
     public function getName(): string
     {
         return $this->name;
@@ -49,6 +54,11 @@ class Store implements ISession
     public function setName(string $name): void
     {
         $this->name = $name;
+    }
+
+    public function id(): string
+    {
+        return $this->id;
     }
 
     public function getId(): string
