@@ -1,12 +1,10 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Facades;
 
 /**
  * @method static bool has(string $name)
- * @method static mixed get(string $name, \Closure|string|int|float|bool $default = null)
+ * @method static mixed get(string $name, \Closure|string|int|float|bool|null $default = null)
  * @method static void set(string $name, string|int|float|bool|null $value)
  * @method static void remove(string $name)
  * @method static array all()

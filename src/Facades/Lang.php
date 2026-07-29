@@ -2,21 +2,21 @@
 
 namespace Imhotep\Facades;
 
-use Imhotep\Contracts\Localization\Localizator;
+use Imhotep\Contracts\Localization\ILocalizator;
 
 /**
- * @method static array|string get(string $key, array $replace = [], string $locale = null, bool $fallback = true)
- * @method static Localizator addPlural(string $locale, \Closure $plural)
- * @method static Localizator addNotFoundKeyCallback(\Closure $callback)
- * @method static Localizator addNamespace(string $namespace, string|array $path)
- * @method static string getLocale()
- * @method static Localizator setLocale(string $locale)
- * @method static string getFallback():
- * @method static Localizator setFallback(string $fallback)
- * @method static array getLoaded():
- * @method static Localizator setLoaded(array $loaded)
+ * @method static array|string get(string $key, array $replace = [], string|null $locale = null, bool $fallback = true)
+ * @method static ILocalizator addPlural(string $locale, \Closure $plural)
+ * @method static ILocalizator addNotFoundKeyCallback(\Closure $callback)
+ * @method static ILocalizator addNamespace(string $namespace, string|array $path)
+ * @method static string locale()
+ * @method static ILocalizator setLocale(string $locale)
+ * @method static string fallback()
+ * @method static ILocalizator setFallback(string $fallback)
+ * @method static array loaded()
+ * @method static ILocalizator setLoaded(array $loaded)
  *
- * @see \Imhotep\Events\Events
+ * @see \Imhotep\Localization\ILocalizator
  */
 
 class Lang extends Facade
