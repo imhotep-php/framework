@@ -13,22 +13,22 @@ trait HasCallbacks
 
     public array $afterResolvingCallbacks = [];
 
-    public function resolving(string|Closure $abstract, Closure $callback = null): void
+    public function resolving(string|Closure $abstract, ?Closure $callback = null): void
     {
         $this->addContainerCallback('resolving_after', $abstract, $callback);
     }
 
-    public function beforeResolving(string|Closure $abstract, Closure $callback = null): void
+    public function beforeResolving(string|Closure $abstract, ?Closure $callback = null): void
     {
         $this->addContainerCallback('resolving_before', $abstract, $callback);
     }
 
-    public function afterResolving(string|Closure $abstract, Closure $callback = null): void
+    public function afterResolving(string|Closure $abstract, ?Closure $callback = null): void
     {
         $this->addContainerCallback('resolving_after', $abstract, $callback);
     }
 
-    protected function addContainerCallback(string $event, string|Closure $abstract, Closure $callback = null): void
+    protected function addContainerCallback(string $event, string|Closure $abstract, ?Closure $callback = null): void
     {
         if (! is_string($abstract)) {
             $callback = $abstract;

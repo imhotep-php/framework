@@ -179,7 +179,7 @@ class Container implements IContainer
      * @return $this
      * @throws ContainerException
      */
-    public function bind(string $abstract, string|Closure $concrete = null, bool $singleton = false, bool $scoped = false): static
+    public function bind(string $abstract, string|Closure|null $concrete = null, bool $singleton = false, bool $scoped = false): static
     {
         if (! ($definition = $this->definition($abstract))) {
             $definition = $this->newDefinition($abstract);
@@ -205,7 +205,7 @@ class Container implements IContainer
      * @return $this
      * @throws ContainerException
      */
-    public function bindIf(string $abstract, string|Closure $concrete = null, bool $singleton = false): static
+    public function bindIf(string $abstract, string|Closure|null $concrete = null, bool $singleton = false): static
     {
         if ($this->has($abstract)) {
             return $this;
@@ -222,7 +222,7 @@ class Container implements IContainer
      * @return $this
      * @throws ContainerException
      */
-    public function singleton(string $abstract, string|Closure $concrete = null): static
+    public function singleton(string $abstract, string|Closure|null $concrete = null): static
     {
         return $this->bind($abstract, $concrete, true);
     }
@@ -235,7 +235,7 @@ class Container implements IContainer
      * @return $this
      * @throws ContainerException
      */
-    public function singletonIf(string $abstract, string|Closure $concrete = null): static
+    public function singletonIf(string $abstract, string|Closure|null $concrete = null): static
     {
         if (! $this->has($abstract)) {
             return $this->bind($abstract, $concrete, true);
@@ -268,7 +268,7 @@ class Container implements IContainer
      * @return $this
      * @throws ContainerException
      */
-    public function scoped(string $abstract, string|Closure $concrete = null): static
+    public function scoped(string $abstract, string|Closure|null $concrete = null): static
     {
         return $this->bind($abstract, $concrete, true, true);
     }
@@ -281,7 +281,7 @@ class Container implements IContainer
      * @param bool $singleton
      * @return $this
      */
-    public function scopedIf(string $abstract, string|Closure $concrete = null): static
+    public function scopedIf(string $abstract, string|Closure|null $concrete = null): static
     {
         if (! $this->has($abstract)) {
             $this->scoped($abstract, $concrete);
@@ -418,7 +418,7 @@ class Container implements IContainer
         }, count($this->tags[$tag]));
     }
 
-    public function forgetTags(string|array $tags = null): void
+    public function forgetTags(string|array|null $tags = null): void
     {
         if (is_null($tags)) {
             $this->tags = [];
@@ -600,7 +600,7 @@ class Container implements IContainer
      * @throws ContainerException
      * @throws Throwable
      */
-    protected function buildDependencyPrimitive(ReflectionParameter $dependency, Throwable $e = null): mixed
+    protected function buildDependencyPrimitive(ReflectionParameter $dependency, ?Throwable $e = null): mixed
     {
         if (! is_null($concrete = $this->getContextualConcrete('$'.$dependency->getName()))) {
             return ($concrete instanceof Closure) ? $concrete($this) : $concrete;
@@ -635,9 +635,9 @@ class Container implements IContainer
      */
     protected function buildDependencyClass(ReflectionParameter $dependency): mixed
     {
-        $className = $dependency->getType()->getName();
-
         try {
+            $className = $dependency->getType()->getName();
+
             return $this->get($className);
         }
         catch (Throwable $e) {
@@ -656,7 +656,7 @@ class Container implements IContainer
      * @return $this
      * @throws ContainerException
      */
-    public function set(string $abstract, string|Closure $concrete = null, bool $singleton = false): static
+    public function set(string $abstract, string|Closure|null $concrete = null, bool $singleton = false): static
     {
         return $this->bind($abstract, $concrete, $singleton);
     }
@@ -688,7 +688,7 @@ class Container implements IContainer
      * @return mixed
      * @throws ContainerException
      */
-    public function rebinding(string|Closure $abstract, Closure $callback = null): mixed
+    public function rebinding(string|Closure $abstract, ?Closure $callback = null): mixed
     {
         $hasAbstract = $this->has($abstract);
 
@@ -725,7 +725,7 @@ class Container implements IContainer
         });
     }
 
-    public function call($callable, array $parameters = [], string $defaultMethod = null): mixed
+    public function call($callable, array $parameters = [], ?string $defaultMethod = null): mixed
     {
         $pushedToBuildStack = false;
 
@@ -745,7 +745,7 @@ class Container implements IContainer
         return $result;
     }
 
-    protected function toCall($callable, array $parameters = [], string $defaultMethod = null): mixed
+    protected function toCall($callable, array $parameters = [], ?string $defaultMethod = null): mixed
     {
         if (is_string($callable) && empty($defaultMethod) && method_exists($callable, '__invoke')) {
             $defaultMethod = '__invoke';
