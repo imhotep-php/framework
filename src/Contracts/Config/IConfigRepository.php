@@ -4,8 +4,9 @@ namespace Imhotep\Contracts\Config;
 
 use ArrayAccess;
 use Closure;
+use Imhotep\Contracts\Arrayable;
 
-interface IConfigRepository extends ArrayAccess
+interface IConfigRepository extends ArrayAccess, Arrayable
 {
     public function has(string $key): bool;
 
@@ -19,23 +20,23 @@ interface IConfigRepository extends ArrayAccess
 
     public function getMany(array $keys): array;
 
-    public function string(string $key, Closure|string $default = null): ?string;
+    public function string(string $key, Closure|string|null $default = null): ?string;
 
     public function stringOrFail(string $key, ?string $message = null): string;
 
-    public function int(string $key, Closure|int $default = null): ?int;
+    public function int(string $key, Closure|int|null $default = null): ?int;
 
     public function intOrFail(string $key, ?string $message = null): int;
 
-    public function float(string $key, Closure|float $default = null): ?float;
+    public function float(string $key, Closure|float|null $default = null): ?float;
 
     public function floatOrFail(string $key, ?string $message = null): float;
 
-    public function bool(string $key, Closure|bool $default = null): ?bool;
+    public function bool(string $key, Closure|bool|null $default = null): ?bool;
 
     public function boolOrFail(string $key, ?string $message = null): bool;
 
-    public function array(string $key, Closure|array $default = null): ?array;
+    public function array(string $key, Closure|array|null $default = null): ?array;
 
     public function arrayOrFail(string $key, ?string $message = null): array;
 
