@@ -12,7 +12,8 @@ use Imhotep\Routing\Console\RouteListCommand;
 class RoutingServiceProvider extends ServiceProvider
 {
     public array $aliases = [
-        'router' => [RouterContract::class, \Imhotep\Routing\Router::class]
+        'router' => [RouterContract::class, \Imhotep\Routing\Router::class],
+        'redirect' => [Redirector::class],
     ];
 
     public array $singletons = [
@@ -20,7 +21,7 @@ class RoutingServiceProvider extends ServiceProvider
         RouteCollectionContract::class => RouteCollection::class
     ];
 
-    public function register()
+    public function register(): void
     {
         $this->app->singleton('url', function ($app) {
             return new UrlGenerator(

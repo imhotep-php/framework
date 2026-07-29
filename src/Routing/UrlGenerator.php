@@ -11,6 +11,8 @@ class UrlGenerator
 
     protected Request $request;
 
+    protected array $cache = [];
+
     public function __construct(RouteCollection $routes, Request $request)
     {
         $this->routes = $routes;
@@ -19,12 +21,20 @@ class UrlGenerator
 
     public function full(): string
     {
-        return $this->request->fullUrl();
+        if (isset($this->cache['full'])) {
+            return $this->cache['full'];
+        }
+
+        return $this->cache['full'] = $this->request->fullUrl();
     }
 
     public function current(): string
     {
-        return $this->request->url();
+        if (isset($this->cache['full'])) {
+            //return $this->cache['current'];
+        }
+
+        return $this->cache['current'] = $this->request->url();
     }
 
     public function to(string $path): string
@@ -45,20 +55,62 @@ class UrlGenerator
         return $this->to($referer);
     }
 
-    public function route(string $name, array $parameters = []): string
+    public function route(string $name, array $parameters = [], bool $absolute = false): string
     {
         if ($route = $this->routes->getByName($name)) {
             $url = $route->uri();
 
-            $url = preg_replace_callback('/\{.*?\}/', function ($match) use ($parameters) {
-                $key = preg_replace('/({)|(\??})/', "", $match[0]);
+            $usedParameters = [];
 
-                if (str_ends_with($match[0], '?}') && array_key_exists($key, $parameters) && empty($parameters[$key])) {
-                    return '';
+            $url = preg_replace_callback('/\{.*?\}/', function ($match) use ($parameters, &$usedParameters) {
+                $key = preg_replace('/({)|(\??})/', "", $match[0]);
+                $usedParameters[] = $key;
+
+                $isOptional = str_ends_with($match[0], '?}');
+
+                if ($isOptional) {
+                    if (!array_key_exists($key, $parameters)) {
+                        return '';
+                    }
+
+                    $value = $parameters[$key];
+                    if ($value === null || $value === '') {
+                        return '';
+                    }
+
+                    return $value;
                 }
 
-                return $parameters[$key] ?? $match[0];
+                if (!array_key_exists($key, $parameters)) {
+                    return $match[0];
+                }
+
+                $value = $parameters[$key];
+                if ($value === null || $value === '') {
+                    return $match[0];
+                }
+
+                return $value;
             }, $url);
+
+            $url = preg_replace('#/+#', '/', $url);
+            $url = rtrim($url, '/');
+
+            $queryParameters = [];
+            foreach ($parameters as $key => $value) {
+                if (!in_array($key, $usedParameters)) {
+                    $queryParameters[$key] = $value;
+                }
+            }
+
+            if (!empty($queryParameters)) {
+                $url .= (str_contains($url, '?') ? '&' : '?') . http_build_query($queryParameters);
+            }
+
+            if ($absolute) {
+                $baseUrl = $this->request->scheme() . '://' . $this->request->host(true);
+                $url = $baseUrl . '/' . ltrim($url, '/');
+            }
 
             return $url === '/' ? $url : rtrim($url, '/');
         }
@@ -80,5 +132,18 @@ class UrlGenerator
         }
 
         return true;
+    }
+
+    public function is(string $path, bool $exact = false): bool
+    {
+        $currentPath = $this->cache['path'] ?? $this->request->path();
+
+        if ($exact) {
+            $currentPath = rtrim($currentPath, '/');
+            $path = rtrim($path, '/');
+            return $currentPath === $path;
+        }
+
+        return str_starts_with($currentPath, $path);
     }
 }

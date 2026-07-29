@@ -37,6 +37,10 @@ class Route implements RouteContract
 
     protected ?string $domain = null;
 
+    protected bool $isFallback = false;
+
+    protected bool $isEmptyAction = false;
+
     public function __construct(
         protected string|array $methods,
         protected string $uri,
@@ -98,7 +102,7 @@ class Route implements RouteContract
         $this->groupAttributes = $attributes;
     }
 
-    public function name(string $name = null): static|string|null
+    public function name(?string $name = null): static|string|null
     {
         if (is_null($name)) {
             return $this->name;
@@ -133,7 +137,7 @@ class Route implements RouteContract
         return false;
     }
 
-    public function domain(string $domain = null): static|string|null
+    public function domain(?string $domain = null): static|string|null
     {
         if (is_null($domain)) {
             return $this->domain;
@@ -144,7 +148,26 @@ class Route implements RouteContract
         return $this;
     }
 
-    public function where(string|array $name, string $regex = null): static
+    public function fallback(): static
+    {
+        $this->isFallback = true;
+
+        return $this;
+    }
+
+    public function isFallback(): bool
+    {
+        return $this->isFallback;
+    }
+
+    public function isEmptyAction(): bool
+    {
+        $this->parseAction();
+
+        return $this->isEmptyAction;
+    }
+
+    public function where(string|array $name, ?string $regex = null): static
     {
         if (is_array($name)) {
             foreach ($name as $key => $val) {
@@ -218,7 +241,7 @@ class Route implements RouteContract
         return $this;
     }
 
-    public function defaults(array|string $name = null, mixed $value = null): static|array
+    public function defaults(array|string|null $name = null, mixed $value = null): static|array
     {
         if (is_null($name)) {
             return $this->getDefaults();
@@ -490,17 +513,19 @@ class Route implements RouteContract
             return;
         }
 
+        $this->isEmptyAction = true;
         $this->action = ['type' => 'closure', 'uses' => function () {
             throw new \LogicException(sprintf("Route for [%s] has no action.", $this->uri));
         }];
     }
 
-    protected function runCallable(){
+    protected function runCallable(): mixed
+    {
         $parameters = Reflector::resolveDependencies(
             $this->container, $this->action['uses'], $this->params
         );
 
-        return $this->action['uses'](...$parameters);
+        return $this->action['uses'](...array_values($parameters));
     }
 
     protected function isControllerAction(): bool
@@ -508,7 +533,7 @@ class Route implements RouteContract
         return is_string($this->action['uses']);
     }
 
-    protected function runController()
+    protected function runController(): mixed
     {
         $controller = $this->getController();
         $method = $this->getControllerMethod();
@@ -566,7 +591,7 @@ class Route implements RouteContract
 
     protected array $excludedMiddlewares = [];
 
-    public function middleware(string|array|Closure $middleware = null): array|static
+    public function middleware(string|array|Closure|null $middleware = null): array|static
     {
         if (is_null($middleware)) {
             return $this->middlewares;
@@ -620,7 +645,7 @@ class Route implements RouteContract
         return $this->excludedMiddlewares;
     }
 
-    public function cache(array $data = null)
+    public function cache(?array $data = null)
     {
         if (is_null($data)) {
             $this->parse();

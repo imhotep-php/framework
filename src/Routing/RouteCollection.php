@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Routing;
 
@@ -38,15 +38,39 @@ class RouteCollection implements RouteCollectionContract
 
     public function match(Request $request): ?Route
     {
-        $result = null;
+        $fallback = null;
 
         foreach ($this->routes as $route) {
+            if ($route->matches($request)) {
+                if ($route->isFallback() && $fallback === null) {
+                    $fallback = $route;
+                    continue;
+                }
+
+                return $route;
+            }
+        }
+
+        return $fallback;
+
+
+        /*
+        $result = null;
+        $fallback = null;
+
+        foreach ($this->routes as $route) {
+            if ($route->isFallback()) {
+                $fallback = $route;
+                continue;
+            }
+
             if ($route->matches($request)) {
                 $result = $route;
             }
         }
 
-        return $result;
+        return $result ?: $fallback;
+        */
     }
 
     public function getByName(string $name): ?Route

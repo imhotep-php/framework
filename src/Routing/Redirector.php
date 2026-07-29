@@ -1,9 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Routing;
 
 use Imhotep\Contracts\Http\Request;
-use Imhotep\Contracts\Http\Response;
 use Imhotep\Contracts\Session\ISession;
 use Imhotep\Http\RedirectResponse;
 
@@ -20,7 +19,7 @@ class Redirector
 
     }
 
-    public function back($status = 302, $headers = []): RedirectResponse
+    public function back(int $status = 302, array $headers = []): RedirectResponse
     {
         return $this->createRedirect($this->generator->previous(), $status, $headers);
     }
@@ -30,7 +29,7 @@ class Redirector
 
     }
 
-    public function to(string $to, int $status = 302, array $headers = [], bool $secure = null): RedirectResponse
+    public function to(string $to, int $status = 302, array $headers = [], ?bool $secure = null): RedirectResponse
     {
         return $this->createRedirect($to, $status, $headers);
     }

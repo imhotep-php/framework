@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Routing;
 
@@ -12,6 +10,7 @@ use Imhotep\Contracts\Http\Response as ResponseContract;
 use Imhotep\Contracts\Routing\RouteCollection;
 use Imhotep\Contracts\Routing\Router as RouterContract;
 use Imhotep\Http\Exceptions\HttpResponseException;
+use Imhotep\Http\Exceptions\NotFoundHttpException;
 use Imhotep\Http\JsonResponse;
 use Imhotep\Http\Response;
 use Imhotep\Support\Pipeline;
@@ -88,12 +87,12 @@ class Router implements RouterContract
 
 
 
-    public function any(string $uri, string|array|Closure $action): Route
+    public function any(string $uri, string|array|Closure|null $action = null): Route
     {
         return $this->createRoute(['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'], $uri, $action);
     }
 
-    public function match(array $methods, string $uri, string|array|Closure $action): Route
+    public function match(array $methods, string $uri, string|array|Closure|null $action = null): Route
     {
         return $this->createRoute($methods, $uri, $action);
     }
@@ -131,6 +130,23 @@ class Router implements RouterContract
     public function options(string $uri, string|array|Closure $action): Route
     {
         return $this->createRoute('OPTIONS', $uri, $action);
+    }
+
+    public function view(string $uri, string $view, array $data = [], array|int $status = 200, array $headers = []): Route
+    {
+        return $this->match(['GET','HEAD'], $uri, ViewController::class)
+            ->setDefaults([
+                'view' => $view,
+                'data' => $data,
+                'status' => is_array($status) ? 200 : $status,
+                'headers' => is_array($status) ? $status : $headers,
+            ]);
+    }
+
+    public function fallback(string|array|Closure $action): Route
+    {
+        return $this->createRoute('GET', '{fallback}', $action)
+            ->where('fallback', '.*')->fallback();
     }
 
     public function redirect(string $uri, string $destination, int $status = 302): Route
@@ -176,27 +192,18 @@ class Router implements RouterContract
         return $route;
     }
 
-    protected mixed $defaultAction = null;
-
-    public function setDefaultAction(string|array|Closure $action): void
-    {
-        if(Reflector::isCallable($action, true)) {
-            $this->defaultAction = $action;
-        }
-    }
-
-
     public function dispatch(RequestContract $request): ResponseContract
     {
         $this->current = $this->routes->match($request);
 
         if (is_null($this->current)) {
-            if (! is_null($this->defaultAction)) {
-                return call_user_func($this->defaultAction);
-            }
-
-            return static::toResponse(null, $request);
+            throw new NotFoundHttpException(sprintf(
+                'The route %s could not be found.',
+                $request->path()
+            ));
         }
+
+        $request->setRouteResolver(fn() => $this->current);
 
         $this->container->instance(Route::class, $this->current);
 
@@ -222,29 +229,29 @@ class Router implements RouterContract
         return $response;
     }
 
-    static public function toResponse(mixed $response, RequestContract $request): ResponseContract
+    static public function toResponse(mixed $response, RequestContract $request, int $statusCode = 200): ResponseContract
     {
         if ($response instanceof Responsable) {
             $response = $response->toResponse($request);
         }
 
         if ($response instanceof View) {
-            $response = new Response($response->render(), 200, ['Content-Type' => 'text/html']);
+            $response = new Response($response->render(), $statusCode, ['Content-Type' => 'text/html']);
         }
         elseif (is_string($response) || is_numeric($response) || is_bool($response)) {
-            $response = new Response((string)$response, 200, ['Content-Type' => 'text/html']);
+            $response = new Response((string)$response, $statusCode, ['Content-Type' => 'text/html']);
         }
         elseif (is_array($response)) {
-            $response = new JsonResponse($response, 200);
+            $response = new JsonResponse($response, $statusCode);
         }
         elseif (is_null($response)) {
-            $response = new Response('', 200, ['Content-Type' => 'text/html']);
+            $response = new Response('', $statusCode, ['Content-Type' => 'text/html']);
         }
 
         return $response->prepare($request);
     }
 
-    public function getCurrentRoute(): ?Route
+    public function current(): ?Route
     {
         return $this->current;
     }
