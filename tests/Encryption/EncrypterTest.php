@@ -98,7 +98,6 @@ class EncrypterTest extends TestCase
         $data = 'Data encrypted with very old key';
         $encrypted = $oldEncrypter->encrypt($data);
 
-        var_dump( [$this->oldKey1, $this->oldKey2]);
         $newEncrypter = new Encrypter(
             $this->currentKey,
             $this->cipher,
