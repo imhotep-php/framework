@@ -35,6 +35,16 @@ class Repository implements IConfigRepository
         return $this->validateType($value, $type, $key);
     }
 
+    public function except(array $keys): array
+    {
+        return Arr::except($this->items, $keys);
+    }
+
+    public function only(array $keys): array
+    {
+        return Arr::only($this->items, $keys);
+    }
+
     public function get(string|array $key, mixed $default = null): mixed
     {
         if (is_array($key)) {
@@ -240,7 +250,7 @@ class Repository implements IConfigRepository
         if ($message === null) {
             $message = sprintf('Required configuration [%s] is not set.', $this->buildPath($key));
         } else {
-            $message = str_replace(':key', $this->buildPath($key), $message);
+            $message = str_replace([':key', ':path'], $this->buildPath($key), $message);
         }
 
         throw new RuntimeException($message);
