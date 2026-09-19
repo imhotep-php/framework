@@ -286,6 +286,21 @@ class Filesystem
         return json_decode($this->get($path), true, $depth, $flags);
     }
 
+    public function jsonWithLock(string $path, int $depth = 512, int $flags = 0): mixed
+    {
+        return json_decode($this->getWithLock($path), true, $depth, $flags);
+    }
+
+    public function putJson(string $path, mixed $data, int $flags = 0, int $depth = 512): bool|int
+    {
+        return $this->put($path, json_encode($data, $flags, $depth));
+    }
+
+    public function putJsonWithLock(string $path, mixed $data, int $flags = 0, int $depth = 512): bool|int
+    {
+        return $this->putWithLock($path, json_encode($data, $flags, $depth));
+    }
+
     public function require(string $path, array $data = []): mixed
     {
         if (is_file($path)) {

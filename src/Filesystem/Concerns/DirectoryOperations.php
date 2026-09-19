@@ -11,11 +11,7 @@ trait DirectoryOperations
 
     public function ensureDirectoryExists(string $path, bool $recursive = true): bool
     {
-        if (! $this->isDirectory($path)) {
-            return $this->makeDirectory($path, recursive: $recursive);
-        }
-
-        return false;
+        return $this->isDirectory($path) || $this->makeDirectory($path, recursive: $recursive);
     }
 
     public function moveDirectory(string $from, string $to, bool $overwrite = false): bool
