@@ -34,6 +34,15 @@ abstract class Connection implements IConnection
         return $this->commandHandler($result);
     }
 
+    public function pipeline(callable $callback): array
+    {
+        $this->client->pipeline();
+
+        $callback($this);
+
+        return $this->client->exec();
+    }
+
     protected function commandHandler(mixed $result): mixed
     {
         return $result;
