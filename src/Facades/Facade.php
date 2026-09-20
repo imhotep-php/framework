@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace Imhotep\Facades;
 
+use Closure;
 use Imhotep\Container\Container;
+use RuntimeException;
 
 abstract class Facade
 {
     protected static Container $app;
 
-    protected static array $resolvedInstance;
+    protected static array $resolvedInstance = [];
 
     protected static bool $cached = true;
 
-    public static function resolved(\Closure $callback): void
+    public static function resolved(Closure $callback): void
     {
         $accessor = static::getFacadeAccessor();
 
@@ -34,10 +36,10 @@ abstract class Facade
 
     protected static function getFacadeAccessor(): string
     {
-        throw new \RuntimeException('Facade does not implement getFacadeAccessor method.');
+        throw new RuntimeException('Facade does not implement getFacadeAccessor method.');
     }
 
-    protected static function resolveFacadeInstance($name)
+    protected static function resolveFacadeInstance(string $name)
     {
         if (isset(static::$resolvedInstance[$name])) {
             return static::$resolvedInstance[$name];
@@ -52,7 +54,7 @@ abstract class Facade
         }
     }
 
-    public static function clearResolvedInstance($name): void
+    public static function clearResolvedInstance(string $name): void
     {
         unset(static::$resolvedInstance[$name]);
     }
@@ -67,7 +69,7 @@ abstract class Facade
         return static::$app;
     }
 
-    public static function setFacadeApplication($app): void
+    public static function setFacadeApplication(Container $app): void
     {
         static::$app = $app;
     }
@@ -77,7 +79,7 @@ abstract class Facade
         $instance = static::getFacadeRoot();
 
         if (! $instance) {
-            throw new \RuntimeException('A facade root has not been set.');
+            throw new RuntimeException('A facade root has not been set.');
         }
 
         return $instance->$method(...$args);
@@ -86,22 +88,28 @@ abstract class Facade
     public static function defaultAliases(array $merge = []): array
     {
         return array_merge([
-            'Auth' => Auth::class,
-            'Cache' => Cache::class,
-            'Cookie' => Cookie::class,
-            'Crypt' => Crypt::class,
-            'DB' => DB::class,
-            'Env' => Env::class,
-            'Event' => Event::class,
-            'Lang' => Lang::class,
-            'Log' => Log::class,
+            'Auth'         => Auth::class,
+            'Cache'        => Cache::class,
+            'Config'       => Config::class,
+            'Console'      => Console::class,
+            'Cookie'       => Cookie::class,
+            'Crypt'        => Crypt::class,
+            'DB'           => DB::class,
+            'Env'          => Env::class,
+            'Event'        => Event::class,
+            'File'         => File::class,
+            'Hash'         => Hash::class,
+            'Lang'         => Lang::class,
+            'Log'          => Log::class,
             'Notification' => Notification::class,
-            'Route' => Route::class,
-            'Schema' => Schema::class,
-            'Session' => Session::class,
-            'Storage' => Storage::class,
-            'Validator' => Validator::class,
-            'View' => View::class,
+            'Redis'        => Redis::class,
+            'Response'     => Response::class,
+            'Route'        => Route::class,
+            'Schema'       => Schema::class,
+            'Session'      => Session::class,
+            'Storage'      => Storage::class,
+            'Validator'    => Validator::class,
+            'View'         => View::class,
         ], $merge);
     }
 }
