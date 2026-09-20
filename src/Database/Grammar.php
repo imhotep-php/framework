@@ -12,21 +12,26 @@ abstract class Grammar
         __call as macroCall;
     }
 
-    protected ?string $tablePrefix = null;
+    protected static array $cache = [];
 
-    public function getTablePrefix(): ?string
+    protected string $tablePrefix = '';
+
+    public function getTablePrefix(): string
     {
         return $this->tablePrefix;
     }
 
-    public function setTablePrefix(?string $prefix = null): static
+    public function setTablePrefix(string $prefix): static
     {
         $this->tablePrefix = $prefix;
 
         return $this;
     }
 
-
+    public function getDateFormat(): string
+    {
+        return 'Y-m-d H:i:s';
+    }
 
     protected function columnize(string|array $columns): string
     {
@@ -39,20 +44,19 @@ abstract class Grammar
             return $value->getValue();
         }
 
-        $segments = explode('.', $value);
-        foreach ($segments as $index => $segment) {
-            if ($index === 0 && count($segments) > 1) {
-                $segments[$index] = $this->wrapTable($segment);
-            } else {
-                $segments[$index] = $this->wrapValue($segment);
-            }
+        if ($this->isJsonSelector($value)) {
+            return $this->wrapJsonSelector($value);
         }
 
-        return implode('.', $segments);
+        return $this->wrapSegments($value);
     }
 
-    protected function wrapTable(string|array|Table $table): string
+    public function wrapTable(Table|Expression|array|string $table): string
     {
+        if ($table instanceof Expression) {
+            return $table->getValue();
+        }
+
         if ($table instanceof Table) {
             $table = $table->getName();
         }
@@ -65,12 +69,63 @@ abstract class Grammar
             return $this->wrapTable($table[0]).' as '.$this->wrap($table[1]);
         }
 
-        if(! empty($this->tablePrefix)){
+        if($this->tablePrefix){
             $table = $this->tablePrefix.$table;
         }
 
         return $this->wrap($table);
     }
+
+    protected function wrapColumn(Expression|string $value): string
+    {
+        if ($value instanceof Expression) {
+            return $value->getValue();
+        }
+
+        if ($this->isJsonSelector($value)) {
+            return $this->wrapJsonSelector($value);
+        }
+
+        return $this->wrapSegments($value);
+    }
+
+    protected function wrapJsonSelector(string $value): string
+    {
+        return "'{$value}'";
+    }
+
+    protected function wrapSegments(string $value): string
+    {
+        $segments = explode('.', $value);
+        $count = count($segments);
+
+        if ($count > 1) {
+            $segments[0] = $this->wrapTable($segments[0]);
+
+            for ($i = 1; $i < $count; $i++) {
+                $segments[$i] = $this->wrapValue($segments[$i]);
+            }
+
+            return implode('.', $segments);
+        }
+
+        return $this->wrapValue($segments[0]);
+
+        /*
+        $segments = explode('.', $value);
+
+        foreach ($segments as $index => $segment) {
+            if ($index === 0 && count($segments) > 1) {
+                $segments[$index] = $this->wrapTable($segment);
+            } else {
+                $segments[$index] = $this->wrapValue($segment);
+            }
+        }
+
+        return implode('.', $segments);
+        */
+    }
+
 
     protected function wrapValue(mixed $value): string
     {
@@ -174,6 +229,9 @@ abstract class Grammar
             return $this->macroCall($method, $parameters);
         }
 
-        throw new DatabaseException(sprintf('Grammar method %s in %s not configured or not supported.', $method, static::class));
+        throw new DatabaseException(sprintf(
+            'Grammar method [%s] in [%s] not configured or not supported.',
+            $method, static::class
+        ));
     }
 }

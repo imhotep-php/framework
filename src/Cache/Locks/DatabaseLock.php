@@ -2,12 +2,12 @@
 
 namespace Imhotep\Cache\Locks;
 
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Database\Query\Builder;
 
 class DatabaseLock extends Lock
 {
-    protected Connection $connection;
+    protected IConnection $connection;
 
     protected string $table;
 
@@ -16,9 +16,9 @@ class DatabaseLock extends Lock
     protected array $lottery;
 
     public function __construct(
-        Connection $connection, string $table,
-        string $name, int $timeout, string $owner = '',
-        array $lottery = [2, 100], int $defaultTimeout = 86400
+        IConnection $connection, string $table,
+        string      $name, int $timeout, string $owner = '',
+        array       $lottery = [2, 100], int $defaultTimeout = 86400
     )
     {
         parent::__construct($name, $timeout, $owner);

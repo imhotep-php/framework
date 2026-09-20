@@ -3,7 +3,7 @@
 namespace Imhotep\Database\Schema;
 
 use Closure;
-use Imhotep\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Database\Expression;
 use Imhotep\Support\Fluent;
 
@@ -20,8 +20,6 @@ class Table
     protected bool $isCreating = false;
 
     protected bool $isTemporary = false;
-
-    protected string $columnClassDefault = Column::class;
 
     public function __construct(string $name, ?Closure $callback = null, string $prefix = '')
     {
@@ -57,7 +55,7 @@ class Table
      */
     public function id(string $column = 'id'): Column
     {
-        return $this->bigInt($column)->autoIncrement()->unsigned();
+        return $this->addColumn('id', $column);
     }
 
     public function int(string $column): Column
@@ -75,9 +73,61 @@ class Table
         return $this->addColumn('bigInteger', $column);
     }
 
+    public function integer(string $column): Column
+    {
+        return $this->int($column);
+    }
+
+    public function smallInteger(string $column): Column
+    {
+        return $this->smallInt($column);
+    }
+
+    public function bigInteger(string $column): Column
+    {
+        return $this->bigInt($column);
+    }
+
+    public function smallSerial(string $column): Column
+    {
+        return $this->addColumn('smallSerial', $column);
+    }
+
+    /**
+     * Create new auto-incrementing typical integer (4-byte, 1 to 2147483647) column in table.
+     *
+     * @param string $column
+     * @return Column
+     */
+    public function serial(string $column): Column
+    {
+        return $this->addColumn('serial', $column);
+    }
+
+    /**
+     * Create new auto-incrementing typical integer (8-byte, 1 to 9223372036854775807) column in table.
+     *
+     * @param string $column
+     * @return Column
+     */
+    public function bigSerial(string $column): Column
+    {
+        return $this->addColumn('bigSerial', $column);
+    }
+
+    public function numeric(string $column, ?int $precision = null, ?int $scale = null): Column
+    {
+        return $this->addColumn('numeric', $column, compact('precision', 'scale'));
+    }
+
     public function decimal(string $column, ?int $precision = null, ?int $scale = null): Column
     {
         return $this->addColumn('decimal', $column, compact('precision', 'scale'));
+    }
+
+    public function real(string $column): Column
+    {
+        return $this->addColumn('real', $column);
     }
 
     public function float(string $column): Column
@@ -88,6 +138,11 @@ class Table
     public function double(string $column): Column
     {
         return $this->addColumn('double', $column);
+    }
+
+    public function boolean(string $column): Column
+    {
+        return $this->bool($column);
     }
 
     public function bool(string $column): Column
@@ -135,6 +190,11 @@ class Table
         return $this->addColumn('enum', $column, compact('allowed'));
     }
 
+    public function uuid(string $column): Column
+    {
+        return $this->addColumn('uuid', $column);
+    }
+
     public function date(string $column): Column
     {
         return $this->addColumn('date', $column);
@@ -145,6 +205,11 @@ class Table
         return $this->addColumn('time', $column);
     }
 
+    public function timeTz(string $column): Column
+    {
+        return $this->addColumn('timeTz', $column);
+    }
+
     public function datetime(string $column): Column
     {
         return $this->addColumn('datetime', $column);
@@ -152,7 +217,18 @@ class Table
 
     public function timestamp(string $column, int $precision = 0): Column
     {
-        return $this->addColumn('timestamp', $column);
+        if ($precision < 0) $precision = 0;
+        if ($precision > 6) $precision = 6;
+
+        return $this->addColumn('timestamp', $column, compact('precision'));
+    }
+
+    public function timestampTz(string $column, int $precision = 0): Column
+    {
+        if($precision < 0) $precision = 0;
+        if($precision > 6) $precision = 6;
+
+        return $this->addColumn('timestampTz', $column, compact('precision'));
     }
 
     public function timestamps(int $precision = 0): void
@@ -170,7 +246,7 @@ class Table
      */
     public function softDeletes(string $column = 'deleted_at', int $precision = 0): Column
     {
-        return $this->timestamp('deleted_at', $precision)->default(new Expression('NULL'))->nullable();
+        return $this->timestamp($column, $precision)->nullable();
     }
 
 
@@ -214,11 +290,10 @@ class Table
 
     public function addColumn(string $type, string $name, array $parameters = []): Column
     {
-        $columnClass = $this->columnClassDefault;
-
-        $column = new $columnClass(
+        $column = new Column(
             array_merge(compact('type', 'name'), $parameters)
         );
+
         $this->columns[] = $column;
 
         return $column;
@@ -306,7 +381,7 @@ class Table
     }
 
 
-    public function foreingId(string $column): ForeignIdColumn
+    public function foreignId(string $column): ForeignIdColumn
     {
         $column = $this->bigInt($column);
 
@@ -333,6 +408,13 @@ class Table
         return $this->commands;
     }
 
+    public function getCommandsByNamed(array $names): array
+    {
+        return array_filter($this->commands, function ($command) use ($names) {
+            return in_array($command['name'], $names);
+        });
+    }
+
     protected function addCommand(string $name, array $parameters = []): Fluent
     {
         $this->commands[] = $command = $this->createCommand($name, $parameters);
@@ -354,10 +436,8 @@ class Table
         return str_replace(['-','.'], '_', $index);
     }
 
-    public function build(Connection $connection, Grammar $grammar): void
+    public function build(IConnection $connection, Grammar $grammar): void
     {
-        $this->isValidConnection($connection);
-
         $statements = $this->toSql($grammar);
 
         foreach ($statements as $statement) {
@@ -382,18 +462,6 @@ class Table
         }
 
         return $statements;
-    }
-
-    protected function isValidConnection(Connection $connection): void
-    {
-
-    }
-
-    protected function getCommandsByNamed(array $names): array
-    {
-        return array_filter($this->commands, function ($command) use ($names) {
-            return in_array($command['name'], $names);
-        });
     }
 
     protected function addImpliedCommands(Grammar $grammar): void

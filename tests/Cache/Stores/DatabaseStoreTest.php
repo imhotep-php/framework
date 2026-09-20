@@ -3,14 +3,17 @@
 namespace Imhotep\Tests\Cache\Stores;
 
 use Imhotep\Cache\Stores\DatabaseStore;
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Config\Repository;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Database\ConnectionFactory;
+use Imhotep\Database\Sqlite\Connector as SQLiteConnector;
+use Imhotep\Database\Sqlite\Connection as SQLiteConnection;
 
 class DatabaseStoreTest extends StoreTestCase
 {
-    protected Connection $database;
+    protected IConnection $database;
 
-    protected string $dbfile = '';
+    protected string $dbfile;
 
     public function __construct()
     {
@@ -22,18 +25,15 @@ class DatabaseStoreTest extends StoreTestCase
             touch($this->dbfile);
         }
 
-        $driver = [
-            'connection' => \Imhotep\Database\SQLite\Connection::class,
-            'connector' => \Imhotep\Database\SQLite\Connector::class,
-        ];
-
         $config = [
             'database' => $this->dbfile,
             'prefix' => '',
-            'foreign_keys' => true,
         ];
 
-        $this->database = (new ConnectionFactory())->make($driver, $config);
+        $this->database = (new ConnectionFactory())->make(
+            SQLiteConnector::class,
+            SQLiteConnection::class,
+            new Repository($config));
 
         $this->database->statement('CREATE TABLE IF NOT EXISTS cache (key TEXT NOT NULL PRIMARY KEY, value TEXT, expires_at INTEGER)');
 

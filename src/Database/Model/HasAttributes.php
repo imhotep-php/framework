@@ -6,7 +6,6 @@ use DateTimeInterface;
 use Imhotep\Support\Str;
 use ReflectionMethod;
 use ReflectionNamedType;
-use function PHPUnit\Framework\returnArgument;
 
 trait HasAttributes
 {

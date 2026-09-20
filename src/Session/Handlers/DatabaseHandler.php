@@ -2,16 +2,16 @@
 
 namespace Imhotep\Session\Handlers;
 
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Database\Query\Builder;
 use SessionHandlerInterface;
 
 class DatabaseHandler implements SessionHandlerInterface
 {
     public function __construct(
-        protected Connection $connection,
-        protected string     $table,
-        protected int        $lifetime
+        protected IConnection $connection,
+        protected string      $table,
+        protected int         $lifetime
     ) { }
 
     public function close(): bool

@@ -1,10 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Imhotep\Database\Query\Traits;
 
 trait HasLockConditions
 {
-    protected mixed $lock = null;
+    protected string|bool|null $lock = null;
 
     public function lock(string|bool $value = true): static
     {

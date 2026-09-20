@@ -2,14 +2,14 @@
 
 namespace Imhotep\Tests\Database;
 
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Database\Query\Builder;
 use Imhotep\Database\Query\Grammar;
 use PHPUnit\Framework\TestCase;
 
 class QueryGrammarTest extends TestCase
 {
-    protected function getConnection(): Connection
+    protected function getConnection(): IConnection
     {
         return $this->createMock(\Imhotep\Database\Connection::class);
     }

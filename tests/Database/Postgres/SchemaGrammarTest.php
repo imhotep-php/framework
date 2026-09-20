@@ -3,7 +3,7 @@
 namespace Imhotep\Tests\Database\Postgres;
 
 use Closure;
-use Imhotep\Database\Postgres\Schema\Grammar;
+use Imhotep\Database\Postgres\SchemaGrammar;
 use Imhotep\Database\Schema\Table;
 use PHPUnit\Framework\TestCase;
 
@@ -13,7 +13,7 @@ class SchemaGrammarTest extends TestCase
 
     protected function getGrammar()
     {
-        $grammar = new Grammar();
+        $grammar = new SchemaGrammar();
         $grammar->setCharset('UTF8');
 
         return $grammar;
@@ -30,7 +30,7 @@ class SchemaGrammarTest extends TestCase
 
     public function test_macro()
     {
-        $grammar = new Grammar();
+        $grammar = new SchemaGrammar();
 
         $grammar::macro('typeFoo', function () {
             return true;
@@ -62,7 +62,7 @@ class SchemaGrammarTest extends TestCase
         $statements = $this->getStatements(function (Table $table) {
             $table->create();
             $table->id();
-            $table->string('title');
+            $table->string('title', 255);
         });
 
         $this->assertCount(1, $statements);
@@ -72,7 +72,7 @@ class SchemaGrammarTest extends TestCase
             $table->create();
             $table->temporary();
             $table->id();
-            $table->string('title');
+            $table->string('title', 255);
         });
 
         $this->assertCount(1, $statements);
@@ -164,7 +164,7 @@ class SchemaGrammarTest extends TestCase
             $table->string('string');
         });
         $this->assertCount(1, $statements);
-        $this->assertSame('ALTER TABLE "test" ADD "string" varchar(255) NOT NULL', $statements[0]);
+        $this->assertSame('ALTER TABLE "test" ADD "string" text NOT NULL', $statements[0]);
 
         $statements = $this->getStatements(function (Table $table) {
             $table->char('char');
@@ -222,20 +222,20 @@ class SchemaGrammarTest extends TestCase
             $table->timestamp('updated')->useCurrent();
         });
         $this->assertCount(1, $statements);
-        $this->assertSame('ALTER TABLE "test" ADD "added" timestamp without time zone NOT NULL, ADD "updated" timestamp without time zone default CURRENT_TIMESTAMP NOT NULL', $statements[0]);
+        $this->assertSame('ALTER TABLE "test" ADD "added" timestamp(0) without time zone NOT NULL, ADD "updated" timestamp(0) without time zone default CURRENT_TIMESTAMP NOT NULL', $statements[0]);
 
         $statements = $this->getStatements(function (Table $table) {
             $table->timestamps();
         });
 
         $this->assertCount(1, $statements);
-        $this->assertSame('ALTER TABLE "test" ADD "created_at" timestamp without time zone default CURRENT_TIMESTAMP NOT NULL, ADD "updated_at" timestamp without time zone default CURRENT_TIMESTAMP NOT NULL', $statements[0]);
+        $this->assertSame('ALTER TABLE "test" ADD "created_at" timestamp(0) without time zone default CURRENT_TIMESTAMP NOT NULL, ADD "updated_at" timestamp(0) without time zone default CURRENT_TIMESTAMP NOT NULL', $statements[0]);
 
         $statements = $this->getStatements(function (Table $table) {
             $table->softDeletes();
         });
         $this->assertCount(1, $statements);
-        $this->assertSame('ALTER TABLE "test" ADD "deleted_at" timestamp without time zone DEFAULT NULL', $statements[0]);
+        $this->assertSame('ALTER TABLE "test" ADD "deleted_at" timestamp(0) without time zone', $statements[0]);
     }
 
     public function test_auto_increment_column_from()

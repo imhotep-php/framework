@@ -2,61 +2,58 @@
 
 namespace Imhotep\Database\Query;
 
+use BadMethodCallException;
 use Closure;
-use Imhotep\Contracts\Database\IModel;
-use Imhotep\Contracts\Database\QueryBuilder as QueryBuilderContract;
-use Imhotep\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
+use Imhotep\Contracts\Database\IQueryBuilder;
+use Imhotep\Contracts\Database\IQueryGrammar;
 use Imhotep\Database\Expression;
 use Imhotep\Database\Model\Model;
-use Imhotep\Database\Query\Traits\PrepareWhereExpression;
-use Imhotep\Database\Query\Grammar;
-use Imhotep\Database\Utils\MorphHelper;
 use Imhotep\Support\Arr;
+use Imhotep\Support\Traits\Macroable;
 use InvalidArgumentException;
-use stdClass;
 
-class Builder implements QueryBuilderContract
+class Builder implements IQueryBuilder
 {
-    use PrepareWhereExpression;
+    use Macroable {
+        __call as macroCall;
+    }
+    use Traits\HasQueryMethods;
+    use Traits\HasQueryAggregates;
     use Traits\HasWhereConditions;
+    use Traits\HasGroupMethods;
     use Traits\HasLockConditions;
 
     protected bool $useWritePDO = false;
 
     protected array $bindings = [
         'columns' => [],
-        //'select' => [],
-        //'from' => [],
+        'select' => [],
+        'from' => [],
         'join' => [],
         'where' => [],
-        //'groupBy' => [],
-        //'having' => [],
+        'groupBy' => [],
+        'having' => [],
         //'order' => [],
-        //'union' => [],
+        'union' => [],
         //'unionOrder' => [],
     ];
 
     public string $command;
 
-    public array $from;
-
-    //public string $table;
-
-    //public string $alias;
+    public Expression|array|null $from = null;
 
     public array $joins = [];
 
     public bool|array $distinct = false;
 
-    public ?array $columns = ['*'];
+    public array $columns = [];
 
     public ?array $aggregate = [];
 
     public array $conditions = [];
 
     public array $orders = [];
-
-    public array $groups = [];
 
     public ?int $limit = null;
 
@@ -68,19 +65,19 @@ class Builder implements QueryBuilderContract
 
     protected bool $withSQL = false;
 
-    public function __construct(
-        protected Connection $connection,
-        protected Grammar $grammar
-    )
-    {
-    }
+    protected static array $cache = [];
 
-    public function getConnection(): Connection
+    public function __construct(
+        protected IConnection $connection,
+        protected IQueryGrammar $grammar
+    ) {}
+
+    public function getConnection(): IConnection
     {
         return $this->connection;
     }
 
-    public function getGrammar(): Grammar
+    public function getGrammar(): IQueryGrammar
     {
         return $this->grammar;
     }
@@ -92,25 +89,20 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function withDump(): static
-    {
-        $this->withDump = true;
-
-        return $this;
-    }
-
-    public function withSQL(): static
-    {
-        $this->withSQL = true;
-
-        return $this;
-    }
 
     public function select(array|string|Expression $columns = ['*']): static
     {
         $this->command = 'select';
 
         $this->columns = is_array($columns) ? $columns : [$columns];
+
+        return $this;
+    }
+
+    public function selectRaw(string $expression, array $bindings = []): static
+    {
+        $this->addSelect([new Expression($expression)]);
+        $this->addBinding($bindings, 'select');
 
         return $this;
     }
@@ -139,7 +131,8 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function insert(array $values): int|array
+
+    public function insert(array $values, bool $ignore = false): int|array
     {
         if (empty($values)) {
             return 0;
@@ -147,8 +140,7 @@ class Builder implements QueryBuilderContract
 
         if (! is_array(reset($values))) {
             $values = [$values];
-        }
-        else {
+        } else {
             foreach ($values as $key => $value) {
                 ksort($value);
                 $values[$key] = $value;
@@ -171,6 +163,11 @@ class Builder implements QueryBuilderContract
         }
 
         return $this->connection->insert($sql, $bindings);
+    }
+
+    public function insertOrIgnore(array $values): int|array
+    {
+        return $this->insert($values, true);
     }
 
     public function insertGetId(array $values, string $keyName = 'id'): mixed
@@ -267,13 +264,6 @@ class Builder implements QueryBuilderContract
         ) !== false;
     }
 
-    public function softDelete(): static
-    {
-        $this->command = 'update';
-
-        return $this;
-    }
-
     public function distinct(): static
     {
         $this->distinct = true;
@@ -281,37 +271,66 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function from(string $table, ?string $alias = null): static
-    {
-        if ($alias !== null) {
-            $this->from = [$table, $alias];
-        }
-        else {
-            $parts = preg_split('/\s+/', trim($table));
 
-            if (count($parts) === 1) {
-                $this->from = [$parts[0]];
-            }
-            elseif (count($parts) === 2) { // table alias или table AS
-                if (strtolower($parts[1]) === 'as') {
-                    $this->from = [$parts[0]]; // 'table AS' without alias
-                }
-                else {
-                    $this->from = [$parts[0], $parts[1]]; // 'table alias'
-                }
-            }
-            elseif (count($parts) === 3) { // table as alias
-                if (strtolower($parts[1]) === 'as') {
-                    $this->from = [$parts[0], $parts[2]]; // 'table as alias'
-                }
-            }
-            else {
-                throw new InvalidArgumentException("Invalid table name [$table] with alias.");
-            }
+
+
+    // FROM
+
+    public function from(Expression|Closure|self|string $table, ?string $as = null): static
+    {
+        if ($this->isQueryable($table)) {
+            return $this->fromSub($table, $as);
         }
+        elseif (is_null($as)) {
+            return $this->fromParsed($table);
+        }
+
+        $this->from = [$table, $as];
 
         return $this;
     }
+
+    public function fromParsed(string $table): static
+    {
+        if ($value = $this->getCache($cacheKey = 'from_'.$table)) {
+            $this->from = $value;
+            return $this;
+        }
+
+        $parts = preg_split('/\s+/', $table, -1, PREG_SPLIT_NO_EMPTY);
+        $count = count($parts);
+
+        if ($count === 1) {
+            $this->from = [$parts[0]];
+        } elseif ($count === 2 && strcasecmp($parts[1], 'as') !== 0) {
+            $this->from = [$parts[0], $parts[1]];
+        } elseif ($count === 3 && strcasecmp($parts[1], 'as') === 0) {
+            $this->from = [$parts[0], $parts[2]];
+        }
+        else {
+            throw new InvalidArgumentException("Invalid table name [$table] with alias.");
+        }
+
+        return $this->setCache($cacheKey, $this->from);
+    }
+
+    public function fromSub(Closure|Builder $query, string $as): static
+    {
+        [$query, $bindings] = $this->createSub($query);
+
+        return $this->fromRaw('('.$query.') as '.$this->grammar->wrapTable($as), $bindings);
+    }
+
+    public function fromRaw(string $expression, array $bindings = []): static
+    {
+        $this->from = new Expression($expression);
+
+        $this->addBinding($bindings, 'from');
+
+        return $this;
+    }
+
+
 
     public function join(string $table, mixed $first, mixed $operator = null, mixed $second = null, string $type = 'inner', bool $where = false): static
     {
@@ -333,36 +352,55 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-
-    public function groupBy(): static
+    public function leftJoin(string $table, mixed $first, mixed $operator = null, mixed $second = null): static
     {
-        $args = func_get_args();
+        return $this->join($table, $first, $operator, $second, 'left');
+    }
 
-        foreach ($args as $arg) {
-            if (is_string($arg)) {
-                $this->groups[] = $arg;
-            }
-            elseif (is_array($arg)) {
-                $this->groups = array_merge($this->groups, $arg);
-            }
-            else {
-                throw new InvalidArgumentException("GroupBy argument must be string or array");
-            }
+    public function rightJoin(string $table, mixed $first, mixed $operator = null, mixed $second = null): static
+    {
+        return $this->join($table, $first, $operator, $second, 'right');
+    }
+
+    public function outerJoin(string $table, mixed $first, mixed $operator = null, mixed $second = null): static
+    {
+        return $this->join($table, $first, $operator, $second, 'outer');
+    }
+
+
+    public function orderBy(Expression|string|array $column, string $direction = 'asc'): static
+    {
+        if ($column instanceof Expression) {
+            return $this->orderByRaw($column->getValue());
+        }
+
+        foreach ((array)$column as $value) {
+            $this->orders[] = ['column' => $value, 'direction' => $direction];
         }
 
         return $this;
     }
 
-    public function orderBy($column, $direction = 'asc'): static
+    public function orderByDesc(string|array $column): static
     {
-        $this->orders[] = compact('column', 'direction');
+        return $this->orderBy($column, 'desc');
+    }
+
+    public function orderByRaw(string $sql, array $bindings = []): static
+    {
+        $this->orders[] = ['sql' => $sql, 'bindings' => $bindings];
 
         return $this;
     }
 
-    public function orderByDesc($column): static
+    public function latest(string $column = 'created_at'): static
     {
         return $this->orderBy($column, 'desc');
+    }
+
+    public function oldest(string $column = 'created_at'): static
+    {
+        return $this->orderBy($column);
     }
 
 
@@ -388,77 +426,67 @@ class Builder implements QueryBuilderContract
         return $this;
     }
 
-    public function pluck(string $column, ?string $key = null): array
+
+    public array $unions = [];
+
+    public function union(string|self|Closure $query, array $bindings = [], bool $all = false): static
     {
-        $originalColumns = $this->columns;
-
-        $this->columns = $key ? [$column, $key] : [$column];
-
-        $queryResults = $this->runSelect();
-
-        $this->columns = $originalColumns;
-
-        $results = [];
-
-        if (is_null($key)) {
-            foreach ($queryResults as $row) $results[] = $row->$column;
-        }
-        else {
-            foreach ($queryResults as $row) $results[$row->$key] = $row->$column;
+        if ($this->isQueryable($query)) {
+            [$query, $bindings] = $this->createSub($query);
         }
 
-        return $results;
+        $this->unions[] = ['query' => $query, 'all' => $all];
+
+        $this->addBinding($bindings, 'union');
+
+        return $this;
     }
 
-    public function min(string $column): mixed
+    public function unionAll(string|self|Closure $query, array $bindings = []): static
     {
-        return $this->aggregate(__FUNCTION__, [$column]);
+        return $this->union($query, $bindings, true);
     }
 
-    public function max(string $column): mixed
+
+
+    protected function isQueryable(mixed $query): bool
     {
-        return $this->aggregate(__FUNCTION__, [$column]);
+        return $query instanceof Closure || $query instanceof Builder;
     }
 
-    protected function aggregate($function, $columns = ['*']): mixed
+    protected function createSub(mixed $query): array
     {
-        $this->aggregate = compact('function', 'columns');
+        if ($query instanceof Closure) {
+            $callback = $query;
 
-        $results = $this->get();
-
-        return empty($results) ? null : $results[0]->aggregate;
-    }
-
-    public function get(): array
-    {
-        $sql = $this->grammar->compileSelect($this);
-
-        $result = $this->connection->select($sql, $this->bindings['where']);
-        if ($this->modelClass) {
-            return array_map(function($item) {
-                return $this->modelClass::newFrom((array)$item);
-            }, $result);
+            $callback($query = $this->newQuery());
         }
 
-        return $result;
+        return $this->parseSub($query);
     }
 
-    public function first(): null|array|stdClass|IModel
+    protected function parseSub(mixed $query): array
     {
-        return $this->take(1)->get()[0] ?? null;
+        if ($query instanceof self) {
+            //$query = $this->prependDatabaseNameIfCrossDatabaseQuery($query);
+
+            return [$query->toSql(), $query->getBindings()];
+        }
+        elseif (is_string($query)) {
+            return [$query, []];
+        }
+
+        throw new InvalidArgumentException('A subquery must be a query builder instance');
     }
 
-    public function count(string $column = 'id'): int
-    {
-        return (int)$this->aggregate(__FUNCTION__, [$column]);
-    }
+
 
     protected function runSelect(): array
     {
         return $this->connection->select($this->toSql(), $this->getBindings(), $this->useWritePDO);
     }
 
-    protected function toSql(): string
+    public function toSql(): string
     {
         return $this->grammar->compileSelect($this);
     }
@@ -473,29 +501,43 @@ class Builder implements QueryBuilderContract
         $this->bindings[$type] = $values;
     }
 
-    public function addBinding(mixed $values, string $type): void
+    public function addBinding(mixed $values, string $type): static
     {
-        if (is_null($values)) {
-            return;
+        if (! is_null($values)) {
+            $this->bindings[$type] = array_merge(
+                $this->bindings[$type],
+                is_array($values) ? $values : [$values]
+            );
         }
 
-        $this->bindings[$type] = array_merge(
-            $this->bindings[$type],
-            is_array($values) ? $values : [$values]
-        );
+        return $this;
     }
 
-    public function find(int|string $id, array $columns = ['*']): ?object
+
+
+
+    public function withDump(): static
     {
-        return $this->where('id', '=', $id)->first();
+        $this->withDump = true;
+
+        return $this;
     }
 
-    public function dump()
+    public function withSQL(): static
+    {
+        $this->withSQL = true;
+
+        return $this;
+    }
+
+    public function dump(): static
     {
         dump($this->toSql(), $this->getBindings());
+
+        return $this;
     }
 
-    public function dd()
+    public function dd(): void
     {
         dd($this->toSql(), $this->getBindings());
     }
@@ -526,9 +568,9 @@ class Builder implements QueryBuilderContract
     }
 
 
-    protected function resolveColumnName(Expression|string $column): string
+    protected function resolveColumnName(Expression|string $column): string|Expression
     {
-        if (str_contains($column, '.') || $column instanceof Expression || empty($this->joins)) {
+        if ($column instanceof Expression || str_contains($column, '.') || empty($this->joins)) {
             return $column;
         }
 
@@ -537,5 +579,31 @@ class Builder implements QueryBuilderContract
         }
 
         return $this->from[0].'.'.$column;
+    }
+
+    protected function getCache(string $name): mixed
+    {
+        return static::$cache[$name] ?? null;
+    }
+
+    protected function setCache(string $name, mixed $value): static
+    {
+        static::$cache[$name] = $value;
+
+        return $this;
+    }
+
+
+    public function __call(string $method, array $parameters): mixed
+    {
+        if (static::hasMacro($method)) {
+            return $this->macroCall($method, $parameters);
+        }
+
+        throw new BadMethodCallException(sprintf(
+            'Method %s::%s() does not exist.',
+            static::class,
+            $method,
+        ));
     }
 }

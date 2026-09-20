@@ -17,7 +17,11 @@ class MigrateCommand extends BaseCommand
 
         $this->prepareDatabase();
 
-        $this->migrate->dispatch('migrate', $this->getPaths());
+        $this->migrate->dispatch('migrate', $this->getPaths(), [
+            'pretend' => $this->hasOption('pretend'),
+            'step' => $this->hasOption('step'),
+            'name' => $this->option('name'),
+        ]);
 
         $this->output->newLine();
 
@@ -43,8 +47,8 @@ class MigrateCommand extends BaseCommand
     {
         return array_merge(parent::getOptions(), [
             new InputOption('name', 'n', InputOption::VALUE_OPTIONAL, 'The migration name'),
-            //new InputOption('step', null, InputOption::VALUE_OPTIONAL, 'Force the migrations to be run so they can be rolled back individually'),
-            //new InputOption('pretend', null, InputOption::VALUE_OPTIONAL, 'Dump the SQL queries that would be run'),
+            new InputOption('step', null, InputOption::VALUE_NONE, 'Force the migrations to be run so they can be rolled back individually'),
+            new InputOption('pretend', null, InputOption::VALUE_NONE, 'Dump the SQL queries that would be run'),
         ]);
     }
 }

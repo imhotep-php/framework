@@ -2,7 +2,7 @@
   "name": "imhotep/database",
   "type": "library",
   "description": "Database tools",
-  "keywords": ["database", "mysql", "sqlite", "postgresql"],
+  "keywords": ["database", "mysql", "mariadb", "sqlite", "postgresql"],
   "license" : "MIT",
   "homepage": "https://imhotep.dev",
   "authors": [

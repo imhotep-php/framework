@@ -15,6 +15,16 @@ use Imhotep\Support\Fluent;
 class ForeignKey extends Fluent
 {
     /**
+     * Set ON UPDATE action to CASCADE;
+     *
+     * @return $this
+     */
+    public function onUpdateCascade(): static
+    {
+        return $this->onUpdate('CASCADE');
+    }
+
+    /**
      * Set ON UPDATE action to RESTRICT;
      *
      * @return $this
@@ -45,13 +55,13 @@ class ForeignKey extends Fluent
     }
 
     /**
-     * Set ON UPDATE action to CASCADE;
+     * Set ON DELETE action to CASCADE;
      *
      * @return $this
      */
-    public function onUpdateCascade(): static
+    public function onDeleteCascade(): static
     {
-        return $this->onUpdate('CASCADE');
+        return $this->onDelete('CASCADE');
     }
 
     /**
@@ -82,15 +92,5 @@ class ForeignKey extends Fluent
     public function onDeleteSetDefault(): static
     {
         return $this->onDelete('SET DEFAULT');
-    }
-
-    /**
-     * Set ON DELETE action to CASCADE;
-     *
-     * @return $this
-     */
-    public function onDeleteCascade(): static
-    {
-        return $this->onDelete('CASCADE');
     }
 }

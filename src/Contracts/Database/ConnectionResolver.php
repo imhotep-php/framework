@@ -8,9 +8,9 @@ interface ConnectionResolver
      * Get a database connection instance.
      *
      * @param  string|null  $name
-     * @return Connection
+     * @return IConnection
      */
-    public function connection(?string $name = null): Connection;
+    public function connection(?string $name = null): IConnection;
 
     /**
      * Get the default connection name.
@@ -22,8 +22,8 @@ interface ConnectionResolver
     /**
      * Set the default connection name.
      *
-     * @param  string  $name
-     * @return void
+     * @param string $name
+     * @return ConnectionResolver
      */
-    public function setDefaultConnection(string $name): void;
+    public function setDefaultConnection(string $name): static;
 }

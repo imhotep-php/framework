@@ -7,14 +7,14 @@ use Imhotep\Auth\GenericUser;
 use Imhotep\Contracts\Arrayable;
 use Imhotep\Contracts\Auth\Authenticatable;
 use Imhotep\Contracts\Auth\UserProvider;
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 
 class DatabaseUserProvider implements UserProvider
 {
     public function __construct(
-        protected Connection $connection,
-        protected string $table,
-        protected ?string $userClass = null
+        protected IConnection $connection,
+        protected string      $table,
+        protected ?string     $userClass = null
     ) { }
 
     public function getById(mixed $id): ?Authenticatable

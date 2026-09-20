@@ -2,7 +2,7 @@
 
 namespace Imhotep\Facades;
 
-use Imhotep\Contracts\Database\Connection as ConnectionContract;
+use Imhotep\Contracts\Database\IConnection as ConnectionContract;
 use Imhotep\Database\Query\Builder as QueryBuilder;
 use Iterator;
 use Closure;

@@ -2,12 +2,12 @@
 
 namespace Imhotep\Database\Query;
 
-use _PHPStan_72b31c081\React\Dns\Query\Query;
-use Imhotep\Contracts\Database\QueryGrammar as QueryGrammarContract;
+use Closure;
+use Imhotep\Contracts\Database\IQueryGrammar;
 use Imhotep\Database\Expression;
 use Imhotep\Database\Grammar as BaseGrammar;
 
-class Grammar extends BaseGrammar implements QueryGrammarContract
+class Grammar extends BaseGrammar implements IQueryGrammar
 {
     public function compileInsert(Builder $query, array $values): string
     {
@@ -64,7 +64,14 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
         }
         $sqlSet = implode(", ", $sqlSet);
 
+        $sqlJoin = $this->compileJoins($query);
         $sqlWhere = $this->compileWheres($query);
+
+        if (!empty($sqlJoin)) {
+            return sprintf('UPDATE %s %s SET %s %s',
+                $this->wrapTable($query->from), $sqlJoin, $sqlSet, $sqlWhere
+            );
+        }
 
         return sprintf('UPDATE %s SET %s %s',
             $this->wrapTable($query->from), $sqlSet, $sqlWhere
@@ -101,6 +108,8 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
         $sql[] = $this->compileJoins($query);
         $sql[] = $this->compileWheres($query);
         $sql[] = $this->compileGroups($query);
+        $sql[] = $this->compileHavings($query);
+        $sql[] = $this->compileUnions($query);
         $sql[] = $this->compileOrders($query);
         $sql[] = $this->compileLimit($query);
         $sql[] = $this->compileLock($query);
@@ -110,15 +119,17 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
 
     public function compileColumns(Builder $query): string
     {
-        //$columns = $query->columns ?: ['*'];
-
         $sql = [];
+
+        if (empty($query->columns)) {
+            return '*';
+        }
 
         foreach ($query->columns as $key => $column) {
             if ($column === '*') {
                 $sql[] = $column;
             }
-            elseif ($column instanceof \Closure) {
+            elseif ($column instanceof Closure) {
                 $columnQuery = $query->newQuery();
 
                 $column($columnQuery);
@@ -133,8 +144,6 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
             else {
                 $sql[] = $this->wrap($column);
             }
-
-            //$sql[] = ($column === '*') ? $column : $this->wrap($column);
         }
 
         return implode(', ', $sql);
@@ -161,7 +170,7 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
 
     public function compileWheres(Builder $query): string
     {
-        if (count($query->conditions) === 0) {
+        if (empty($query->conditions)) {
             return '';
         }
 
@@ -209,11 +218,13 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
 
     protected function whereBasic(Builder $query, array $where): string
     {
-        return sprintf('%s %s %s',
-            $this->wrap($where['column']),
+        $sql = sprintf('%s %s %s',
+            $this->wrapColumn($where['column']),
             $where['operator'],
             $this->prepareValue($where['value'])
         );
+
+        return $where['not'] ? "NOT ($sql)" : $sql;
     }
 
     protected function whereColumn(Builder $query, array $where): string
@@ -227,45 +238,27 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
 
     protected function whereNull(Builder $query, array $where): string
     {
-        return $this->wrap($where['column']).' IS NULL';
-    }
-
-    protected function whereNotNull(Builder $query, array $where): string
-    {
-        return $this->wrap($where['column']).' IS NOT NULL';
+        return sprintf('%s %s',
+            $this->wrap($where['column']),
+            $where['not'] ? 'IS NOT NULL' : 'IS NULL'
+        );
     }
 
     protected function whereIn(Builder $query, array $where): string
     {
-        //foreach ($where['values'] as $value) {
-        //    $query->addBinding($value, 'where');
-        //}
-
-        return sprintf('%s IN (%s)',
+        return sprintf('%s %s (%s)',
             $this->wrap($where['column']),
-            $this->prepareValues($where['values'])
-        );
-    }
-
-    protected function whereNotIn(Builder $query, array $where): string
-    {
-        //foreach ($where['values'] as $value) {
-        //    $query->addBinding($value, 'where');
-        //}
-
-        return sprintf('%s NOT IN (%s)',
-            $this->wrap($where['column']),
+            $where['not'] ? 'NOT IN' : 'IN',
             $this->prepareValues($where['values'])
         );
     }
 
     protected function whereNested(Builder $query, array $where): string
     {
-        // compileWhere возвращает строку SQL с WHERE,
-        // которое нужно удалить
+        // Remove 'WHERE '
         $wheres = substr($this->compileWheres($where['query']), 6);
 
-        return sprintf('(%s)', $wheres);
+        return $where['not'] ? "NOT ($wheres)" : "($wheres)";
     }
 
     protected function whereDate(Builder $query, array $where): string
@@ -316,12 +309,63 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
         return count($sql) > 0 ? 'GROUP BY '.implode(', ', $sql) : '';
     }
 
+    protected function compileHavings(Builder $query): string
+    {
+        if (empty($query->havings)) {
+            return '';
+        }
+
+        $sql = '';
+        foreach ($query->havings as $having) {
+            if (!empty($sql)) {
+                $sql .= ' ' . ($having['or'] ? 'OR' : 'AND') . ' ';
+            }
+
+            $sql .= $this->{"having".$having['type']}($query, $having);
+        }
+
+        return 'HAVING ' . $sql;
+    }
+
+    protected function havingBasic(Builder $query, array $having): string
+    {
+        return sprintf('%s %s %s',
+            $this->wrap($having['column']),
+            $having['operator'],
+            $this->prepareValue($having['value'])
+        );
+    }
+
+    protected function havingExpression(Builder $query, array $having): string
+    {
+        return $having['sql'];
+    }
+
+    protected function havingNested(Builder $query, array $having): string
+    {
+        $sql = $this->compileHavings($having['query']);
+
+        if (empty($sql)) {
+            return '';
+        }
+
+        // Remove 'HAVING '
+        $sql = substr($sql, 7);
+
+        return "($sql)";
+    }
+
+
     protected function compileOrders(Builder $query): string
     {
         $sql = [];
 
         foreach ($query->orders as $order) {
-            $sql[] = $this->wrap($order['column']).' '.strtoupper($order['direction']);
+            if (isset($order['sql'])) {
+                $sql[] = $order['sql'];
+            } else {
+                $sql[] = $this->wrap($order['column']).' '.strtoupper($order['direction']);
+            }
         }
 
         return count($sql) > 0 ? 'ORDER BY '.implode(', ', $sql) : '';
@@ -329,17 +373,35 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
 
     protected function compileLimit(Builder $query): string
     {
-        $sql = '';
-        if ($query->limit) $sql.= 'LIMIT '.$query->limit;
-        if ($query->limit && $query->offset) $sql.= ' OFFSET '.$query->offset;
-        return $sql;
+        $sql = [];
+
+        if ($query->limit > 0) {
+            $sql[] = 'LIMIT '.$query->limit;
+        }
+
+        if ($query->offset > 0) {
+            $sql[] = 'OFFSET '.$query->offset;
+        }
+
+        return implode(' ', $sql);
     }
 
     public function compileLock(Builder $query): string
     {
         $lock = $query->getLock();
 
-        return is_string($lock) ? ' '.$lock : '';
+        return is_string($lock) ? $lock : '';
+    }
+
+    public function compileUnions(Builder $query): string
+    {
+        $sql = [];
+
+        foreach ($query->unions as $union) {
+            $sql[] = ($union['all'] ? 'UNION ALL (' : 'UNION ('). $union['query']. ')';
+        }
+
+        return implode(' ', $sql);
     }
 
 
@@ -365,8 +427,14 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
         return implode(', ', array_map([$this, 'wrap'], $columns));
     }
 
-    public function prepareValues(array $values): string
+    public function prepareValues(Expression|array $values): string
     {
+        if ($values instanceof Expression) {
+            return $values->getValue();
+        }
+
+        // return implode(', ', array_fill(0, count($values), '?'));
+
         return implode(', ', array_map(function () {
             return '?';
         }, $values));
@@ -377,4 +445,8 @@ class Grammar extends BaseGrammar implements QueryGrammarContract
         return $value instanceof Expression ? $value->getValue() : '?';
     }
 
+    public function prepareBindingForJson(mixed $bindings): mixed
+    {
+        return json_encode($bindings, JSON_UNESCAPED_UNICODE);
+    }
 }

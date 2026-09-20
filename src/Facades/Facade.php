@@ -97,7 +97,7 @@ abstract class Facade
             'Log' => Log::class,
             'Notification' => Notification::class,
             'Route' => Route::class,
-            'Scheme' => Scheme::class,
+            'Schema' => Schema::class,
             'Session' => Session::class,
             'Storage' => Storage::class,
             'Validator' => Validator::class,

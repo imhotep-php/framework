@@ -1,6 +1,6 @@
 <?php
 
-use Imhotep\Facades\Scheme;
+use Imhotep\Facades\Schema;
 use Imhotep\Database\Migrations\Migration;
 use Imhotep\Database\Schema\Table;
 
@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Scheme::create('notifications', function (Table $table) {
+        Schema::create('notifications', function (Table $table) {
             $table->uuid('id')->primary();
             $table->string('recipient_type');
             $table->string('recipient_id');
@@ -33,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Scheme::dropIfExists('notifications');
+        Schema::dropIfExists('notifications');
     }
 };

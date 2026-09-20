@@ -22,7 +22,7 @@ class DatabaseServiceProvider extends ServiceProvider
             'migrate' => MigrateCommand::class
         ]);
 
-        $this->app->bind('scheme', function ($app) {
+        $this->app->bind('schema', function ($app) {
             return $app['db']->getSchemaBuilder();
         });
     }

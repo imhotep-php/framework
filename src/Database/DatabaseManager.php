@@ -2,65 +2,113 @@
 
 namespace Imhotep\Database;
 
-use Imhotep\Contracts\Database\Connection as ConnectionContract;
+use Closure;
+use Imhotep\Contracts\Config\IConfigRepository;
+use Imhotep\Contracts\Database\IConnection as ConnectionContract;
 use Imhotep\Contracts\Database\ConnectionResolver;
-use Imhotep\Contracts\Database\DatabaseException;
-use Imhotep\Framework\Application;
+use Imhotep\Contracts\IContainer;
+use Imhotep\Support\Traits\Macroable;
+use InvalidArgumentException;
 
 class DatabaseManager implements ConnectionResolver
 {
-    protected $app;
+    use Macroable {
+        __call as macroCall;
+    }
 
-    protected $factory;
+    protected IContainer $container;
 
-    protected array $connections = [];
+    protected IConfigRepository $config;
 
-    protected \Closure $reconnector;
+    protected ConnectionFactory $factory;
+
+    protected Closure $reconnector;
 
     protected array $drivers = [
         'mysql' => [
-            'connection' => \Imhotep\Database\MySQL\Connection::class,
-            'connector' => \Imhotep\Database\MySQL\Connector::class,
+            'connector' => \Imhotep\Database\Mysql\Connector::class,
+            'connection' => \Imhotep\Database\Mysql\Connection::class,
+        ],
+        'mariadb' => [
+            'connector' => \Imhotep\Database\MariaDb\Connector::class,
+            'connection' => \Imhotep\Database\MariaDb\Connection::class,
         ],
         'pgsql' => [
-            'connection' => \Imhotep\Database\Postgres\Connection::class,
             'connector' => \Imhotep\Database\Postgres\Connector::class,
+            'connection' => \Imhotep\Database\Postgres\Connection::class,
         ],
         'sqlite' => [
-            'connection' => \Imhotep\Database\SQLite\Connection::class,
-            'connector' => \Imhotep\Database\SQLite\Connector::class,
+            'connector' => \Imhotep\Database\Sqlite\Connector::class,
+            'connection' => \Imhotep\Database\Sqlite\Connection::class,
         ]
     ];
 
-    public function __construct (Application $app)
+    protected array $extends = [];
+
+    protected array $connections = [];
+
+    public function __construct(IContainer $container)
     {
-        $this->app = $app;
+        $this->container = $container;
+
+        $this->config = $container->make(IConfigRepository::class);
 
         $this->factory = new ConnectionFactory();
 
-        $this->reconnector = function (ConnectionContract $connection) {
-            $this->reconnect($connection->getName());
-        };
+        $this->reconnector = fn(ConnectionContract $connection) => $this->reconnect($connection->getName());
     }
 
     public function connection(?string $name = null): ConnectionContract
     {
-        if (is_null($name)) {
-            $name = $this->getDefaultConnection();
+        $name = $name ?: $this->getDefaultConnection();
+
+        return $this->connections[$name] ??
+            $this->connections[$name] = $this->configureConnection($this->makeConnection($name));
+    }
+
+    protected function makeConnection(string $name): ConnectionContract
+    {
+        $config = $this->config->subsetOrFail("database.connections.{$name}",
+            "Connection [{$name}] not configured");
+
+        $config['name'] = $name;
+
+        $driver = $config->stringOrFail("driver", "Driver invalid");
+
+        if (isset($this->extends[$name])) {
+            return call_user_func($this->extends[$name], $config, $name);
         }
 
-        if (! isset($this->connections[$name])) {
-            $this->connections[$name] = $this->configureConnection(
-                $this->makeConnection($name)
-            );
+        if (isset($this->extends[$driver])) {
+            return call_user_func($this->extends[$driver], $config, $name);
         }
 
-        return $this->connections[$name];
+        if (isset($this->drivers[$driver])) {
+            return $this->factory->make(
+                $this->drivers[$driver]['connector'],
+                $this->drivers[$driver]['connection'],
+                $config);
+        }
+
+        throw new InvalidArgumentException(
+            "Unsupported driver [{$driver}] for connection [{$name}]"
+        );
+    }
+
+    protected function configureConnection(ConnectionContract $connection): ConnectionContract
+    {
+        if ($this->container->bound('events')) {
+            $connection->setEventDispatcher($this->container['events']);
+        }
+
+        $connection->setReconnector($this->reconnector);
+
+        return $connection;
     }
 
     public function reconnect(?string $name = null): ConnectionContract
     {
-        if (is_null($name)) $name = $this->getDefaultConnection();
+        $name = $name ?: $this->getDefaultConnection();
 
         $this->disconnect($name);
 
@@ -71,13 +119,13 @@ class DatabaseManager implements ConnectionResolver
         $newConn = $this->makeConnection($name);
 
         return $this->connections[$name]
-            ->setPdo($newConn->getPdo())
-            ->setReadPdo($newConn->getReadPdo());
+            ->setPdo($newConn->getRawPdo())
+            ->setReadPdo($newConn->getRawReadPdo());
     }
 
     public function disconnect(?string $name = null): void
     {
-        if (is_null($name)) $name = $this->getDefaultConnection();
+        $name = $name ?: $this->getDefaultConnection();
 
         if (isset($this->connections[$name])) {
             $this->connections[$name]->disconnect();
@@ -93,53 +141,51 @@ class DatabaseManager implements ConnectionResolver
         unset($this->connections[$name]);
     }
 
-    protected function makeConnection($name): ConnectionContract
+    public function usingConnection(string $name, callable $callback): mixed
     {
-        $config = $this->getConfig($name);
+        $previousName = $this->getDefaultConnection();
 
-        if (!isset($this->drivers[$config['driver']])) {
-            throw new DatabaseException("Driver [{$name}] is not supported");
+        $this->setDefaultConnection($name);
+
+        try {
+            return $callback();
+        } finally {
+            $this->setDefaultConnection($previousName);
         }
-
-        return $this->factory->make($this->drivers[$config['driver']], $config);
     }
 
-    protected function configureConnection(ConnectionContract $connection, ?string $type = null): ConnectionContract
+    public function setReconnector(Closure $reconnector): static
     {
-        if ($this->app->bound('events')) {
-            $connection->setEventDispatcher($this->app['events']);
-        }
+        $this->reconnector = $reconnector;
 
-        $connection->setReconnector($this->reconnector);
-
-        return $connection;
+        return $this;
     }
 
     public function getDefaultConnection(): string
     {
-        return config()->get('database.default');
+        return $this->config->get('database.default');
     }
 
-    public function setDefaultConnection(string $name): void
+    public function setDefaultConnection(string $name): static
     {
-        config()->set('database.default', $name);
+        $this->config->set("database.default", $name);
+
+        return $this;
     }
 
-    protected function getConfig($name): array
+    public function extend(string $name, callable $resolver): static
     {
-        $config = config()->get("database.connections.{$name}");
+        $this->extends[$name] = $resolver;
 
-        if (is_null($config)) {
-            throw new DatabaseException("Connection [{$name}] not configured");
-        }
-
-        $config['name'] = $name;
-
-        return $config;
+        return $this;
     }
 
     public function __call(string $method, array $parameters): mixed
     {
+        if (static::hasMacro($method)) {
+            return $this->macroCall($method, $parameters);
+        }
+
         return $this->connection()->{$method}(...$parameters);
     }
 }

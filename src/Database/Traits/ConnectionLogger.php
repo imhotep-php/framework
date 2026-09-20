@@ -101,6 +101,28 @@ trait ConnectionLogger
         }
     }
 
+    public function formatQuery(array $query): string
+    {
+        $sql = $query['query'];
+        $bindings = $query['bindings'] ?? [];
+
+        foreach ($bindings as $binding) {
+            if (is_string($binding)) {
+                $binding = "'" . addslashes($binding) . "'";
+            }
+            elseif (is_null($binding)) {
+                $binding = 'NULL';
+            }
+            elseif (is_bool($binding)) {
+                $binding = $binding ? '1' : '0';
+            }
+
+            $sql = preg_replace('/\?/', (string)$binding, $sql, 1);
+        }
+
+        return $sql . ';';
+    }
+
     protected function getElapsedTime(float $start): float
     {
         return round((microtime(true) - $start), 5);

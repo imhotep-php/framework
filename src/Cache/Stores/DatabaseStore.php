@@ -5,20 +5,20 @@ namespace Imhotep\Cache\Stores;
 use Imhotep\Cache\Locks\DatabaseLock;
 use Imhotep\Cache\Locks\Lock;
 use Imhotep\Contracts\Cache\ICacheStore;
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Database\Query\Builder;
 use Throwable;
 
 class DatabaseStore implements ICacheStore
 {
     public function __construct(
-        protected Connection $connection,
-        protected string $table,
-        protected string $prefix,
-        protected Connection $lockConnection,
-        protected string $lockTable,
-        protected array $lockLottery = [2,100],
-        protected int $lockTimeout = 86400,
+        protected IConnection $connection,
+        protected string      $table,
+        protected string      $prefix,
+        protected IConnection $lockConnection,
+        protected string      $lockTable,
+        protected array       $lockLottery = [2,100],
+        protected int         $lockTimeout = 86400,
     ) { }
 
     public function has(string $key): bool

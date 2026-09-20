@@ -4,7 +4,6 @@ namespace Imhotep\Database\Model;
 
 use Imhotep\Contracts\Database\IModel;
 use InvalidArgumentException;
-use stdClass;
 
 abstract class Model implements IModel
 {

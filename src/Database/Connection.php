@@ -3,8 +3,9 @@
 namespace Imhotep\Database;
 
 use Closure;
+use DateTimeInterface;
 use Exception;
-use Imhotep\Contracts\Database\Connection as ConnectionContract;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Contracts\Database\DatabaseException;
 use Imhotep\Contracts\Database\QueryException;
 use Imhotep\Contracts\Events\Dispatcher;
@@ -21,13 +22,13 @@ use PDO;
 use PDOStatement;
 use Throwable;
 
-abstract class Connection implements ConnectionContract
+abstract class Connection implements IConnection
 {
     use ConnectionLogger, ConnectionTransactions, DetectsErrors;
 
-    protected mixed $pdo = null;
+    protected PDO|Closure|null $pdo = null;
 
-    protected mixed $readPdo = null;
+    protected PDO|Closure|null $readPdo = null;
 
     protected Closure $reconnector;
 
@@ -52,18 +53,28 @@ abstract class Connection implements ConnectionContract
         $this->database = $config['database'];
 
         $this->tablePrefix = $config['prefix'] ?? '';
-
-        $this->useSchemaGrammar();
     }
 
     public function getName(): string
     {
-        return $this->config['name'];
+        return $this->config['name'] ?? '';
     }
 
     public function getDatabaseName(): string
     {
         return $this->database;
+    }
+
+    public function getSchema(): string
+    {
+        if (empty($this->config['schema'])) {
+            throw new DatabaseException(sprintf(
+                "For connection [%s] schema not configured.",
+                $this->getName() ?? 'default'
+            ));
+        }
+
+        return $this->config['schema'];
     }
 
     public function getTablePrefix(): string
@@ -102,6 +113,11 @@ abstract class Connection implements ConnectionContract
         return $this->select($query, $bindings, false);
     }
 
+    public function selectFromWrite(string $query, array $bindings = []): array
+    {
+        return $this->select($query, $bindings, false);
+    }
+
     public function selectOne(string $query, array $bindings = [], bool $useReadPdo = true)
     {
         $items = $this->select($query, $bindings, $useReadPdo);
@@ -130,7 +146,6 @@ abstract class Connection implements ConnectionContract
         return $this->affectingStatement($query, $bindings);
     }
 
-
     public function lastInsertId(?string $name = null): string|false
     {
         return $this->pdo->lastInsertId($name);
@@ -149,6 +164,10 @@ abstract class Connection implements ConnectionContract
     public function statement(string $query, array $bindings = [], bool $useReadPdo = false): PDOStatement|false
     {
         return $this->run($query, $bindings, function ($query, $bindings) use ($useReadPdo) {
+            if ($this->pretending()) {
+                return false;
+            }
+
             $statement = $this->getPdoForSelect($useReadPdo)->prepare($query);
 
             $statement->setFetchMode($this->fetchMode);
@@ -246,7 +265,7 @@ abstract class Connection implements ConnectionContract
         throw $e;
     }
 
-    protected function bindValues(PDOStatement $statement, $bindings)
+    protected function bindValues(PDOStatement $statement, array $bindings): void
     {
         foreach ($bindings as $key => $value) {
             $statement->bindValue(
@@ -263,6 +282,16 @@ abstract class Connection implements ConnectionContract
 
     protected function prepareBindings(array $bindings): array
     {
+        $grammar = $this->getQueryGrammar();
+
+        foreach ($bindings as $key => $value) {
+            if ($value instanceof DateTimeInterface) {
+                $bindings[$key] = $value->format($grammar->getDateFormat());
+            } elseif (is_bool($value)) {
+                $bindings[$key] = (int) $value;
+            }
+        }
+
         return $bindings;
     }
 
@@ -334,11 +363,22 @@ abstract class Connection implements ConnectionContract
      */
     public function getPdo(): ?PDO
     {
+        if ($this->pdo instanceof Closure) {
+            $this->pdo = call_user_func($this->pdo);
+        }
+
         return $this->pdo;
     }
 
-    public function setPdo($pdo): static
+    public function getRawPdo(): PDO|Closure|null
     {
+        return $this->pdo;
+    }
+
+    public function setPdo(PDO|Closure|null $pdo): static
+    {
+        $this->transactions = 0;
+
         $this->pdo = $pdo;
 
         return $this;
@@ -346,26 +386,40 @@ abstract class Connection implements ConnectionContract
 
     public function getReadPdo(): ?PDO
     {
+        if ($this->transactions > 0) {
+            return $this->getPdo();
+        }
+
+        // TODO: sticky
+
+        if ($this->readPdo instanceof Closure) {
+            $this->readPdo = call_user_func($this->readPdo);
+        }
+
+        return $this->readPdo ?: $this->getPdo();
+    }
+
+    public function getRawReadPdo(): PDO|Closure|null
+    {
         return $this->readPdo;
     }
 
-    public function setReadPdo($pdo): static
+    public function setReadPdo(PDO|Closure|null $pdo): static
     {
         $this->readPdo = $pdo;
 
         return $this;
     }
 
-    /**
-     * @return PDO
-     */
     public function getPdoForSelect(bool $useReadPdo): ?PDO
     {
-        if ($useReadPdo && ! is_null($this->readPdo)) {
-            return $this->readPdo;
+        if ($useReadPdo) {
+            if (!is_null($readPdo = $this->getReadPdo())) {
+                return $readPdo;
+            }
         }
 
-        return $this->pdo;
+        return $this->getPdo();
     }
 
     public function setReconnector(Closure $reconnector): static
@@ -389,6 +443,11 @@ abstract class Connection implements ConnectionContract
         if (is_null($this->pdo)) {
             $this->reconnect();
         }
+    }
+
+    public function disconnect(): void
+    {
+        $this->setPdo(null)->setReadPdo(null);
     }
 
     /*
@@ -441,47 +500,59 @@ abstract class Connection implements ConnectionContract
 
     protected ?SchemaGrammar $schemaGrammar = null;
 
-    public function useSchemaGrammar(): static
-    {
-        throw new DatabaseException("Schema grammar is not supported.");
-    }
+    protected ?QueryGrammar $queryGrammar = null;
 
     public function getSchemaGrammar(): SchemaGrammar
     {
-        return $this->schemaGrammar;
+        return $this->schemaGrammar ?? $this->buildSchemaGrammar();
     }
 
-    /**
-     * @return mixed
-     * @throws DatabaseException
-     */
     public function getSchemaBuilder(): SchemaBuilder
     {
-        if (is_null($this->schemaGrammar)) {
-            $this->useSchemaGrammar();
-        }
-
-        throw new DatabaseException("Schema builder is not supported.");
-    }
-
-    protected ?QueryGrammar $queryGrammar = null;
-
-    public function useQueryGrammar(): static
-    {
-        throw new DatabaseException("Query grammar is not supported.");
+        return $this->createSchemaBuilder();
     }
 
     public function getQueryGrammar(): QueryGrammar
     {
-        return $this->queryGrammar;
+        return $this->queryGrammar ?? $this->buildQueryGrammar();
     }
 
     public function getQueryBuilder(): QueryBuilder
     {
-        if (is_null($this->schemaGrammar)) {
-            $this->useQueryGrammar();
-        }
+        return $this->createQueryBuilder();
+    }
 
-        throw new DatabaseException("Query builder is not supported.");
+    abstract protected function createSchemaGrammar(): SchemaGrammar;
+
+    abstract protected function createSchemaBuilder(): SchemaBuilder;
+
+    abstract protected function createQueryGrammar(): QueryGrammar;
+
+    abstract protected function createQueryBuilder(): QueryBuilder;
+
+    protected function buildSchemaGrammar(): SchemaGrammar
+    {
+        $this->schemaGrammar = $this->createSchemaGrammar();
+        $this->configureSchemaGrammar($this->schemaGrammar);
+
+        return $this->schemaGrammar;
+    }
+
+    protected function buildQueryGrammar(): QueryGrammar
+    {
+        $this->queryGrammar = $this->createQueryGrammar();
+        $this->configureQueryGrammar($this->queryGrammar);
+
+        return $this->queryGrammar;
+    }
+
+    protected function configureSchemaGrammar($grammar): void
+    {
+        $grammar->setTablePrefix($this->tablePrefix);
+    }
+
+    protected function configureQueryGrammar($grammar): void
+    {
+        $grammar->setTablePrefix($this->tablePrefix);
     }
 }

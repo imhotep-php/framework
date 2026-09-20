@@ -2,6 +2,7 @@
 
 namespace Imhotep\Database;
 
+use Exception;
 use Imhotep\Contracts\Database\DatabaseException;
 use Imhotep\Database\Traits\DetectsErrors;
 use PDO;
@@ -20,58 +21,42 @@ abstract class Connector
         PDO::ATTR_EMULATE_PREPARES => false,
     ];
 
-    public function connect(array $config)
+    public function connect(array $config): PDO
     {
         $this->config = $config;
 
-        return $this->create($this->getDsn(), $this->getOptions());
+        return $this->configure(
+            $this->create($this->getDsn(), $this->getOptions())
+        );
     }
 
-    protected function create(string $dsn, array $options = [])
+    protected function create(string $dsn, array $options = []): PDO
     {
         [$username, $password] = [
-            $this->config['username'] ?? null, $this->config['password'] ?? null,
+            $this->config['username'] ?? null,
+            $this->config['password'] ?? null,
         ];
 
+        $connect = fn() => new PDO($dsn, $username, $password, $options);
+
         try {
-            return new PDO($dsn, $username, $password, $options);
+            return $connect();
         }
-        catch (\Exception $e) {
-            if ($this->causedByLostConnection($e)) {
-                return new PDO($dsn, $username, $password, $options);
+        catch (Exception $e) {
+            if (! $this->causedByLostConnection($e)) {
+                throw new DatabaseException($e->getMessage(), $e->getCode(), $e);
             }
 
-            throw new DatabaseException($e->getMessage(), $e->getCode(), $e);
+            return $connect();
         }
     }
 
-    public function getDsn(): string
+    abstract protected function configure(PDO $connection): PDO;
+
+    abstract public function getDsn(): string;
+
+    public function getOptions(): array
     {
-        $dsn = "{$this->config['driver']}:";
-
-        if (isset($this->config['host'])) {
-            $dsn.= "host={$this->config['host']};";
-        }
-
-        if (isset($this->config['port'])) {
-            $dsn.= "port={$this->config['port']};";
-        }
-
-        if (isset($this->config['database'])) {
-            $dsn.= "dbname={$this->config['database']};";
-        }
-
-        if (isset($this->config['charset'])) {
-            $dsn.= "charset={$this->config['charset']};";
-        }
-
-        return $dsn;
-    }
-
-    public function getOptions()
-    {
-        $options = $this->config['options'] ?? [];
-
-        return array_diff_key($this->options, $options) + $options;
+        return array_replace($this->options, $this->config['options'] ?? []);
     }
 }

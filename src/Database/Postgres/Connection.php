@@ -2,56 +2,47 @@
 
 namespace Imhotep\Database\Postgres;
 
-use Imhotep\Contracts\Database\DatabaseException;
 use Imhotep\Database\Connection as ConnectionBase;
-use Imhotep\Database\Postgres\Schema\Builder as SchemaBuilder;
-use Imhotep\Database\Postgres\Schema\Grammar as SchemaGrammar;
-use Imhotep\Database\Postgres\Query\Builder as QueryBuilder;
-use Imhotep\Database\Postgres\Query\Grammar as QueryGrammar;
+use Imhotep\Database\Postgres\QueryBuilder as PostgresQueryBuilder;
+use Imhotep\Database\Postgres\QueryGrammar as PostgresQueryGrammar;
+use Imhotep\Database\Postgres\SchemaBuilder as PostgresSchemaBuilder;
+use Imhotep\Database\Postgres\SchemaGrammar as PostgresSchemaGrammar;
 
 class Connection extends ConnectionBase
 {
-    public function getSchema()
+    public function __construct($pdo, array $config = [])
     {
-        if (empty($this->config['schema'])) {
-            throw new DatabaseException("For connection [%s] schema not configured.");
+        if (empty($config['schema'])) {
+            $config['schema'] = 'public';
         }
 
-        return $this->config['schema'];
+        parent::__construct($pdo, $config);
     }
 
-    public function useSchemaGrammar(): static
+    protected function createSchemaGrammar(): PostgresSchemaGrammar
     {
-        $this->schemaGrammar = new SchemaGrammar();
-        $this->schemaGrammar->setTablePrefix($this->tablePrefix);
-        $this->schemaGrammar->setCharset($this->getConfig('charset', 'utf8mb4'));
-
-        return $this;
+        return new PostgresSchemaGrammar();
     }
 
-    public function getSchemaBuilder(): SchemaBuilder
+    protected function createQueryGrammar(): PostgresQueryGrammar
     {
-        if (is_null($this->schemaGrammar)) {
-            $this->useSchemaGrammar();
-        }
-
-        return new SchemaBuilder($this);
+        return new PostgresQueryGrammar();
     }
 
-    public function useQueryGrammar(): static
+    protected function createSchemaBuilder(): PostgresSchemaBuilder
     {
-        $this->queryGrammar = new QueryGrammar();
-        $this->queryGrammar->setTablePrefix($this->tablePrefix);
-
-        return $this;
+        return new PostgresSchemaBuilder($this);
     }
 
-    public function getQueryBuilder(): QueryBuilder
+    protected function createQueryBuilder(): PostgresQueryBuilder
     {
-        if (is_null($this->queryGrammar)) {
-            $this->useQueryGrammar();
-        }
+        return new PostgresQueryBuilder($this, $this->getQueryGrammar());
+    }
 
-        return new QueryBuilder($this, $this->queryGrammar);
+    protected function configureSchemaGrammar($grammar): void
+    {
+        parent::configureSchemaGrammar($grammar);
+
+        $grammar->setCharset($this->getConfig('charset', 'utf8'));
     }
 }

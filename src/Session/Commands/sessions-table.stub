@@ -1,6 +1,6 @@
 <?php
 
-use Imhotep\Facades\Scheme;
+use Imhotep\Facades\Schema;
 use Imhotep\Database\Migrations\Migration;
 use Imhotep\Database\Schema\Table;
 
@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Scheme::create('sessions', function (Table $table) {
+        Schema::create('sessions', function (Table $table) {
             $table->string('id', 40)->primary();
             $table->text('payload');
             $table->int('last_activity')->index();
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Scheme::dropIfExists('sessions');
+        Schema::dropIfExists('sessions');
     }
 };

@@ -2,11 +2,11 @@
 
 namespace Imhotep\Database\Schema;
 
-use Imhotep\Contracts\Database\SchemaGrammar as SchemaGrammarContract;
+use Imhotep\Contracts\Database\ISchemaGrammar;
 use Imhotep\Database\Grammar as BaseGrammar;
 use Imhotep\Support\Fluent;
 
-abstract class Grammar extends BaseGrammar implements SchemaGrammarContract
+abstract class Grammar extends BaseGrammar implements ISchemaGrammar
 {
     protected bool $transaction = false;
 
@@ -50,7 +50,7 @@ abstract class Grammar extends BaseGrammar implements SchemaGrammarContract
         return $columns;
     }
 
-    public function getType($column): string
+    public function getType(Column $column): string
     {
         return $this->{'type'.ucfirst($column->type)}($column);
     }

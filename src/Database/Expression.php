@@ -2,7 +2,9 @@
 
 namespace Imhotep\Database;
 
-class Expression
+use Imhotep\Contracts\Database\IExpression;
+
+class Expression implements IExpression
 {
     public function __construct(
         protected mixed $value

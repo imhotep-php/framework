@@ -2,7 +2,6 @@
 
 namespace Imhotep\Database\Query;
 
-use Closure;
 use InvalidArgumentException;
 
 class JoinClause extends Builder
@@ -30,6 +29,6 @@ class JoinClause extends Builder
 
     public function orOn(...$conditions): static
     {
-        return $this->on(...[...$conditions, 'or']);
+        return $this->on(...[...$conditions, true]);
     }
 }

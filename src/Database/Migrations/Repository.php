@@ -2,7 +2,7 @@
 
 namespace Imhotep\Database\Migrations;
 
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Contracts\Database\ConnectionResolver;
 use Imhotep\Database\Query\Builder;
 use Imhotep\Database\Schema\Builder as SchemaBuilder;
@@ -188,9 +188,9 @@ class Repository
     /**
      * Resolve the database connection instance.
      *
-     * @return Connection
+     * @return IConnection
      */
-    public function getConnection(): Connection
+    public function getConnection(): IConnection
     {
         return $this->resolver->connection($this->connection);
     }

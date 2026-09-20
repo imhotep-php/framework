@@ -1,6 +1,6 @@
 <?php
 
-use Imhotep\Facades\Scheme;
+use Imhotep\Facades\Schema;
 use Imhotep\Database\Migrations\Migration;
 use Imhotep\Database\Schema\Table;
 
@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Scheme::create('{{table}}', function (Table $table) {
+        Schema::create('{{table}}', function (Table $table) {
             $table->id();
             $table->timestamps();
         });
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Scheme::dropIfExists('{{table}}');
+        Schema::dropIfExists('{{table}}');
     }
 };

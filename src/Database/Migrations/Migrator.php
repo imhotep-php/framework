@@ -5,7 +5,7 @@ namespace Imhotep\Database\Migrations;
 use Exception;
 use Imhotep\Console\Traits\InteractsWithIO;
 use Imhotep\Contracts\Console\Command;
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 use Imhotep\Contracts\Database\ConnectionResolver;
 use Imhotep\Contracts\Database\DatabaseException;
 use SplFileInfo;
@@ -99,13 +99,13 @@ class Migrator
 
         $this->components()->info('Running migrations');
 
-        $pretend = $options['pretend'] ?? false;
-
-        $step = $options['step'] ?? false;
-
-        $name = $this->option('name');
+        $pretend = is_bool($options['pretend']) && $options['pretend'];
+        $step = is_bool($options['step']) && $options['step'];
+        $name = $options['name'] ?? null;
 
         $batch = $this->repository->getNextBatchNumber();
+
+        $queries = [];
 
         foreach ($migrations as $migration) {
             if ($name && $name !== $migration->getBasename('.php')) {
@@ -114,9 +114,26 @@ class Migrator
 
             $migration = $this->resolveMigration($migration);
 
-            $this->components()->task($migration->name, fn() => $this->runMigration($migration, 'up', $batch));
+            if ($pretend) {
+                $queries = $this->pretendRunMigration($migration, 'up', $batch);
+            }
+            else {
+                $this->components()->task($migration->name,
+                    fn() => $this->runMigration($migration, 'up', $batch)
+                );
+            }
 
             if($step) $batch++;
+        }
+
+        if ($pretend && !empty($queries)) {
+            $this->output->newLine();
+
+            foreach ($queries as $query) {
+                $query = $this->db->connection()->formatQuery($query);
+
+                $this->output->writeln("  <fg=yellow>{$query}</>");
+            }
         }
 
         $this->output->newLine();
@@ -209,6 +226,28 @@ class Migrator
         }
 
         return 0;
+    }
+
+    protected function pretendRunMigration(Migration $migration, string $method, ?int $batch = null): array
+    {
+        if (! method_exists($migration, $method)) return [];
+
+        $connection = $this->resolveConnection($migration->connection);
+
+        $prevConnection = $this->db->getDefaultConnection();
+
+        try {
+            $this->db->setDefaultConnection($connection->getName());
+
+            return $connection->pretend(function () use ($connection, $migration, $method) {
+                $migration->{$method}();
+            });
+        }
+        finally {
+            $this->db->setDefaultConnection($prevConnection);
+        }
+
+        return [];
     }
 
     protected function runMigration(Migration $migration, string $method, ?int $batch = null): void
@@ -333,7 +372,7 @@ class Migrator
         return $resolved;
     }
 
-    protected function resolveConnection(?string $connection = null): Connection
+    protected function resolveConnection(?string $connection = null): IConnection
     {
         return $this->db->connection($connection);
     }

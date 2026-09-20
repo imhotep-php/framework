@@ -3,18 +3,18 @@
 namespace Imhotep\Database\Schema;
 
 use Closure;
-use Imhotep\Contracts\Database\Connection as ConnectionContract;
-use Imhotep\Contracts\Database\SchemaBuilder as SchemaBuilderContract;
-use Imhotep\Database\Connection;
-use Imhotep\Database\Schema\Grammar as SchemaGrammar;
+use Imhotep\Contracts\Database\DatabaseException;
+use Imhotep\Contracts\Database\IConnection;
+use Imhotep\Contracts\Database\ISchemaBuilder;
+use Imhotep\Contracts\Database\ISchemaGrammar;
 
-abstract class Builder implements SchemaBuilderContract
+abstract class Builder implements ISchemaBuilder
 {
-    protected ConnectionContract $connection;
+    protected IConnection $connection;
 
-    protected SchemaGrammar $grammar;
+    protected ISchemaGrammar $grammar;
 
-    public function __construct(Connection $connection)
+    public function __construct(IConnection $connection)
     {
         $this->connection = $connection;
 
@@ -24,10 +24,10 @@ abstract class Builder implements SchemaBuilderContract
     /**
      * Get or set the database connection instance.
      *
-     * @param ConnectionContract|null $connection
-     * @return ConnectionContract|static
+     * @param IConnection|null $connection
+     * @return IConnection|static
      */
-    public function connection(?ConnectionContract $connection = null): static|ConnectionContract
+    public function connection(?IConnection $connection = null): static|IConnection
     {
         if (is_null($connection)) {
             return $this->connection;
@@ -42,40 +42,45 @@ abstract class Builder implements SchemaBuilderContract
     public function createDatabase(string $name): mixed
     {
         return $this->connection->statement(
-            $this->grammar->compileCreateDatabase($name, $this->connection)
+            $this->grammar->compileCreateDatabase($name)
         );
+    }
+
+    public function hasDatabase(string $name): bool
+    {
+        return false;
     }
 
     public function dropDatabase(string $name): mixed
     {
         return $this->connection->statement(
-            $this->grammar->compileDropDatabase($name, $this->connection)
+            $this->grammar->compileDropDatabase($name)
         );
     }
 
     public function dropDatabaseIfExists(string $name): mixed
     {
         return $this->connection->statement(
-            $this->grammar->compileDropDatabaseIfExists($name, $this->connection)
+            $this->grammar->compileDropDatabaseIfExists($name)
         );
     }
 
 
-    public function getTables(): mixed
+    public function getTables(): array
     {
-        return $this->connection->selectFromWriteConnection(
+        return $this->connection->selectFromWrite(
             $this->grammar->compileGetTables(),
         );
     }
 
     public function hasTable(string $table): bool
     {
-        return count($this->connection->selectFromWriteConnection(
+        return count($this->connection->selectFromWrite(
             $this->grammar->compileTableExists(), [$this->connection->getTablePrefix().$table]
         )) > 0;
     }
 
-    public function create(string $table, Closure $callback)
+    public function create(string $table, Closure $callback): void
     {
         $this->build(tap($this->createTable($table), function ($table) use ($callback) {
             $table->create();
@@ -83,7 +88,7 @@ abstract class Builder implements SchemaBuilderContract
         }));
     }
 
-    public function table(string $table, Closure $callback)
+    public function table(string $table, Closure $callback): void
     {
         $this->build($this->createTable($table, $callback));
     }
@@ -95,7 +100,7 @@ abstract class Builder implements SchemaBuilderContract
         }));
     }
 
-    public function drop(string $table)
+    public function drop(string $table): void
     {
         $this->build(tap($this->createTable($table), function ($table) {
             $table->drop();
@@ -109,9 +114,9 @@ abstract class Builder implements SchemaBuilderContract
         }));
     }
 
-    public function dropAllTables()
+    public function dropAllTables(): void
     {
-        return $this->connection->statement(
+        $this->connection->statement(
             $this->grammar->compileDropTables()
         );
     }
@@ -119,12 +124,20 @@ abstract class Builder implements SchemaBuilderContract
 
     public function getColumns(string $table): array
     {
-        return $this->connection->selectFromWriteConnection(
+        return $this->connection->selectFromWrite(
             $this->grammar->compileGetColumns($table),
         );
     }
 
-    public function getColumnType(string $table, string $column): ?string
+    public function getColumnNames(string $table): array
+    {
+        return array_map(
+            fn($column) => $column->name,
+            $this->getColumns($table)
+        );
+    }
+
+    public function getColumnType(string $table, string $column): string
     {
         $columns = $this->getColumns($table);
 
@@ -137,17 +150,15 @@ abstract class Builder implements SchemaBuilderContract
 
     public function hasColumn(string $table, string $column): bool
     {
-        $tableColumns = array_map(fn ($v) => strtolower($v->name), $this->getColumns($table));
-
-        return in_array(strtolower($column), $tableColumns);
+        return in_array($column, $this->getColumnNames($table));
     }
 
     public function hasColumns(string $table, array $columns): bool
     {
-        $tableColumns = array_map(fn ($v) => strtolower($v->name), $this->getColumns($table));
+        $tableColumns = $this->getColumnNames($table);
 
         foreach ($columns as $column) {
-            if (! in_array(strtolower($column), $tableColumns)) return false;
+            if (! in_array($column, $tableColumns)) return false;
         }
 
         return true;
@@ -165,11 +176,6 @@ abstract class Builder implements SchemaBuilderContract
         $this->table($table, function ($table) use ($columns) {
             $table->dropColumn($columns);
         });
-    }
-
-    public function dropColumns(string $table, array $column): void
-    {
-        $this->dropColumn($table, $column);
     }
 
 
@@ -190,8 +196,15 @@ abstract class Builder implements SchemaBuilderContract
 
     abstract protected function createTable(string $table, ?Closure $callback = null): Table;
 
-    protected function build($table)
+    protected function build($table): void
     {
+        $this->validateTable($table);
+
         $table->build($this->connection, $this->grammar);
+    }
+
+    protected function validateTable(Table $table): void
+    {
+
     }
 }

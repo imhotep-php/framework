@@ -2,7 +2,7 @@
 
 namespace Imhotep\Database\Events;
 
-use Imhotep\Contracts\Database\Connection;
+use Imhotep\Contracts\Database\IConnection;
 
 class QueryExecuted
 {
@@ -10,7 +10,7 @@ class QueryExecuted
         public string $sql,
         public array $bindings,
         public float $time,
-        public Connection $connection
+        public IConnection $connection
     )
     { }
 }
