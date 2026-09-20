@@ -35,7 +35,6 @@ class FtpDriver extends BaseDriver
     public function __destruct()
     {
         if ($this->curlHandle !== null) {
-            curl_close($this->curlHandle);
             $this->curlHandle = null;
         }
     }

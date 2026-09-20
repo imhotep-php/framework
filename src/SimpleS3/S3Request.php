@@ -194,8 +194,6 @@ class S3Request
 
         $this->response->finalize($this->curl);
 
-        curl_close($this->curl);
-
         return $this->response;
     }
 

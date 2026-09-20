@@ -226,8 +226,6 @@ class RepositoryTest extends TestCase
     {
         $reflection = new \ReflectionClass($this->cache);
         $method = $reflection->getMethod('parseTtl');
-        $method->setAccessible(true);
-
         return $method->invoke($this->cache, $ttl);
     }
 
