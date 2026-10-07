@@ -239,8 +239,9 @@ trait HasWhereConditions
             $this->pushCondition('basic', $or, [
                 'column' => $this->resolveColumnName($column),
                 'operator' => '=',
-                'value' => $value
-            ]);
+                'value' => $value,
+                'not' => false,
+            ], $value);
         }
 
         return $this;

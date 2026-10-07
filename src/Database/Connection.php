@@ -46,8 +46,6 @@ abstract class Connection implements IConnection
     {
         $this->pdo = $pdo;
 
-        $this->readPdo = $pdo;
-
         $this->config = $config;
 
         $this->database = $config['database'];
@@ -295,7 +293,7 @@ abstract class Connection implements IConnection
         return $bindings;
     }
 
-    protected function recordsHaveBeenModified(bool $value = false)
+    protected function recordsHaveBeenModified(bool $value = false): void
     {
         if (! $this->recordsModified) {
             $this->recordsModified = $value;

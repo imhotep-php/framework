@@ -10,6 +10,7 @@ use Imhotep\Contracts\Database\IQueryGrammar;
 use Imhotep\Database\Expression;
 use Imhotep\Database\Model\Model;
 use Imhotep\Support\Arr;
+use Imhotep\Support\Traits\Conditionable;
 use Imhotep\Support\Traits\Macroable;
 use InvalidArgumentException;
 
@@ -23,6 +24,7 @@ class Builder implements IQueryBuilder
     use Traits\HasWhereConditions;
     use Traits\HasGroupMethods;
     use Traits\HasLockConditions;
+    use Conditionable;
 
     protected bool $useWritePDO = false;
 
