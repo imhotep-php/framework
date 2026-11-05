@@ -1,9 +1,8 @@
-<?php declare(strict_types = 1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Notifications;
 
 use Imhotep\Contracts\Notifications\INotification;
-use Imhotep\Contracts\Queue\ShouldQueue;
 
 abstract class Notification implements INotification
 {
@@ -62,10 +61,5 @@ abstract class Notification implements INotification
     public function toArray(mixed $recipient): array
     {
         return [];
-    }
-
-    public function shouldBeQueued(): bool
-    {
-        return $this instanceof ShouldQueue;
     }
 }

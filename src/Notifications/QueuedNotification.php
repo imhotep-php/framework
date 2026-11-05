@@ -1,11 +1,10 @@
-<?php declare(strict_types = 1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Notifications;
 
 use Imhotep\Contracts\Notifications\INotification as INotification;
-use Imhotep\Contracts\Queue\ShouldQueue;
 
-class QueuedNotification implements ShouldQueue
+class QueuedNotification
 {
     public mixed $recipient;
 

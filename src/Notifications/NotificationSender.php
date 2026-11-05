@@ -1,4 +1,4 @@
-<?php declare(strict_types = 1);
+<?php declare(strict_types=1);
 
 namespace Imhotep\Notifications;
 
@@ -10,7 +10,6 @@ use Imhotep\Notifications\Events\NotificationFailed;
 use Imhotep\Notifications\Events\NotificationSending;
 use Imhotep\Notifications\Events\NotificationSent;
 use Imhotep\Notifications\Events\NotificationSkipped;
-use Imhotep\Queue\QueueManager;
 use Imhotep\Support\Str;
 use Throwable;
 
@@ -19,7 +18,7 @@ class NotificationSender
     public function __construct(
         protected ChannelManager $manager,
         protected ?Dispatcher $events = null,
-        protected ?QueueManager $queue = null,
+        protected mixed $queue = null,
         protected ?string $locale = null,
     ) {}
 
